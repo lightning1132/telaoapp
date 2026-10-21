@@ -340,7 +340,7 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
     <div id="news" hidden></div>
     <p class="muted">Compartilhamento de tela entre amigos, direto de um PC pro outro. Sem conta, sem OBS, sem stream pública.</p>
     <div class="av-row">
-      <button type="button" class="av-pick av-big" title="Escolher foto de perfil (imagem ou GIF até 300 KB)"><span class="my-av" data-size="52"></span></button>
+      <button type="button" class="av-pick av-big" title="Escolher foto de perfil (imagem ou GIF)"><span class="my-av" data-size="52"></span></button>
       <label class="grow">Seu nome
         <input id="name" maxlength="24" placeholder="ex: Gui" autocomplete="off">
       </label>
@@ -509,7 +509,7 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
         <h3>Foto de perfil</h3>
         <div class="av-row"><button type="button" class="av-pick av-big" title="Trocar foto"><span class="my-av" data-size="56"></span></button>
           <div><button type="button" class="ghost av-pick">Trocar foto</button> <button type="button" class="ghost av-remove" hidden>Remover</button>
-          <p class="muted dg-p" style="margin-top:6px">Imagem (é recortada em quadrado) ou GIF até 300 KB. Aparece na lista da sala, no chat, nas reações e na tela privada.</p></div></div>
+          <p class="muted dg-p" style="margin-top:6px">Imagem (é recortada em quadrado) ou GIF. GIF grande é reduzido automaticamente; GIF longo é cortado nos primeiros 6 s. Aparece na lista da sala, no chat, nas reações e na tela privada.</p></div></div>
       </section>
       <section>
         <h3>Tela privada</h3>
@@ -545,7 +545,7 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
         <h3>Figurinhas do grupo <span class="muted" id="rxStkCount"></span></h3>
         <p class="muted dg-p">Ficam ligadas ao código desta sala e chegam pra todo mundo. Clique numa figurinha para colocá-la no botão escolhido acima. Qualquer um pode remover (some pra todos).</p>
         <div id="rxStkGrid" class="stk-grid"></div>
-        <div class="dg-row"><button type="button" class="ghost" id="rxAddStk">+ Adicionar figurinha (imagem ou GIF até 300 KB)</button></div>
+        <div class="dg-row"><button type="button" class="ghost" id="rxAddStk">+ Adicionar figurinha (imagem ou GIF)</button></div>
       </section>
     </div>
     <div class="pk-foot"><span class="grow"></span><button type="button" class="primary" id="rxClose">Fechar</button></div>
@@ -572,7 +572,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.9.1';
+const TELAO_VERSION = '1.9.2';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -582,7 +582,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 6;       // nível do app desktop mais novo (6: chat e figurinhas por cima do jogo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.9.1', 'hoje', ['Corrige a atualização do app para a 1.9 (a 1.9.0 voltava sozinha para a versão anterior)']],
+  ['1.9.2', 'hoje', ['GIF grande na foto de perfil ou nas figurinhas é reduzido automaticamente (e cortado nos primeiros 6 s se for longo)']],
+  ['1.9.1', '21/10', ['Corrige a atualização do app para a 1.9 (a 1.9.0 voltava sozinha para a versão anterior)']],
   ['1.9.0', '21/10', ['Chat da sala, que aparece por cima do jogo de quem transmite (botão 💬 na miniatura liga/desliga)',
                      'Reações personalizáveis: barra de 8 com emojis, textos e figurinhas do grupo',
                      'Figurinhas do grupo: qualquer um adiciona ou remove, e todo mundo da sala recebe',
@@ -2628,21 +2629,140 @@ function blobReady(){
   clearTimeout(blobRenderTimer);
   blobRenderTimer = setTimeout(() => { renderMembers(); renderTileAvatars(); renderReactBars(); renderChat(); renderStickerPanels(); }, 60);
 }
-// Lê um arquivo de imagem do usuário. GIF vai como está (até maxGif); o resto é reduzido pra caber em `side`.
-function readImageFile(file, side, maxGif){
-  return new Promise((res, rej) => {
-    if (!file || !/^image\//.test(file.type)) return rej(new Error('escolha um arquivo de imagem'));
-    if (file.type === 'image/gif'){
-      if (file.size > maxGif) return rej(new Error('GIF grande demais (' + Math.round(file.size / 1024) + ' KB; o limite é ' + Math.round(maxGif / 1024) + ' KB)'));
-      const fr = new FileReader(); fr.onload = () => res({gif: true, url: fr.result}); fr.onerror = () => rej(new Error('não consegui ler o arquivo')); fr.readAsDataURL(file);
+/* gifenc 1.0.3 — codificador de GIF (c) 2017 Matt DesLauriers, licença MIT (https://github.com/mattdesl/gifenc) */
+const GifEnc = (() => {var X={signature:"GIF",version:"89a",trailer:59,extensionIntroducer:33,applicationExtensionLabel:255,graphicControlExtensionLabel:249,imageSeparator:44,signatureSize:3,versionSize:3,globalColorTableFlagMask:128,colorResolutionMask:112,sortFlagMask:8,globalColorTableSizeMask:7,applicationIdentifierSize:8,applicationAuthCodeSize:3,disposalMethodMask:28,userInputFlagMask:2,transparentColorFlagMask:1,localColorTableFlagMask:128,interlaceFlagMask:64,idSortFlagMask:32,localColorTableSizeMask:7};function F(t=256){let e=0,s=new Uint8Array(t);return{get buffer(){return s.buffer},reset(){e=0},bytesView(){return s.subarray(0,e)},bytes(){return s.slice(0,e)},writeByte(r){n(e+1),s[e]=r,e++},writeBytes(r,o=0,i=r.length){n(e+i);for(let c=0;c<i;c++)s[e++]=r[c+o]},writeBytesView(r,o=0,i=r.byteLength){n(e+i),s.set(r.subarray(o,o+i),e),e+=i}};function n(r){var o=s.length;if(o>=r)return;var i=1024*1024;r=Math.max(r,o*(o<i?2:1.125)>>>0),o!=0&&(r=Math.max(r,256));let c=s;s=new Uint8Array(r),e>0&&s.set(c.subarray(0,e),0)}}var O=12,J=5003,lt=[0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535];function at(t,e,s,n,r=F(512),o=new Uint8Array(256),i=new Int32Array(J),c=new Int32Array(J)){let x=i.length,a=Math.max(2,n);o.fill(0),c.fill(0),i.fill(-1);let l=0,f=0,g=a+1,h=g,b=!1,w=h,_=(1<<w)-1,u=1<<g-1,k=u+1,B=u+2,p=0,A=s[0],z=0;for(let y=x;y<65536;y*=2)++z;z=8-z,r.writeByte(a),I(u);let d=s.length;for(let y=1;y<d;y++){t:{let m=s[y],v=(m<<O)+A,M=m<<z^A;if(i[M]===v){A=c[M];break t}let V=M===0?1:x-M;for(;i[M]>=0;)if(M-=V,M<0&&(M+=x),i[M]===v){A=c[M];break t}I(A),A=m,B<1<<O?(c[M]=B++,i[M]=v):(i.fill(-1),B=u+2,b=!0,I(u))}}return I(A),I(k),r.writeByte(0),r.bytesView();function I(y){for(l&=lt[f],f>0?l|=y<<f:l=y,f+=w;f>=8;)o[p++]=l&255,p>=254&&(r.writeByte(p),r.writeBytesView(o,0,p),p=0),l>>=8,f-=8;if((B>_||b)&&(b?(w=h,_=(1<<w)-1,b=!1):(++w,_=w===O?1<<w:(1<<w)-1)),y==k){for(;f>0;)o[p++]=l&255,p>=254&&(r.writeByte(p),r.writeBytesView(o,0,p),p=0),l>>=8,f-=8;p>0&&(r.writeByte(p),r.writeBytesView(o,0,p),p=0)}}}var $=at;function D(t,e,s){return t<<8&63488|e<<2&992|s>>3}function G(t,e,s,n){return t>>4|e&240|(s&240)<<4|(n&240)<<8}function j(t,e,s){return t>>4<<8|e&240|s>>4}function R(t,e,s){return t<e?e:t>s?s:t}function T(t){return t*t}function tt(t,e,s){var n=0,r=1e100;let o=t[e],i=o.cnt,c=o.ac,x=o.rc,a=o.gc,l=o.bc;for(var f=o.fw;f!=0;f=t[f].fw){let h=t[f],b=h.cnt,w=i*b/(i+b);if(!(w>=r)){var g=0;s&&(g+=w*T(h.ac-c),g>=r)||(g+=w*T(h.rc-x),!(g>=r)&&(g+=w*T(h.gc-a),!(g>=r)&&(g+=w*T(h.bc-l),!(g>=r)&&(r=g,n=f))))}}o.err=r,o.nn=n}function Q(){return{ac:0,rc:0,gc:0,bc:0,cnt:0,nn:0,fw:0,bk:0,tm:0,mtm:0,err:0}}function ut(t,e){let s=e==="rgb444"?4096:65536,n=new Array(s),r=t.length;if(e==="rgba4444")for(let o=0;o<r;++o){let i=t[o],c=i>>24&255,x=i>>16&255,a=i>>8&255,l=i&255,f=G(l,a,x,c),g=f in n?n[f]:n[f]=Q();g.rc+=l,g.gc+=a,g.bc+=x,g.ac+=c,g.cnt++}else if(e==="rgb444")for(let o=0;o<r;++o){let i=t[o],c=i>>16&255,x=i>>8&255,a=i&255,l=j(a,x,c),f=l in n?n[l]:n[l]=Q();f.rc+=a,f.gc+=x,f.bc+=c,f.cnt++}else for(let o=0;o<r;++o){let i=t[o],c=i>>16&255,x=i>>8&255,a=i&255,l=D(a,x,c),f=l in n?n[l]:n[l]=Q();f.rc+=a,f.gc+=x,f.bc+=c,f.cnt++}return n}function H(t,e,s={}){let{format:n="rgb565",clearAlpha:r=!0,clearAlphaColor:o=0,clearAlphaThreshold:i=0,oneBitAlpha:c=!1}=s;if(!t||!t.buffer)throw new Error("quantize() expected RGBA Uint8Array data");if(!(t instanceof Uint8Array)&&!(t instanceof Uint8ClampedArray))throw new Error("quantize() expected RGBA Uint8Array data");let x=new Uint32Array(t.buffer),a=s.useSqrt!==!1,l=n==="rgba4444",f=ut(x,n),g=f.length,h=g-1,b=new Uint32Array(g+1);for(var w=0,u=0;u<g;++u){let C=f[u];if(C!=null){var _=1/C.cnt;l&&(C.ac*=_),C.rc*=_,C.gc*=_,C.bc*=_,f[w++]=C}}T(e)/w<.022&&(a=!1);for(var u=0;u<w-1;++u)f[u].fw=u+1,f[u+1].bk=u,a&&(f[u].cnt=Math.sqrt(f[u].cnt));a&&(f[u].cnt=Math.sqrt(f[u].cnt));var k,B,p;for(u=0;u<w;++u){tt(f,u,!1);var A=f[u].err;for(B=++b[0];B>1&&(p=B>>1,!(f[k=b[p]].err<=A));B=p)b[B]=k;b[B]=u}var z=w-e;for(u=0;u<z;){for(var d;;){var I=b[1];if(d=f[I],d.tm>=d.mtm&&f[d.nn].mtm<=d.tm)break;d.mtm==h?I=b[1]=b[b[0]--]:(tt(f,I,!1),d.tm=u);var A=f[I].err;for(B=1;(p=B+B)<=b[0]&&(p<b[0]&&f[b[p]].err>f[b[p+1]].err&&p++,!(A<=f[k=b[p]].err));B=p)b[B]=k;b[B]=I}var y=f[d.nn],m=d.cnt,v=y.cnt,_=1/(m+v);l&&(d.ac=_*(m*d.ac+v*y.ac)),d.rc=_*(m*d.rc+v*y.rc),d.gc=_*(m*d.gc+v*y.gc),d.bc=_*(m*d.bc+v*y.bc),d.cnt+=y.cnt,d.mtm=++u,f[y.bk].fw=y.fw,f[y.fw].bk=y.bk,y.mtm=h}let M=[];var V=0;for(u=0;;++V){let L=R(Math.round(f[u].rc),0,255),C=R(Math.round(f[u].gc),0,255),Y=R(Math.round(f[u].bc),0,255),E=255;if(l){if(E=R(Math.round(f[u].ac),0,255),c){let st=typeof c=="number"?c:127;E=E<=st?0:255}r&&E<=i&&(L=C=Y=o,E=0)}let K=l?[L,C,Y,E]:[L,C,Y];if(xt(M,K)||M.push(K),(u=f[u].fw)==0)break}return M}function xt(t,e){for(let s=0;s<t.length;s++){let n=t[s],r=n[0]===e[0]&&n[1]===e[1]&&n[2]===e[2],o=n.length>=4&&e.length>=4?n[3]===e[3]:!0;if(r&&o)return!0}return!1}function U(t,e){var s=0,n;for(n=0;n<t.length;n++){let r=t[n]-e[n];s+=r*r}return s}function P(t,e){return e>1?Math.round(t/e)*e:t}function et(t,{roundRGB:e=5,roundAlpha:s=10,oneBitAlpha:n=null}={}){let r=new Uint32Array(t.buffer);for(let o=0;o<r.length;o++){let i=r[o],c=i>>24&255,x=i>>16&255,a=i>>8&255,l=i&255;if(c=P(c,s),n){let f=typeof n=="number"?n:127;c=c<=f?0:255}l=P(l,e),a=P(a,e),x=P(x,e),r[o]=c<<24|x<<16|a<<8|l<<0}}function nt(t,e,s="rgb565"){if(!t||!t.buffer)throw new Error("quantize() expected RGBA Uint8Array data");if(!(t instanceof Uint8Array)&&!(t instanceof Uint8ClampedArray))throw new Error("quantize() expected RGBA Uint8Array data");if(e.length>256)throw new Error("applyPalette() only works with 256 colors or less");let n=new Uint32Array(t.buffer),r=n.length,o=s==="rgb444"?4096:65536,i=new Uint8Array(r),c=new Array(o),x=s==="rgba4444";if(s==="rgba4444")for(let a=0;a<r;a++){let l=n[a],f=l>>24&255,g=l>>16&255,h=l>>8&255,b=l&255,w=G(b,h,g,f),_=w in c?c[w]:c[w]=gt(b,h,g,f,e);i[a]=_}else{let a=s==="rgb444"?j:D;for(let l=0;l<r;l++){let f=n[l],g=f>>16&255,h=f>>8&255,b=f&255,w=a(b,h,g),_=w in c?c[w]:c[w]=bt(b,h,g,e);i[l]=_}}return i}function gt(t,e,s,n,r){let o=0,i=1e100;for(let c=0;c<r.length;c++){let x=r[c],a=x[3],l=q(a-n);if(l>i)continue;let f=x[0];if(l+=q(f-t),l>i)continue;let g=x[1];if(l+=q(g-e),l>i)continue;let h=x[2];l+=q(h-s),!(l>i)&&(i=l,o=c)}return o}function bt(t,e,s,n){let r=0,o=1e100;for(let i=0;i<n.length;i++){let c=n[i],x=c[0],a=q(x-t);if(a>o)continue;let l=c[1];if(a+=q(l-e),a>o)continue;let f=c[2];a+=q(f-s),!(a>o)&&(o=a,r=i)}return r}function rt(t,e,s=5){if(!t.length||!e.length)return;let n=t.map(i=>i.slice(0,3)),r=s*s,o=t[0].length;for(let i=0;i<e.length;i++){let c=e[i];c.length<o?c=[c[0],c[1],c[2],255]:c.length>o?c=c.slice(0,3):c=c.slice();let x=N(n,c.slice(0,3),U),a=x[0],l=x[1];l>0&&l<=r&&(t[a]=c)}}function q(t){return t*t}function W(t,e,s=U){let n=Infinity,r=-1;for(let o=0;o<t.length;o++){let i=t[o],c=s(e,i);c<n&&(n=c,r=o)}return r}function N(t,e,s=U){let n=Infinity,r=-1;for(let o=0;o<t.length;o++){let i=t[o],c=s(e,i);c<n&&(n=c,r=o)}return[r,n]}function ot(t,e,s=U){return t[W(t,e,s)]}function ct(t={}){let{initialCapacity:e=4096,auto:s=!0}=t,n=F(e),r=5003,o=new Uint8Array(256),i=new Int32Array(r),c=new Int32Array(r),x=!1;return{reset(){n.reset(),x=!1},finish(){n.writeByte(X.trailer)},bytes(){return n.bytes()},bytesView(){return n.bytesView()},get buffer(){return n.buffer},get stream(){return n},writeHeader:a,writeFrame(l,f,g,h={}){let{transparent:b=!1,transparentIndex:w=0,delay:_=0,palette:u=null,repeat:k=0,colorDepth:B=8,dispose:p=-1}=h,A=!1;if(s?x||(A=!0,a(),x=!0):A=Boolean(h.first),f=Math.max(0,Math.floor(f)),g=Math.max(0,Math.floor(g)),A){if(!u)throw new Error("First frame must include a { palette } option");pt(n,f,g,u,B),it(n,u),k>=0&&dt(n,k)}let z=Math.round(_/10);wt(n,p,z,b,w);let d=Boolean(u)&&!A;ht(n,f,g,d?u:null),d&&it(n,u),yt(n,l,f,g,B,o,i,c)}};function a(){ft(n,"GIF89a")}}function wt(t,e,s,n,r){t.writeByte(33),t.writeByte(249),t.writeByte(4),r<0&&(r=0,n=!1);var o,i;n?(o=1,i=2):(o=0,i=0),e>=0&&(i=e&7),i<<=2;let c=0;t.writeByte(0|i|c|o),S(t,s),t.writeByte(r||0),t.writeByte(0)}function pt(t,e,s,n,r=8){let o=1,i=0,c=Z(n.length)-1,x=o<<7|r-1<<4|i<<3|c,a=0,l=0;S(t,e),S(t,s),t.writeBytes([x,a,l])}function dt(t,e){t.writeByte(33),t.writeByte(255),t.writeByte(11),ft(t,"NETSCAPE2.0"),t.writeByte(3),t.writeByte(1),S(t,e),t.writeByte(0)}function it(t,e){let s=1<<Z(e.length);for(let n=0;n<s;n++){let r=[0,0,0];n<e.length&&(r=e[n]),t.writeByte(r[0]),t.writeByte(r[1]),t.writeByte(r[2])}}function ht(t,e,s,n){if(t.writeByte(44),S(t,0),S(t,0),S(t,e),S(t,s),n){let r=0,o=0,i=Z(n.length)-1;t.writeByte(128|r|o|0|i)}else t.writeByte(0)}function yt(t,e,s,n,r=8,o,i,c){$(s,n,e,r,t,o,i,c)}function S(t,e){t.writeByte(e&255),t.writeByte(e>>8&255)}function ft(t,e){for(var s=0;s<e.length;s++)t.writeByte(e.charCodeAt(s))}function Z(t){return Math.max(Math.ceil(Math.log2(t)),1)}var Bt=ct;return {GIFEncoder: ct, quantize: H, applyPalette: nt};})();
+
+/* GIF grande: o Telão reduz antes de mandar (tamanho, quadros por segundo e cores) até caber no limite.
+   GIF longo é cortado nos primeiros 6 s. Continua sendo GIF, então funciona em qualquer versão. */
+const GIF_MAX_INPUT = 25 * 1024 * 1024, GIF_MAX_SECONDS = 6;
+async function decodeGif(file, side, square){
+  if (typeof ImageDecoder === 'undefined') throw new Error('este navegador não consegue reduzir GIF; use o Chrome, o Edge ou o app');
+  const dec = new ImageDecoder({data: await file.arrayBuffer(), type: 'image/gif'});
+  try{
+    await dec.tracks.ready;
+    try{ await dec.completed; }catch{}
+    const n = dec.tracks.selectedTrack ? dec.tracks.selectedTrack.frameCount : 1;
+    const frames = [];
+    let t = 0, cut = false, W = 0, H = 0, sx = 0, sy = 0, sw = 0, sh = 0, c = null, g = null;
+    for (let i = 0; i < n; i++){
+      const {image} = await dec.decode({frameIndex: i});
+      if (!W){
+        const iw = image.displayWidth, ih = image.displayHeight;
+        if (square){ const m = Math.min(iw, ih); sx = (iw - m) / 2; sy = (ih - m) / 2; sw = sh = m; W = H = Math.max(1, Math.min(side, m)); }
+        else { sw = iw; sh = ih; const k = Math.min(1, side / Math.max(iw, ih)); W = Math.max(1, Math.round(iw * k)); H = Math.max(1, Math.round(ih * k)); }
+        c = document.createElement('canvas'); c.width = W; c.height = H; g = c.getContext('2d', {willReadFrequently: true});
+      }
+      let d = (image.duration || 0) / 1000;
+      if (!(d >= 20)) d = 100;   // como os navegadores: quadro sem tempo (ou < 20 ms) dura 100 ms
+      g.clearRect(0, 0, W, H); g.drawImage(image, sx, sy, sw, sh, 0, 0, W, H);
+      image.close();
+      frames.push({img: g.getImageData(0, 0, W, H), delay: d});
+      t += d;
+      if (t >= GIF_MAX_SECONDS * 1000 && i < n - 1){ cut = true; break; }
+    }
+    return {frames, W, H, cut, ms: Math.min(t, GIF_MAX_SECONDS * 1000)};
+  } finally { try{ dec.close(); }catch{} }
+}
+function gifEncode(frames, W, H, colors, tol){
+  const enc = GifEnc.GIFEncoder();
+  const N = W * H;
+  const hasAlpha = frames.some(f => { const d = f.img.data; for (let i = 3; i < d.length; i += 28) if (d[i] < 128) return true; return false; });
+  // paleta única tirada de até 8 quadros (formato de 12 bits: rápido mesmo com GIF cheio de cores)
+  const step = Math.max(1, Math.floor(frames.length / 8)), picks = [];
+  for (let i = 0; i < frames.length && picks.length < 8; i += step) picks.push(frames[i].img.data);
+  const sample = new Uint8ClampedArray(picks.length * N * 4);
+  picks.forEach((d, i) => sample.set(d, i * N * 4));
+  const pal = GifEnc.quantize(sample, colors - 1, {format: 'rgb444'});
+  const T = pal.length;   // última cor da paleta = "transparente"
+  const full = pal.concat([[0, 0, 0]]);
+  const shown = new Int16Array(N * 3);
+  frames.forEach((f, k) => {
+    const d = f.img.data, idx = GifEnc.applyPalette(d, pal, 'rgb444'), delay = Math.max(20, Math.round(f.delay));
+    if (hasAlpha){
+      // GIF com transparência: quadro completo, buracos transparentes, e o quadro anterior é apagado
+      for (let p = 0, q = 3; p < N; p++, q += 4) if (d[q] < 128) idx[p] = T;
+      enc.writeFrame(idx, W, H, {palette: k === 0 ? full : undefined, delay, transparent: true, transparentIndex: T, dispose: 2});
       return;
     }
-    const url = URL.createObjectURL(file), im = new Image();
-    im.onload = () => { URL.revokeObjectURL(url); res({gif: false, img: im}); };
-    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('não consegui abrir a imagem')); };
-    im.src = url;
+    // opaco: só o que mudou em relação ao que já está na tela; diferenças pequenas (`tol`) contam como "não mudou"
+    for (let p = 0, q = 0; p < N; p++, q += 4){
+      const c = pal[idx[p]];
+      if (k > 0 && Math.abs(d[q] - shown[p * 3]) + Math.abs(d[q + 1] - shown[p * 3 + 1]) + Math.abs(d[q + 2] - shown[p * 3 + 2]) <= tol){ idx[p] = T; continue; }
+      shown[p * 3] = c[0]; shown[p * 3 + 1] = c[1]; shown[p * 3 + 2] = c[2];
+    }
+    enc.writeFrame(idx, W, H, k === 0 ? {palette: full, delay} : {delay, transparent: true, transparentIndex: T, dispose: 1});
   });
+  enc.finish();
+  return enc.bytes();
 }
+function gifResample(src, fps, maxMs, scale){
+  const W = Math.max(1, Math.round(src.W * scale)), H = Math.max(1, Math.round(src.H * scale));
+  let c1 = null, c2 = null, g1 = null, g2 = null;
+  if (scale < 1){
+    c1 = document.createElement('canvas'); c1.width = src.W; c1.height = src.H; g1 = c1.getContext('2d');
+    c2 = document.createElement('canvas'); c2.width = W; c2.height = H; g2 = c2.getContext('2d', {willReadFrequently: true});
+  }
+  const step = 1000 / fps, out = [];
+  let t = 0, lastKept = -Infinity;
+  for (const f of src.frames){
+    if (t >= maxMs) break;
+    if (!out.length || t - lastKept >= step - 1){
+      let img = f.img;
+      if (scale < 1){ g1.putImageData(f.img, 0, 0); g2.clearRect(0, 0, W, H); g2.drawImage(c1, 0, 0, W, H); img = g2.getImageData(0, 0, W, H); }
+      out.push({img, delay: f.delay}); lastKept = t;
+    } else out[out.length - 1].delay += f.delay;   // quadro descartado: o anterior fica na tela por mais tempo
+    t += f.delay;
+  }
+  return {frames: out, W, H};
+}
+function bytesToDataUrl(bytes, type){
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return 'data:' + type + ';base64,' + btoa(bin);
+}
+async function compressGif(file, side, maxBytes, square){
+  const src = await decodeGif(file, side, square);
+  const tries = [
+    {fps: 15, colors: 256, scale: 1, tol: 12}, {fps: 15, colors: 192, scale: 1, tol: 30}, {fps: 12, colors: 128, scale: 1, tol: 45},
+    {fps: 10, colors: 96, scale: 1, tol: 60}, {fps: 10, colors: 96, scale: 0.85, tol: 60}, {fps: 8, colors: 64, scale: 0.75, tol: 70},
+    {fps: 8, colors: 48, scale: 0.6, tol: 80}, {fps: 6, colors: 32, scale: 0.5, tol: 90, ms: 4000}, {fps: 5, colors: 24, scale: 0.4, tol: 100, ms: 3000},
+  ];
+  for (const tr of tries){
+    await sleep(0);   // deixa a tela respirar entre as tentativas
+    const r = gifResample(src, tr.fps, Math.min(src.ms, tr.ms || Infinity), tr.scale);
+    // estimativa rápida com 1 de cada 4 quadros: pula tentativas que claramente não cabem
+    if (r.frames.length >= 12){
+      const sample = r.frames.filter((_, i) => i % 4 === 0);
+      const est = gifEncode(sample, r.W, r.H, tr.colors, tr.tol || 0).length * r.frames.length / sample.length;
+      if (est > maxBytes * 1.6) continue;   // a amostra pula quadros, então exagera um pouco: margem larga
+    }
+    const bytes = gifEncode(r.frames, r.W, r.H, tr.colors, tr.tol || 0);
+    if (bytes.length <= maxBytes) return {url: bytesToDataUrl(bytes, 'image/gif'), bytes: bytes.length, cut: src.cut || (tr.ms && tr.ms < src.ms), seconds: Math.min(src.ms, tr.ms || Infinity) / 1000};
+  }
+  throw new Error('mesmo reduzindo bastante, esse GIF não coube em ' + Math.round(maxBytes / 1024) + ' KB; tente um mais curto');
+}
+const fmtKB = b => b >= 1024 * 1024 ? (b / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB' : Math.round(b / 1024) + ' KB';
+// Lê um arquivo de imagem do usuário. GIF até maxGif vai como está; maior é reduzido (e cortado em 6 s).
+// O resto vira imagem estática reduzida pra caber em `side`.
+async function readImageFile(file, side, maxGif, square){
+  if (!file || !/^image\//.test(file.type)) throw new Error('escolha um arquivo de imagem');
+  if (file.type === 'image/gif'){
+    if (file.size <= maxGif){
+      const url = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(new Error('não consegui ler o arquivo')); fr.readAsDataURL(file); });
+      return {gif: true, url};
+    }
+    if (file.size > GIF_MAX_INPUT) throw new Error('GIF grande demais (' + fmtKB(file.size) + '; o máximo é ' + fmtKB(GIF_MAX_INPUT) + ')');
+    toast('Reduzindo o GIF (' + fmtKB(file.size) + ')…', 'ok', 3000);
+    const r = await compressGif(file, side, maxGif, square);
+    return {gif: true, url: r.url, reduced: {from: file.size, to: r.bytes, cut: !!r.cut, seconds: r.seconds}};
+  }
+  const url = URL.createObjectURL(file), im = new Image();
+  try{
+    await new Promise((res, rej) => { im.onload = res; im.onerror = () => rej(new Error('não consegui abrir a imagem')); im.src = url; });
+  } finally { URL.revokeObjectURL(url); }
+  return {gif: false, img: im};
+}
+const reducedNote = r => r && r.reduced ? ' GIF reduzido de ' + fmtKB(r.reduced.from) + ' para ' + fmtKB(r.reduced.to) + (r.reduced.cut ? ', cortado nos primeiros ' + Math.round(r.reduced.seconds) + ' s' : '') + '.' : '';
 function canvasToSmallUrl(c, maxChars){
   for (const q of [0.88, 0.8, 0.7, 0.6, 0.5]){
     let u = ''; try{ u = c.toDataURL('image/webp', q); }catch{}
@@ -2716,8 +2836,8 @@ function pickAvatar(){
   inp.onchange = async () => {
     const f = inp.files && inp.files[0]; if (!f) return;
     try{
-      const r = await readImageFile(f, 128, AVATAR_GIF_MAX);
-      if (r.gif){ await setMyAvatar(r.url); toast('Foto de perfil trocada.'); return; }
+      const r = await readImageFile(f, 128, AVATAR_GIF_MAX, true);
+      if (r.gif){ await setMyAvatar(r.url); toast('Foto de perfil trocada.' + reducedNote(r), 'ok', 7000); return; }
       openCropper(r.img, async url => { await setMyAvatar(url); toast('Foto de perfil trocada.'); });
     }catch(e){ toast('Não deu pra usar essa imagem: ' + e.message + '.', 'warn', 7000); }
   };
@@ -2826,7 +2946,7 @@ function onStickers(from, d){
 async function addStickerFile(file){
   if (activeStickers().length >= STICKER_MAX){ toast('O grupo já tem ' + STICKER_MAX + ' figurinhas. Remova alguma antes de adicionar outra.', 'warn'); return; }
   try{
-    const r = await readImageFile(file, 160, STICKER_GIF_MAX);
+    const r = await readImageFile(file, 160, STICKER_GIF_MAX, false);
     let url = r.url;
     if (!r.gif){
       const im = r.img, k = Math.min(1, 160 / Math.max(im.naturalWidth, im.naturalHeight));
@@ -2840,7 +2960,7 @@ async function addStickerFile(file){
     stickers.set(h, e); saveStickers();
     broadcastStickers([e]);
     renderReactBars(); renderStickerPanels();
-    toast('Figurinha adicionada ao grupo. Todo mundo da sala recebe.');
+    toast('Figurinha adicionada ao grupo. Todo mundo da sala recebe.' + reducedNote(r), 'ok', 7000);
     return h;
   }catch(err){ toast('Não deu pra usar essa imagem: ' + err.message + '.', 'warn', 7000); }
 }

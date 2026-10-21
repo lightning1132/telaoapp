@@ -1,24 +1,24 @@
 {
-  "version": "1.9.1",
+  "version": "1.9.2",
   "minShell": 2,
-  "page": "versoes/telao-1.9.1.html",
-  "sha256": "29c4c540bcb6269e571182ed333bccf5357a57ba95b4c5d0072e3a9f5563cb9f",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.9.1",
+  "page": "versoes/telao-1.9.2.html",
+  "sha256": "6f5e206fba6ecd2ad75b271d8ae6369baf884fbd704bc391e13a22763b4891f8",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.9.2",
   "notes": [
-    "Corrige a atualização do app para a 1.9 (a 1.9.0 voltava sozinha para a versão anterior)"
+    "GIF grande na foto de perfil ou nas figurinhas é reduzido automaticamente (e cortado nos primeiros 6 s se for longo)"
   ],
   "app": {
-    "version": "1.9.1",
+    "version": "1.9.2",
     "shell": 6,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.9.1/app.asar",
-        "sha256": "cbc82ba8435a09e0567e610ec234eed5a8a2c40718eb1fed77ee10dc6496fd15",
-        "size": 267799
+        "path": "versoes/app-1.9.2/app.asar",
+        "sha256": "c26ca245e596247e30aa63489fa4d6cb6a97b11571861d2ff1d052f76f330f39",
+        "size": 284511
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.9.1/telao-audio.exe",
+        "path": "versoes/app-1.9.2/telao-audio.exe",
         "sha256": "8a12183c7c83bfdc8da81f4ee0b81ad2fc7988769da6ce3c2b636b4c85ab0205",
         "size": 505856
       }
