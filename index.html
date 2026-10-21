@@ -572,7 +572,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.9.0';
+const TELAO_VERSION = '1.9.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -582,7 +582,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 6;       // nível do app desktop mais novo (6: chat e figurinhas por cima do jogo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.9.0', 'hoje', ['Chat da sala, que aparece por cima do jogo de quem transmite (botão 💬 na miniatura liga/desliga)',
+  ['1.9.1', 'hoje', ['Corrige a atualização do app para a 1.9 (a 1.9.0 voltava sozinha para a versão anterior)']],
+  ['1.9.0', '21/10', ['Chat da sala, que aparece por cima do jogo de quem transmite (botão 💬 na miniatura liga/desliga)',
                      'Reações personalizáveis: barra de 8 com emojis, textos e figurinhas do grupo',
                      'Figurinhas do grupo: qualquer um adiciona ou remove, e todo mundo da sala recebe',
                      'Foto de perfil (imagem ou GIF)',

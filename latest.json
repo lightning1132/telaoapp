@@ -1,31 +1,24 @@
 {
-  "version": "1.9.0",
+  "version": "1.9.1",
   "minShell": 2,
-  "page": "versoes/telao-1.9.0.html",
-  "sha256": "5bdad5fafec198004a8f8293d17cf078f1703b4ca81ec7fdf69809456f6bf7cf",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.9.0",
+  "page": "versoes/telao-1.9.1.html",
+  "sha256": "29c4c540bcb6269e571182ed333bccf5357a57ba95b4c5d0072e3a9f5563cb9f",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.9.1",
   "notes": [
-    "Chat da sala, que aparece por cima do jogo de quem transmite (botão 💬 na miniatura liga/desliga)",
-    "Reações personalizáveis: barra de 8 com emojis, textos e figurinhas do grupo",
-    "Figurinhas do grupo: qualquer um adiciona ou remove, e todo mundo da sala recebe",
-    "Foto de perfil (imagem ou GIF)",
-    "Tela privada: troca a sua transmissão por uma mensagem, sem cortar o som",
-    "Qualidades 360p e 540p, e Ultimate 120 fps (experimental)",
-    "Retransmissão: um amigo repassa o vídeo quando a internet de quem transmite está no limite",
-    "Modo rápido vem desligado (só ajuda no Windows 10)"
+    "Corrige a atualização do app para a 1.9 (a 1.9.0 voltava sozinha para a versão anterior)"
   ],
   "app": {
-    "version": "1.9.0",
+    "version": "1.9.1",
     "shell": 6,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.9.0/app.asar",
-        "sha256": "0012136ad1ad970300779a66d62068cdf279d5e3d1fa7c3ace582444c5459ed1",
-        "size": 192167
+        "path": "versoes/app-1.9.1/app.asar",
+        "sha256": "cbc82ba8435a09e0567e610ec234eed5a8a2c40718eb1fed77ee10dc6496fd15",
+        "size": 267799
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.9.0/telao-audio.exe",
+        "path": "versoes/app-1.9.1/telao-audio.exe",
         "sha256": "8a12183c7c83bfdc8da81f4ee0b81ad2fc7988769da6ce3c2b636b4c85ab0205",
         "size": 505856
       }
