@@ -196,6 +196,10 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 .pk-empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:30px}
 .pk-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line);font-size:13px}
 .pk-foot .grow{flex:1}
+.pk-foot{flex-wrap:wrap}
+.pk-audio{display:flex;align-items:center;gap:8px;color:var(--text)}
+.pk-audio select{max-width:300px}
+#pkAudioHint{font-size:12px}
 .desk-badge{display:inline-block;margin-left:8px;font-size:11px;font-weight:600;color:var(--accent);
   border:1px solid var(--accent);border-radius:999px;padding:1px 8px;vertical-align:middle;letter-spacing:0}
 #diag{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
@@ -331,7 +335,8 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
     </div>
     <div id="pkGrid"></div>
     <div class="pk-foot">
-      <span id="pkAudio" class="muted"></span>
+      <label class="pk-audio">Som: <select id="pkAudioSel"></select></label>
+      <span id="pkAudioHint" class="muted"></span>
       <span class="grow"></span>
       <button type="button" class="ghost" id="pkCancel">Cancelar</button>
       <button type="button" class="primary" id="pkGo" disabled>Compartilhar</button>
@@ -387,16 +392,17 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.6.1';
+const TELAO_VERSION = '1.7.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 3;       // nível do app desktop mais novo (reações por cima do jogo, janela flutuante completa)
+const LATEST_SHELL = 4;       // nível do app desktop mais novo (4: o app se atualiza sozinho)
 const CHANGELOG = [
-  ['1.6.1', 'hoje', ['Mostra a versão do app junto da versão do Telão', 'Botão 🎮 avisa quando o app precisa ser atualizado para as reações por cima do jogo']],
+  ['1.7.0', 'hoje', ['O app também se atualiza sozinho: baixa só o necessário (~1 MB) e reinicia', 'Se a versão nova do app não abrir, volta sozinho para a anterior', 'Som escolhido junto com a tela: janela manda o som dela sozinha; tela inteira mostra os apps com som ali mesmo']],
+  ['1.6.1', '21/10', ['Mostra a versão do app junto da versão do Telão', 'Botão 🎮 avisa quando o app precisa ser atualizado para as reações por cima do jogo']],
   ['1.6.0', '21/10', ['Reações aparecem por cima do jogo de quem transmite (app desktop)', 'Janela flutuante: assista um amigo numa janela sempre por cima']],
   ['1.5.0', '21/10', ['Atualização automática', 'Sala de sempre: salas recentes e entrada automática', 'Reações (emojis) sobre a tela de quem transmite', 'Clipe dos últimos 30 segundos de qualquer tela']],
   ['1.4.0', '21/10', ['Versão de cada pessoa na sala (passe o mouse no nome)', 'Aviso quando alguém da sala está numa versão mais nova ou mais antiga', 'Esta lista de novidades']],
@@ -417,7 +423,10 @@ function showUpdate(info){
   if (store.get('updLater', '') === info.version + '|' + new Date().toDateString()) return;   // "Depois" vale até amanhã
   updInfo = info;
   const notes = (info.notes || []).slice(0, 3).join(' · ');
-  if (info.kind === 'page'){
+  if (info.kind === 'app-ready'){
+    $('#updText').textContent = 'App do Telão ' + info.version + ' baixado.' + (notes ? ' Novidades: ' + notes : '') + ' Leva uns segundos para reiniciar.';
+    $('#updGo').textContent = 'Reiniciar e atualizar'; $('#updGo').hidden = false;
+  } else if (info.kind === 'page'){
     $('#updText').textContent = 'Telão ' + info.version + ' baixado e pronto.' + (notes ? ' Novidades: ' + notes : '');
     $('#updGo').textContent = 'Atualizar agora';
   } else if (info.kind === 'app'){
@@ -434,6 +443,16 @@ function initUpdates(){
   $('#updLater').onclick = () => { if (updInfo) store.set('updLater', updInfo.version + '|' + new Date().toDateString()); $('#upd').hidden = true; };
   $('#updGo').onclick = () => {
     if (!updInfo) return;
+    if (updInfo.kind === 'app-ready'){
+      if ((me || localStream) && !updWarned){
+        updWarned = true;
+        toast('Atualizar agora fecha e reabre o Telão; você sai da sala por alguns segundos' + (localStream ? ' (sua transmissão para)' : '') + '. Clique de novo para confirmar.', 'warn', 8000);
+        return;
+      }
+      $('#updGo').disabled = true; $('#updGo').textContent = 'Reiniciando…';
+      teardown(); window.telaoDesktop.applyApp();
+      return;
+    }
     if (updInfo.kind === 'page'){
       if (me && !updWarned){
         updWarned = true;
@@ -448,7 +467,7 @@ function initUpdates(){
   if (DESKTOP && (window.telaoDesktop.shell || 0) < LATEST_SHELL && RELEASES_URL
       && store.get('updLater', '') !== 'app' + LATEST_SHELL + '|' + new Date().toDateString()){
     updInfo = {kind: 'app', version: 'app' + LATEST_SHELL, download: RELEASES_URL};
-    $('#updText').textContent = 'Tem app novo do Telão: reações por cima do jogo e janela flutuante completa. Precisa baixar o arquivo uma vez.';
+    $('#updText').textContent = 'Tem app novo do Telão: reações por cima do jogo, janela flutuante completa e o app passa a se atualizar sozinho. Precisa baixar o arquivo uma última vez.';
     $('#updGo').textContent = 'Baixar'; $('#updGo').hidden = false;
     $('#upd').hidden = false;
   }
@@ -462,9 +481,10 @@ function initUpdates(){
         let r; try{ r = await window.telaoDesktop.checkUpdate(); }catch{ r = {status: 'erro'}; }
         $('#updCheck').textContent = 'Procurar atualização';
         const msg = {'atualizado': 'Você já está na versão mais nova.', 'baixada': 'Versão nova baixada.', 'pronta': 'Versão nova pronta.',
+                     'app-baixado': 'App novo baixado.', 'app-ignorada': 'A versão nova do app não abriu neste PC e foi ignorada.',
                      'precisa-app': 'Tem versão nova do app para baixar.', 'sem-endereco': 'Este app não tem endereço de atualização configurado.',
                      'ignorada': 'A versão nova falhou ao abrir neste PC e foi ignorada.'}[r && r.status] || ('Não consegui verificar agora' + (r && r.error ? ' (' + r.error + ')' : '') + '.');
-        toast(msg, r && /baixada|pronta|precisa-app/.test(r.status) ? 'ok' : (r && r.status === 'atualizado' ? 'ok' : 'warn'));
+        toast(msg, r && /baixad|pronta|precisa-app/.test(r.status) ? 'ok' : (r && r.status === 'atualizado' ? 'ok' : 'warn'));
       };
     }
   } else if (UPDATE_MANIFEST){
@@ -826,6 +846,7 @@ function showRoom(){
     if (localStream) toast('O novo codec vale a partir da próxima vez que você compartilhar.');
   };
   $('#audioSrc').onchange = onAudioSrcChange;
+  $('#audioSrc').hidden = DESKTOP;   // no app, o som é escolhido no seletor de janelas
   $('#netClose').onclick = () => { netDismissed = true; hideNetBanner(); };
   $('#netFix').onclick = () => { store.set('openTurn', true); leave(); };
   setStatus('Entrando na sala…', 'warn');
@@ -1155,6 +1176,7 @@ function helperConnect(){
       helper.apps = Array.isArray(m.apps) ? m.apps : [];
       helper.discord = !!m.discord;
       helper.boost = typeof m.boost === 'number' ? m.boost : -1;
+      if (pickerAudioRefresh) pickerAudioRefresh();
       populateAudio();
     } else if ((m.type === 'started' || m.type === 'error') && helper.pending){
       const p = helper.pending; helper.pending = null;
@@ -1324,19 +1346,58 @@ const makeSdpTransform = codec => sdp => startBitrateSdp(preferCodec(stereoSdp(s
 
 /* ---------- Seletor de janela/tela (só no app desktop) ---------- */
 let pickerTab = 'window';
+let pickerAudioRefresh = null;
 function openPicker(){
   return new Promise(resolve => {
     const box = $('#picker'), grid = $('#pkGrid'), go = $('#pkGo');
     let sources = [], selected = null, closed = false;
-    const audioSel = $('#audioSrc');
-    $('#pkAudio').textContent = 'Áudio: ' + (audioSel.selectedOptions[0] ? audioSel.selectedOptions[0].textContent : 'sem áudio') + ' (troque na barra do topo)';
+    /* Som escolhido junto com a tela: janela → som dela (automático); tela inteira → apps com som ali mesmo. */
+    const aSel = $('#pkAudioSel');
+    const audioOptions = sel => {
+      const o = [];
+      const apps = helper.ready ? helper.apps.filter(a => !/^discord(ptb|canary)?\.exe$/i.test(a.name))
+        .sort((a, b) => (b.active - a.active) || (a.title || a.name).localeCompare(b.title || b.name)) : [];
+      if (sel && sel.type === 'window'){
+        if (helper.ready) o.push([AUDIO_WINDOW, 'Desta janela']);
+        if (helper.ready && helper.discord) o.push([AUDIO_EXCEPT_DISCORD, 'Tudo menos o Discord']);
+        for (const a of apps) o.push(['app:' + a.name, 'Só ' + (a.title || a.name)]);
+      } else {
+        if (helper.ready && helper.discord) o.push([AUDIO_EXCEPT_DISCORD, 'Tudo menos o Discord']);
+        for (const a of apps) o.push(['app:' + a.name, 'Só ' + (a.title || a.name)]);
+      }
+      o.push([AUDIO_SYSTEM, 'Sistema inteiro (inclui o Discord)'], [AUDIO_NONE, 'Sem som']);
+      return o;
+    };
+    let manual = {window: null, screen: null};   // escolha feita à mão nesta abertura, por tipo
+    const renderAudio = () => {
+      const kind = selected && selected.type === 'screen' ? 'screen' : 'window';
+      const opts = audioOptions(selected);
+      const prev = manual[kind];
+      aSel.textContent = '';
+      for (const [v, l] of opts){ const op = document.createElement('option'); op.value = v; op.textContent = l; aSel.appendChild(op); }
+      const has = v => opts.some(x => x[0] === v);
+      const saved = store.get(kind === 'screen' ? 'screenAudio' : 'windowAudio', kind === 'screen' ? AUDIO_EXCEPT_DISCORD : AUDIO_WINDOW);
+      const fallback = kind === 'screen' ? (has(AUDIO_EXCEPT_DISCORD) ? AUDIO_EXCEPT_DISCORD : AUDIO_SYSTEM) : (has(AUDIO_WINDOW) ? AUDIO_WINDOW : AUDIO_SYSTEM);
+      aSel.value = [prev, saved, fallback].find(v => v && has(v));
+      $('#pkAudioHint').textContent = !helper.ready ? 'Telão Audio não conectado: só dá para mandar o som do sistema inteiro.'
+        : (kind === 'window' && aSel.value === AUDIO_WINDOW ? 'vai só o som do jogo, sem o Discord' : '');
+    };
+    aSel.onchange = () => {
+      const kind = selected && selected.type === 'screen' ? 'screen' : 'window';
+      manual[kind] = aSel.value;
+      store.set(kind === 'screen' ? 'screenAudio' : 'windowAudio', aSel.value);
+      renderAudio();
+    };
+    pickerAudioRefresh = renderAudio;
+    helperSend({cmd: 'list'});
 
     const finish = val => {
       if (closed) return;
       closed = true;
       box.hidden = true;
+      pickerAudioRefresh = null;
       document.removeEventListener('keydown', onKey);
-      resolve(val);
+      resolve(val ? Object.assign({}, val, {audio: aSel.value}) : null);
     };
     const onKey = e => {
       if (e.key === 'Escape') finish(null);
@@ -1359,7 +1420,7 @@ function openPicker(){
         if (x.icon){ const ic = document.createElement('img'); ic.src = x.icon; ic.alt = ''; nm.appendChild(ic); }
         const t = document.createElement('span'); t.textContent = x.name; t.title = x.name; nm.appendChild(t);
         it.append(th, nm);
-        it.onclick = () => { selected = x; go.disabled = false; render(); };
+        it.onclick = () => { selected = x; go.disabled = false; render(); renderAudio(); };
         it.ondblclick = () => finish(x);
         grid.appendChild(it);
       }
@@ -1373,6 +1434,7 @@ function openPicker(){
     };
 
     for (const b of box.querySelectorAll('.pk-tabs button')) b.onclick = () => { pickerTab = b.dataset.t; render(); };
+    renderAudio();
     $('#pkRefresh').onclick = load;
     $('#pkCancel').onclick = () => finish(null);
     go.onclick = () => finish(selected);
@@ -1390,15 +1452,16 @@ async function startShare(){
     toast('Este navegador não consegue capturar a tela. Use Chrome ou Edge no PC.', 'danger'); return;
   }
   const q = QUALITY[currentQ()];
-  const src = $('#audioSrc').value;
-  const sysAudio = src === AUDIO_SYSTEM;
-  const devId = src.startsWith('dev:') ? src.slice(4) : null;
   let chosen = null;
   if (DESKTOP){
     chosen = await openPicker();
     if (!chosen) return;
-    await window.telaoDesktop.select(chosen.id, sysAudio);
   }
+  // No app o som é escolhido junto com a tela; no navegador, pelo seletor da barra.
+  const src = DESKTOP ? (chosen.audio || AUDIO_SYSTEM) : $('#audioSrc').value;
+  const sysAudio = src === AUDIO_SYSTEM;
+  const devId = src.startsWith('dev:') ? src.slice(4) : null;
+  if (DESKTOP) await window.telaoDesktop.select(chosen.id, sysAudio);
   let s;
   try{
     s = await navigator.mediaDevices.getDisplayMedia({

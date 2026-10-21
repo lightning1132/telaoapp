@@ -261,7 +261,8 @@ app.whenReady().then(() => {
   });
 
   // ---- atualização automática ----
-  ipcMain.handle('telao:ready', (_e, v) => { updater.pageReady(v); return {shell: SHELL_VERSION, cached: !!(updater.loaded && updater.loaded.cached)}; });
+  ipcMain.handle('telao:ready', (_e, v) => { updater.pageReady(v); updater.markAppOk(); return {shell: SHELL_VERSION, cached: !!(updater.loaded && updater.loaded.cached)}; });
+  ipcMain.handle('telao:applyApp', () => updater.applyApp());
   ipcMain.handle('telao:checkUpdate', () => updater.check());
   ipcMain.handle('telao:applyUpdate', () => {
     if (!win) return false;

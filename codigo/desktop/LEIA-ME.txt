@@ -15,6 +15,13 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.7
+- O app se atualiza sozinho por completo: quando sai versão nova, ele baixa só o necessário (~1 MB),
+  mostra "Reiniciar e atualizar" e reabre já atualizado. Se a versão nova não abrir, ele volta sozinho
+  para a anterior. Zip completo só quando o Electron (o "motor" do app) mudar; aí o próprio app avisa.
+- Som escolhido junto com a tela: escolheu uma janela, vai o som dela (sem o Discord), sem configurar nada.
+  Escolheu a tela inteira, o próprio seletor mostra os apps com som e já marca "Tudo menos o Discord".
+
 NOVIDADES DO APP 1.6
 - Reações por cima do jogo: quando alguém reage à sua tela, o emoji aparece numa faixa no lado direito
   do jogo e some sozinho. Funciona com o jogo em janela ou "janela sem bordas" (em tela cheia exclusiva
@@ -22,7 +29,6 @@ NOVIDADES DO APP 1.6
   Os emojis não entram na sua transmissão, nem se você compartilhar a tela inteira.
 - Janela flutuante: botão de janelinha na tela de um amigo abre uma janela sempre por cima, com nome,
   reações e clipe. Feche a janela (ou "Trazer de volta") para a tela voltar ao Telão.
-- Atualização automática: a partir da 1.5, a interface se atualiza sozinha. Zip novo só quando o app mudar.
 
 DICAS
 - Para tela inteira (aba "Telas inteiras"), escolha no seletor de áudio do topo de qual app vem o som

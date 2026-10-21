@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   ready: v => ipcRenderer.invoke('telao:ready', v),
   checkUpdate: () => ipcRenderer.invoke('telao:checkUpdate'),
   applyUpdate: () => ipcRenderer.invoke('telao:applyUpdate'),
+  applyApp: () => ipcRenderer.invoke('telao:applyApp'),
   onUpdate: cb => ipcRenderer.on('telao:update', (_e, info) => cb(info)),
   overlayShow: (sourceId, rect) => ipcRenderer.invoke('telao:overlayShow', sourceId, rect),
   overlayHide: () => ipcRenderer.invoke('telao:overlayHide'),
