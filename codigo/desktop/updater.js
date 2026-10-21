@@ -20,7 +20,7 @@ const crypto = require('crypto');
 
 // Nível de compatibilidade do "casco" do app (main.js, preload.js, Telão Audio).
 // Sobe quando uma página nova passa a depender de algo que só um app novo tem.
-const SHELL_VERSION = 6;
+const SHELL_VERSION = 7;
 // Arquivos do app que podem ser trocados pela atualização leve (dentro de resources/). O resto é o Electron.
 const APP_FILES = ['app.asar', 'telao-audio.exe'];
 

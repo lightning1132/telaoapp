@@ -1,24 +1,25 @@
 {
-  "version": "1.9.2",
+  "version": "1.10.0",
   "minShell": 2,
-  "page": "versoes/telao-1.9.2.html",
-  "sha256": "6f5e206fba6ecd2ad75b271d8ae6369baf884fbd704bc391e13a22763b4891f8",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.9.2",
+  "page": "versoes/telao-1.10.0.html",
+  "sha256": "910f6f65bef57bd8cecf1860123315f2a98ddd33d195d0e06e65a17634e01db2",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.10.0",
   "notes": [
-    "GIF grande na foto de perfil ou nas figurinhas é reduzido automaticamente (e cortado nos primeiros 6 s se for longo)"
+    "Tela de entrada com arte de jogos ao fundo, diferente a cada vez que o Telão abre",
+    "Os jogos que vocês transmitem entram no sorteio do fundo (o app procura o jogo na Steam e conta pra sala)"
   ],
   "app": {
-    "version": "1.9.2",
-    "shell": 6,
+    "version": "1.10.0",
+    "shell": 7,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.9.2/app.asar",
-        "sha256": "c26ca245e596247e30aa63489fa4d6cb6a97b11571861d2ff1d052f76f330f39",
-        "size": 284511
+        "path": "versoes/app-1.10.0/app.asar",
+        "sha256": "2267eceed568cf23cb68fd6518af280220989e3fc18c5dbc4598a93f2972beb7",
+        "size": 294969
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.9.2/telao-audio.exe",
+        "path": "versoes/app-1.10.0/telao-audio.exe",
         "sha256": "8a12183c7c83bfdc8da81f4ee0b81ad2fc7988769da6ce3c2b636b4c85ab0205",
         "size": 505856
       }

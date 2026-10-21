@@ -3,7 +3,7 @@
 //   - seletor de janela/tela próprio (a página pede a lista e escolhe; o getDisplayMedia usa a escolha)
 //   - Telão Audio embutido, iniciado escondido junto com o app
 //   - sem economia de energia em segundo plano, para a transmissão não engasgar com o app minimizado
-const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, screen} = require('electron');
+const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, screen, net} = require('electron');
 const path = require('path');
 const fs = require('fs');
 const {spawn} = require('child_process');
@@ -146,6 +146,21 @@ app.whenReady().then(() => {
         thumb: s.thumbnail && !s.thumbnail.isEmpty() ? s.thumbnail.toDataURL() : '',
         icon: s.appIcon && !s.appIcon.isEmpty() ? s.appIcon.toDataURL() : '',
       }));
+  });
+  // Fundo da entrada: procura um jogo pelo nome na loja da Steam (no navegador a Steam bloqueia essa consulta).
+  ipcMain.handle('telao:steamSearch', async (_e, term) => {
+    term = String(term || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (term.length < 2) return [];
+    const base = process.env.TELAO_STEAM_SEARCH_URL || 'https://store.steampowered.com/api/storesearch/';
+    try{
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
+      const r = await net.fetch(base + '?term=' + encodeURIComponent(term) + '&l=english&cc=BR', {signal: ctl.signal});
+      clearTimeout(t);
+      if (!r.ok) return [];
+      const j = await r.json();
+      return (Array.isArray(j.items) ? j.items : []).filter(x => x && Number.isInteger(x.id) && (!x.type || x.type === 'app'))
+        .slice(0, 8).map(x => ({id: x.id, name: String(x.name || '').slice(0, 80)}));
+    }catch{ return []; }
   });
   // Modo rápido: acha a "tela inteira" do monitor onde está o jogo (retângulo em pixels físicos, vindo do Telão Audio).
   ipcMain.handle('telao:screenFor', async (_e, m) => {

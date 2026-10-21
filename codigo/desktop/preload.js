@@ -22,5 +22,6 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   overlayReact: (emoji, who) => ipcRenderer.send('telao:overlayReact', emoji, who),
   overlayItem: item => ipcRenderer.send('telao:overlayItem', item),
   screenForWindow: m => ipcRenderer.invoke('telao:screenFor', m),
+  steamSearch: term => ipcRenderer.invoke('telao:steamSearch', term),
   floatWindows: true,
 });
