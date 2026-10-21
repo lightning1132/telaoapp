@@ -141,6 +141,10 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 .tile .reacts button{background:rgba(0,0,0,.55);border:0;border-radius:999px;width:34px;height:34px;font-size:18px;line-height:1;padding:0;cursor:pointer}
 .tile .reacts button:hover{background:rgba(0,0,0,.8);transform:scale(1.12)}
 .tile .clip.on{color:var(--accent)}
+.tile.floating{width:100vw;height:100vh;max-height:none;aspect-ratio:auto;border:0;border-radius:0}
+.float-body{margin:0;background:#000;overflow:hidden}
+.tile.float-holder .wbox b{color:var(--text)}
+#pipOverlay.off{opacity:.45}
 .tile .clip.busy{opacity:.5;pointer-events:none}
 #clipsBtn{border-color:var(--accent);color:var(--accent)}
 .tile .tmsg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;color:var(--muted);font-size:14px;pointer-events:none}
@@ -309,6 +313,7 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
   <video id="pipVideo" autoplay playsinline muted></video>
   <div class="fx" id="pipFx"></div>
   <div class="pbar" title="Arraste para mover"><span class="rec"></span><span id="pipTxt">Transmitindo</span><span class="grow"></span>
+    <button class="ghost" id="pipOverlay" hidden title="Reações por cima do jogo: ligado. Clique para desligar.">🎮</button>
     <button class="ghost" id="pipMin" title="Minimizar / expandir">–</button>
     <button class="primary stop" id="pipStop">Parar</button></div>
   <div class="pdiag" id="pipDiag" title=""></div>
@@ -382,14 +387,17 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.5.0';
+const TELAO_VERSION = '1.6.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
+const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
+const LATEST_SHELL = 3;       // nível do app desktop mais novo (reações por cima do jogo, janela flutuante completa)
 const CHANGELOG = [
-  ['1.5.0', 'hoje', ['Atualização automática', 'Sala de sempre: salas recentes e entrada automática', 'Reações (emojis) sobre a tela de quem transmite', 'Clipe dos últimos 30 segundos de qualquer tela']],
+  ['1.6.0', 'hoje', ['Reações aparecem por cima do jogo de quem transmite (app desktop)', 'Janela flutuante: assista um amigo numa janela sempre por cima']],
+  ['1.5.0', '21/10', ['Atualização automática', 'Sala de sempre: salas recentes e entrada automática', 'Reações (emojis) sobre a tela de quem transmite', 'Clipe dos últimos 30 segundos de qualquer tela']],
   ['1.4.0', '21/10', ['Versão de cada pessoa na sala (passe o mouse no nome)', 'Aviso quando alguém da sala está numa versão mais nova ou mais antiga', 'Esta lista de novidades']],
   ['1.3.0', '21/10', ['FPS não cai mais pela metade com o app minimizado (Windows 11)', 'Telão Audio fecha junto com o app']],
   ['1.2.0', '21/10', ['H.264 pela placa de vídeo (perfil Main)', 'AV1 pela placa de vídeo no app']],
@@ -436,6 +444,13 @@ function initUpdates(){
       window.open(updInfo.download || updInfo.url, '_blank');
     } else $('#upd').hidden = true;
   };
+  if (DESKTOP && (window.telaoDesktop.shell || 0) < LATEST_SHELL && RELEASES_URL
+      && store.get('updLater', '') !== 'app' + LATEST_SHELL + '|' + new Date().toDateString()){
+    updInfo = {kind: 'app', version: 'app' + LATEST_SHELL, download: RELEASES_URL};
+    $('#updText').textContent = 'Tem app novo do Telão: reações por cima do jogo e janela flutuante completa. Precisa baixar o arquivo uma vez.';
+    $('#updGo').textContent = 'Baixar'; $('#updGo').hidden = false;
+    $('#upd').hidden = false;
+  }
   if (DESKTOP){
     if (window.telaoDesktop.onUpdate) window.telaoDesktop.onUpdate(showUpdate);
     if (window.telaoDesktop.ready) window.telaoDesktop.ready(TELAO_VERSION);
@@ -499,6 +514,7 @@ const ICON = {
   vol:  '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   mute: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   hide: '<svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3"/><path d="M4 20L20 4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  float:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="11" y="11" width="8" height="6" rx="1"/></svg>',
   focus:'<svg class="i" viewBox="0 0 24 24"><path d="M4 4h7v2H6v5H4zM20 20h-7v-2h5v-5h2z"/></svg>',
   clip: '<svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 7.5L20 18M8.5 16.5L20 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   fs:   '<svg class="i" viewBox="0 0 24 24"><path d="M3 3h6v2H5v4H3zM21 3v6h-2V5h-4V3zM3 21v-6h2v4h4v2zM21 21h-6v-2h4v-4h2z"/></svg>',
@@ -795,6 +811,8 @@ function showRoom(){
   };
   $('#shareBtn').onclick = () => localStream ? stopShare() : startShare();
   $('#pipStop').onclick = stopShare;
+  $('#pipOverlay').onclick = toggleOverlay;
+  syncOverlayBtn();
   $('#clipsBtn').onclick = () => { setClips(false); toast('Clipes desligados: o Telão parou de guardar as telas.'); };
   syncClipBuffers();
   initPip();
@@ -1105,7 +1123,15 @@ async function onAudioSrcChange(){
    Programa pequeno que roda no PC de quem transmite e usa a captura por app do Windows.
    Fala com esta página por WebSocket em 127.0.0.1 e manda PCM 48 kHz estéreo 16 bits. */
 const HELPER_URL = 'ws://127.0.0.1:47800';
-const helper = {ws: null, ready: false, apps: [], discord: false, boost: -1, retry: null, onAudio: null, pending: null};
+const helper = {ws: null, ready: false, apps: [], discord: false, boost: -1, retry: null, onAudio: null, pending: null, waiters: []};
+function helperQuery(cmd, type, ms){
+  return new Promise(resolve => {
+    if (!helper.ready) return resolve(null);
+    const w = {type, resolve, timer: setTimeout(() => { helper.waiters = helper.waiters.filter(x => x !== w); resolve(null); }, ms || 2000)};
+    helper.waiters.push(w);
+    helperSend(cmd);
+  });
+}
 let helperAudio = null;
 
 function helperConnect(){
@@ -1118,6 +1144,11 @@ function helperConnect(){
   ws.onmessage = ev => {
     if (typeof ev.data !== 'string'){ if (helper.onAudio) helper.onAudio(ev.data); return; }
     let m; try{ m = JSON.parse(ev.data); }catch{ return; }
+    if (m.type === 'winrect'){
+      const w = helper.waiters.findIndex(x => x.type === 'winrect');
+      if (w >= 0){ const x = helper.waiters.splice(w, 1)[0]; clearTimeout(x.timer); x.resolve(m); }
+      return;
+    }
     if (m.type === 'list'){
       helper.apps = Array.isArray(m.apps) ? m.apps : [];
       helper.discord = !!m.discord;
@@ -1414,6 +1445,8 @@ async function startShare(){
     }
   }
   localStream = s;
+  lastChosen = chosen;
+  showOverlay();
   const vt = s.getVideoTracks()[0];
   if (vt){ try{ vt.contentHint = 'motion'; }catch{} vt.addEventListener('ended', stopShare); }
   if (sysAudio && !s.getAudioTracks().length){
@@ -1434,6 +1467,7 @@ function stopShare(){
   localStream.getTracks().forEach(t => t.stop());
   localStream = null;
   stopHelperAudio();
+  hideOverlay();
   for (const c of outCalls.values()) try{ c.close(); }catch{}
   outCalls.clear(); failCount.clear();
   $('#pipVideo').srcObject = null; $('#pip').hidden = true;
@@ -1653,11 +1687,13 @@ let resTimer = null;
 const resObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => scheduleRes()) : null;
 function scheduleRes(){ clearTimeout(resTimer); resTimer = setTimeout(() => sendResAll(false), 400); }
 function wantedHeight(t){
-  if (document.fullscreenElement === t.el) return 9999;   // tela cheia: qualidade total
+  const doc = t.el.ownerDocument, view = doc.defaultView || window;
+  if (doc.fullscreenElement === t.el) return 9999;   // tela cheia: qualidade total
+  if (t.pipH) return RES_STEPS.find(step => step >= t.pipH * (window.devicePixelRatio || 1) * 0.9) || 9999;   // PiP de vídeo
   const r = t.el.getBoundingClientRect();
   if (!r.width || !r.height) return 0;
   const ar = t.video.videoWidth && t.video.videoHeight ? t.video.videoWidth / t.video.videoHeight : 16 / 9;
-  const px = Math.min(r.height, r.width / ar) * (window.devicePixelRatio || 1);
+  const px = Math.min(r.height, r.width / ar) * (view.devicePixelRatio || 1);
   return RES_STEPS.find(step => step >= px * 0.9) || 9999;
 }
 function sendResAll(force){
@@ -1707,6 +1743,7 @@ function onRelay(from, data){
 }
 
 function setHidden(pid, on){
+  if (on && floatState && floatState.pid === pid) closeFloat();
   const t = tiles.get(pid);
   const name = t ? t.nameEl.textContent : nameOf(pid);
   if (on){ hiddenIds.add(pid); hiddenNames.add(name); }
@@ -1828,6 +1865,7 @@ function buildTile(pid){
     '<button class="mute" title="Mudo">' + ICON.vol + '</button>' +
     '<input type="range" min="0" max="100" class="vol" title="Volume">' +
     '<button class="hide" title="Ocultar (para de receber esta tela e alivia o PC)">' + ICON.hide + '</button>' +
+    '<button class="float" title="Janela flutuante (sempre por cima)">' + ICON.float + '</button>' +
     '<button class="focus" title="Destacar">' + ICON.focus + '</button>' +
     '<button class="fs" title="Tela cheia">' + ICON.fs + '</button></div>';
   const t = {
@@ -1855,7 +1893,8 @@ function buildTile(pid){
   });
   t.clipBtn.onclick = () => clipTile(pid);
   el.querySelector('.focus').onclick = () => { focusId = focusId === pid ? null : pid; layout(); };
-  const goFs = () => { if (document.fullscreenElement) document.exitFullscreen(); else el.requestFullscreen().catch(() => {}); };
+  el.querySelector('.float').onclick = () => toggleFloat(pid);
+  const goFs = () => { const d = el.ownerDocument; if (d.fullscreenElement) d.exitFullscreen(); else el.requestFullscreen().catch(() => {}); };
   el.querySelector('.fs').onclick = goFs;
   t.video.ondblclick = goFs;
   el.querySelector('.clickplay').onclick = () => { t.video.play().then(() => el.classList.remove('needs-click')).catch(() => {}); };
@@ -1923,7 +1962,35 @@ function onReact(from, data){
   const who = (members.find(m => m.id === from) || {}).name || String(data.n || '').slice(0, 24) || 'alguém';
   showReact(data.s, i, who);
 }
+/* Camada de reações por cima do jogo (app desktop 1.6+): janela transparente do próprio app. */
+let lastChosen = null;
+const overlayAvailable = () => DESKTOP && !!window.telaoDesktop.overlayShow;
+const overlayOn = () => !!store.get('overlay', true);
+async function showOverlay(){
+  syncOverlayBtn();
+  if (!overlayAvailable() || !overlayOn() || !localStream) return;
+  const c = lastChosen;
+  let rect = null;
+  if (c && c.type === 'window'){
+    const r = await helperQuery({cmd: 'winrect', hwnd: c.id.split(':')[1] || ''}, 'winrect', 2000);
+    if (r && r.ok) rect = r;
+  }
+  try{ await window.telaoDesktop.overlayShow(c ? c.id : '', rect); }catch{}
+}
+function hideOverlay(){ if (overlayAvailable()) window.telaoDesktop.overlayHide().catch(() => {}); }
+function syncOverlayBtn(){
+  const b = $('#pipOverlay');
+  b.hidden = !overlayAvailable();
+  b.classList.toggle('off', !overlayOn());
+  b.title = 'Reações por cima do jogo: ' + (overlayOn() ? 'ligado' : 'desligado') + '. Clique para ' + (overlayOn() ? 'desligar' : 'ligar') + '. (Precisa do jogo em janela ou janela sem bordas.)';
+}
+function toggleOverlay(){
+  store.set('overlay', !overlayOn());
+  if (overlayOn()) showOverlay(); else { hideOverlay(); syncOverlayBtn(); }
+}
+
 function showReact(streamerId, i, who){
+  if (me && streamerId === me.id && localStream && overlayAvailable() && overlayOn()) window.telaoDesktop.overlayReact(REACTS[i], who);
   let box = null;
   if (me && streamerId === me.id){ if (localStream) box = $('#pipFx'); }
   else { const t = tiles.get(streamerId); if (t && !t.el.hidden) box = t.fxEl; }
@@ -2206,9 +2273,88 @@ function clipSaved(info, seconds){
   d.appendChild(b); $('#toasts').appendChild(d); setTimeout(() => d.remove(), 9000);
 }
 
+/* ---------- Janela flutuante ----------
+   App 1.6+: janela própria sempre por cima. Chrome: Document Picture-in-Picture.
+   Nos dois, a tela inteira do amigo (nome, reações, ✂, volume) vai para a janela.
+   App antigo / outros navegadores: Picture-in-Picture só do vídeo. */
+let floatState = null;   // {pid, kind: 'doc' | 'video', win, holder, poll}
+async function toggleFloat(pid){
+  if (floatState && floatState.pid === pid){ closeFloat(); return; }
+  if (floatState) closeFloat();
+  const t = tiles.get(pid);
+  if (!t || t.el.hidden) return;
+  let w = null;
+  if (DESKTOP && window.telaoDesktop.floatWindows){
+    w = window.open('', 'telao-float-' + Date.now(), 'popup,width=520,height=300');
+  } else if (window.documentPictureInPicture && !/Electron\//.test(navigator.userAgent)){
+    // No Electron a API existe mas o pedido nunca responde; em qualquer caso, 4 s sem abrir → janela simples
+    try{
+      w = await Promise.race([documentPictureInPicture.requestWindow({width: 520, height: 300}), new Promise(r => setTimeout(() => r(null), 4000))]);
+    }catch{ w = null; }
+  }
+  if (w){
+    const d = w.document;
+    d.title = t.nameEl.textContent + ' — Telão';
+    for (const st of document.querySelectorAll('style')) d.head.appendChild(st.cloneNode(true));
+    d.body.className = 'float-body';
+    const holder = document.createElement('div'); holder.className = 'tile wait float-holder';
+    const tag = document.createElement('div'); tag.className = 'tag'; tag.textContent = t.nameEl.textContent;
+    const box = document.createElement('div'); box.className = 'wbox';
+    const msg = document.createElement('div'); msg.textContent = 'Na janela flutuante';
+    const back = document.createElement('button'); back.className = 'ghost'; back.textContent = 'Trazer de volta'; back.onclick = closeFloat;
+    box.append(msg, back); holder.append(tag, box);
+    t.el.parentNode.insertBefore(holder, t.el);
+    t.el.classList.add('floating');
+    d.body.appendChild(t.el);
+    t.video.play().catch(() => {});
+    const f = {pid, kind: 'doc', win: w, holder};
+    floatState = f;
+    const gone = () => { if (floatState === f) returnFloat(); };
+    w.addEventListener('pagehide', gone);
+    w.addEventListener('resize', scheduleRes);
+    f.poll = setInterval(() => { if (w.closed) gone(); }, 800);
+    try{ w.focus(); }catch{}
+    t.sentH = 0; scheduleRes(); layout();
+    return;
+  }
+  try{
+    const pw = await t.video.requestPictureInPicture();
+    floatState = {pid, kind: 'video'};
+    t.pipH = pw.height;
+    pw.addEventListener('resize', () => { t.pipH = pw.height; scheduleRes(); });
+    t.video.addEventListener('leavepictureinpicture', () => {
+      if (floatState && floatState.pid === pid && floatState.kind === 'video') floatState = null;
+      t.pipH = 0; t.sentH = 0; scheduleRes();
+    }, {once: true});
+    t.sentH = 0; scheduleRes();
+  }catch(e){ toast('Não consegui abrir a janela flutuante: ' + e.message, 'warn'); }
+}
+function returnFloat(){
+  const f = floatState;
+  if (!f || f.kind !== 'doc') return;
+  floatState = null;
+  clearInterval(f.poll);
+  const t = tiles.get(f.pid);
+  if (t){
+    t.el.classList.remove('floating');
+    if (f.holder.parentNode) f.holder.replaceWith(t.el); else $('#stage').appendChild(t.el);
+    t.video.play().catch(() => {});
+    t.sentH = 0;
+  }
+  f.holder.remove();
+  try{ if (!f.win.closed) f.win.close(); }catch{}
+  layout(); scheduleRes();
+}
+function closeFloat(){
+  if (!floatState) return;
+  if (floatState.kind === 'video'){ floatState = null; if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {}); }
+  else returnFloat();
+}
+
 function removeTile(pid){
   const t = tiles.get(pid);
   if (!t) return;
+  if (floatState && floatState.pid === pid) closeFloat();
   try{ t.call && t.call.close(); }catch{}
   t.video.srcObject = null;
   if (resObserver) resObserver.unobserve(t.el);
@@ -2298,7 +2444,8 @@ function layout(){
   const visible = [...tiles.keys()].filter(id => !hiddenIds.has(id)).length + waits.size;
   $('#empty').hidden = visible > 0;
   $('#emptyTitle').textContent = tiles.size ? 'Todas as telas estão ocultas' : 'Ninguém compartilhando ainda';
-  const focused = !!focusId && tiles.has(focusId) && !hiddenIds.has(focusId) && visible > 1;
+  const floating = floatState && floatState.kind === 'doc' ? floatState.pid : null;
+  const focused = !!focusId && tiles.has(focusId) && !hiddenIds.has(focusId) && focusId !== floating && visible > 1;
   $('#stage').classList.toggle('focused', focused);
   for (const [id, t] of tiles) t.el.classList.toggle('is-focus', focused && id === focusId);
 }

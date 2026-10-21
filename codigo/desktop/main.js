@@ -3,7 +3,7 @@
 //   - seletor de janela/tela próprio (a página pede a lista e escolhe; o getDisplayMedia usa a escolha)
 //   - Telão Audio embutido, iniciado escondido junto com o app
 //   - sem economia de energia em segundo plano, para a transmissão não engasgar com o app minimizado
-const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu} = require('electron');
+const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, screen} = require('electron');
 const path = require('path');
 const fs = require('fs');
 const {spawn} = require('child_process');
@@ -35,6 +35,7 @@ let win = null;
 let helper = null;
 let pendingSource = null;   // {id, systemAudio}: escolhido na página, consumido pelo getDisplayMedia
 let updater = null;
+let overlay = null;          // camada transparente das reações, por cima do jogo
 
 function helperPath(){
   return app.isPackaged
@@ -78,9 +79,21 @@ function createWindow(){
   updater.watch(win);
 
   // Links externos abrem no navegador; nada de janelas novas dentro do app.
-  win.webContents.setWindowOpenHandler(({url}) => {
+  win.webContents.setWindowOpenHandler(({url, frameName}) => {
+    // Janela flutuante do Telão: popup em branco da própria página, sempre por cima.
+    if ((url === 'about:blank' || url === '') && /^telao-float-/.test(frameName || '')){
+      return {action: 'allow', overrideBrowserWindowOptions: {
+        width: 520, height: 300, minWidth: 240, minHeight: 140, alwaysOnTop: true, autoHideMenuBar: true,
+        backgroundColor: '#000000', title: 'Telão', fullscreenable: true, minimizable: true,
+        webPreferences: {contextIsolation: true, nodeIntegration: false, backgroundThrottling: false},
+      }};
+    }
     if (/^https?:\/\//i.test(url)) shell.openExternal(url);
     return {action: 'deny'};
+  });
+  win.webContents.on('did-create-window', child => {
+    child.setAlwaysOnTop(true, 'floating');
+    child.setMenu(null);
   });
   win.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith('file://')){ e.preventDefault(); if (/^https?:\/\//i.test(url)) shell.openExternal(url); }
@@ -187,6 +200,66 @@ app.whenReady().then(() => {
     return true;
   });
 
+  // ---- camada de reações sobre o jogo ----
+  // Transparente, sempre por cima, não recebe clique nem foco e fica fora de capturas de tela
+  // (quem compartilha a tela inteira não reenvia as reações na transmissão).
+  const overlayDisplay = (sourceId, rect) => {
+    const all = screen.getAllDisplays();
+    const m = /^screen:(\d+):/.exec(String(sourceId || ''));
+    if (m){ const d = all.find(x => String(x.id) === m[1]); if (d) return d; }
+    if (rect && rect.mw > 0){
+      const dip = process.platform === 'win32' ? screen.screenToDipRect(null, {x: rect.mx, y: rect.my, width: rect.mw, height: rect.mh})
+                                               : {x: rect.mx, y: rect.my, width: rect.mw, height: rect.mh};
+      return screen.getDisplayMatching(dip);
+    }
+    return screen.getPrimaryDisplay();
+  };
+  // A camada é uma faixa no lado direito da área do jogo e só fica visível enquanto há reações
+  // animando (some ~3,5 s depois da última). Assim, na maior parte do tempo não há nada por cima do jogo.
+  let overlayActive = false, overlayHideTimer = null, overlayBounds = null;
+  const toDip = r => process.platform === 'win32' ? screen.screenToDipRect(null, r) : r;
+  async function ensureOverlay(){
+    if (overlay && !overlay.isDestroyed()) return overlay;
+    overlay = new BrowserWindow({
+      show: false, frame: false, transparent: true, resizable: false, movable: false, focusable: false,
+      skipTaskbar: true, hasShadow: false, alwaysOnTop: true, fullscreenable: false, backgroundColor: '#00000000',
+      webPreferences: {preload: path.join(__dirname, 'overlay-preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false},
+    });
+    overlay.setAlwaysOnTop(true, 'screen-saver');
+    overlay.setIgnoreMouseEvents(true);
+    overlay.setContentProtection(true);
+    await overlay.loadFile(path.join(__dirname, 'overlay.html'));
+    return overlay;
+  }
+  ipcMain.handle('telao:overlayShow', async (_e, sourceId, rect) => {
+    const d = overlayDisplay(sourceId, rect);
+    let a = d.bounds;   // área do jogo (DIP): monitor inteiro ou a janela escolhida
+    if (rect && rect.w > 0 && !/^screen:/.test(String(sourceId))){
+      const g = toDip({x: rect.x, y: rect.y, width: rect.w, height: rect.h});
+      const x1 = Math.max(g.x, d.bounds.x), y1 = Math.max(g.y, d.bounds.y);
+      const x2 = Math.min(g.x + g.width, d.bounds.x + d.bounds.width), y2 = Math.min(g.y + g.height, d.bounds.y + d.bounds.height);
+      if (x2 - x1 > 100 && y2 - y1 > 100) a = {x: x1, y: y1, width: x2 - x1, height: y2 - y1};
+    }
+    const w = Math.round(Math.min(360, Math.max(180, a.width * 0.25)));
+    overlayBounds = {x: a.x + a.width - w, y: a.y, width: w, height: a.height};
+    const o = await ensureOverlay();
+    o.setBounds(overlayBounds);
+    overlayActive = true;
+    return {display: d.id, bounds: overlayBounds};
+  });
+  ipcMain.handle('telao:overlayHide', () => {
+    overlayActive = false; clearTimeout(overlayHideTimer);
+    if (overlay && !overlay.isDestroyed()) overlay.hide();
+    return true;
+  });
+  ipcMain.on('telao:overlayReact', (_e, emoji, who) => {
+    if (!overlayActive || !overlay || overlay.isDestroyed()) return;
+    if (!overlay.isVisible()){ if (overlayBounds) overlay.setBounds(overlayBounds); overlay.showInactive(); }
+    overlay.webContents.send('overlay:react', {e: String(emoji).slice(0, 4), who: String(who || '').slice(0, 24)});
+    clearTimeout(overlayHideTimer);
+    overlayHideTimer = setTimeout(() => { if (overlay && !overlay.isDestroyed()) overlay.hide(); }, 3500);
+  });
+
   // ---- atualização automática ----
   ipcMain.handle('telao:ready', (_e, v) => { updater.pageReady(v); return {shell: SHELL_VERSION, cached: !!(updater.loaded && updater.loaded.cached)}; });
   ipcMain.handle('telao:checkUpdate', () => updater.check());
@@ -204,5 +277,12 @@ app.whenReady().then(() => {
   updater.start();
 });
 
-app.on('before-quit', stopHelper);
+app.on('before-quit', () => { stopHelper(); if (overlay && !overlay.isDestroyed()) overlay.destroy(); });
 app.on('window-all-closed', () => { stopHelper(); app.quit(); });
+// a camada não é "janela de verdade": fechar a janela principal fecha o app mesmo com ela aberta
+app.on('browser-window-created', (_e, w) => {
+  w.on('closed', () => {
+    if (w !== win) return;
+    for (const o of BrowserWindow.getAllWindows()) if (!o.isDestroyed()) o.destroy();   // camada e janelas flutuantes
+  });
+});

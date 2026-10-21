@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Telão — reações</title>
+<style>
+  html,body{margin:0;height:100%;background:transparent;overflow:hidden;font-family:system-ui,"Segoe UI",sans-serif}
+  #area{position:absolute;inset:0}
+  .rx{position:absolute;bottom:6%;display:flex;flex-direction:column;align-items:center;animation:rise 3s ease-out forwards;will-change:transform,opacity}
+  .rx b{font-size:52px;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.55))}
+  .rx i{font-style:normal;font-size:13px;color:#fff;background:rgba(0,0,0,.6);border-radius:6px;padding:2px 8px;margin-top:3px;white-space:nowrap}
+  @keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}10%{transform:translateY(-8%) scale(1.15);opacity:1}
+    70%{opacity:1}100%{transform:translateY(-320%) scale(1);opacity:0}}
+</style>
+</head>
+<body>
+<div id="area"></div>
+<script>
+'use strict';
+const area = document.getElementById('area');
+window.overlay.onReact(({e, who}) => {
+  if (typeof e !== 'string' || e.length > 4 || area.childElementCount > 24) return;
+  const el = document.createElement('div'); el.className = 'rx';
+  el.style.left = (8 + Math.random() * 52) + '%';             // a janela já é uma faixa no lado direito do jogo
+  const b = document.createElement('b'); b.textContent = e;
+  const n = document.createElement('i'); n.textContent = String(who || '').slice(0, 24);
+  el.append(b, n);
+  el.addEventListener('animationend', () => el.remove());
+  area.appendChild(el);
+});
+</script>
+</body>
+</html>

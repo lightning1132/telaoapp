@@ -18,7 +18,7 @@ const crypto = require('crypto');
 
 // Nível de compatibilidade do "casco" do app (main.js, preload.js, Telão Audio).
 // Sobe quando uma página nova passa a depender de algo que só um app novo tem.
-const SHELL_VERSION = 2;
+const SHELL_VERSION = 3;
 
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 const READY_TIMEOUT_MS = 15000;

@@ -582,6 +582,22 @@ static void handleCommand(Conn* c, const std::string& msg){
   std::string cmd = jsonStr(msg, "cmd");
   if (cmd == "list"){ wsText(c, buildAppList()); return; }
   if (cmd == "stop"){ stopCapture(c); return; }
+  if (cmd == "winrect"){
+    // Retângulo da janela (pixels físicos) e do monitor onde ela está: usado pela camada de reações do app.
+    unsigned long long hv = strtoull(jsonStr(msg, "hwnd").c_str(), nullptr, 10);
+    HWND hwnd = (HWND)(uintptr_t)hv;
+    RECT r{};
+    if (!hv || !IsWindow(hwnd) || !GetWindowRect(hwnd, &r)){ wsText(c, "{\"type\":\"winrect\",\"ok\":false}"); return; }
+    MONITORINFO mi{}; mi.cbSize = sizeof mi;
+    HMONITOR mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    GetMonitorInfoW(mon, &mi);
+    char b[256];
+    snprintf(b, sizeof b, "{\"type\":\"winrect\",\"ok\":true,\"x\":%ld,\"y\":%ld,\"w\":%ld,\"h\":%ld,\"mx\":%ld,\"my\":%ld,\"mw\":%ld,\"mh\":%ld}",
+             r.left, r.top, r.right - r.left, r.bottom - r.top,
+             mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top);
+    wsText(c, b);
+    return;
+  }
   if (cmd == "start"){
     std::vector<Proc> ps = listProcesses();
     std::string target = jsonStr(msg, "target");
@@ -701,6 +717,12 @@ int main(int argc, char** argv){
     if (strcmp(argv[i], "--boost-tree") == 0) gBoostRoot = (DWORD)strtoul(argv[i + 1], nullptr, 10);
   SetConsoleOutputCP(CP_UTF8);
   SetConsoleTitleW(L"Telão Audio");
+  {
+    typedef BOOL (WINAPI *PFN_SetDpiCtx)(HANDLE);
+    HMODULE u32 = GetModuleHandleW(L"user32.dll");
+    PFN_SetDpiCtx setDpi = u32 ? (PFN_SetDpiCtx)GetProcAddress(u32, "SetProcessDpiAwarenessContext") : nullptr;
+    if (setDpi) setDpi((HANDLE)-4);   // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+  }
   // Sem "modo de edição rápida": clicar no console não congela o programa.
   HANDLE in = GetStdHandle(STD_INPUT_HANDLE); DWORD mode = 0;
   if (GetConsoleMode(in, &mode)) SetConsoleMode(in, (mode & ~ENABLE_QUICK_EDIT_MODE) | ENABLE_EXTENDED_FLAGS);
