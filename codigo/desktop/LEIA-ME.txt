@@ -15,11 +15,28 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.9
+- Chat da sala (botão "💬 Chat"). Quem está transmitindo vê as mensagens por cima do jogo, na mesma faixa
+  das reações; liga/desliga no botão 💬 da miniatura (separado do 🎮 das reações). Não entra na transmissão.
+- Reações personalizáveis: em Opções → "Personalizar reações e figurinhas", monte a sua barra de 8 botões
+  com emojis, textos curtos ou figurinhas.
+- Figurinhas do grupo: imagem ou GIF (até 300 KB). Ficam ligadas ao código da sala e chegam pra todo
+  mundo; qualquer um adiciona ou remove. O botão "…" na tela de um amigo abre as figurinhas.
+- Foto de perfil (imagem ou GIF até 300 KB), na tela de entrada ou em Opções.
+- Tela privada (botão 🔒): troca a sua transmissão por uma tela com a sua mensagem ("Volto já"),
+  sem cortar o som do jogo. Clique de novo e o jogo volta na hora.
+- Qualidades novas: 360p e 540p (30 ou 60 fps) para PC ou internet mais modestos, e Ultimate 120 fps
+  (720p e 1080p, experimental). Quem tem monitor de 60 Hz recebe 60 fps automaticamente.
+- Retransmissão: se a sua internet ficar no limite, ou alguém não conseguir receber direto de você, um
+  amigo que já está assistindo repassa o vídeo para os outros. Quem repassa vê um aviso com "Parar", e
+  pode desligar de vez em Opções.
+
 NOVIDADES DO APP 1.8
-- Modo rápido: se o jogo está em tela cheia ou "janela sem bordas", o Telão captura o monitor em vez da
-  janela. No Windows 10 a captura de janela costuma travar em ~20 fps; assim vai liso. O som continua sendo
-  só o do jogo. Liga/desliga no seletor ("Modo rápido"). Atenção: com ele ligado, se você der Alt+Tab,
-  quem assiste vê o que estiver na tela.
+- Modo rápido (só para Windows 10, vem desligado): no Windows 10 a captura de janela costuma travar em
+  ~20 fps. Ligando "Modo rápido" no seletor, se o jogo está em tela cheia ou "janela sem bordas", o Telão
+  captura o monitor em vez da janela e vai liso. O som continua sendo só o do jogo.
+  No Windows 11 não precisa: a captura de janela já é rápida.
+  Atenção: com ele ligado, se você der Alt+Tab, quem assiste vê o que estiver na tela.
 
 NOVIDADES DO APP 1.7
 - O app se atualiza sozinho por completo: quando sai versão nova, ele baixa só o necessário (~1 MB),

@@ -1,25 +1,31 @@
 {
-  "version": "1.8.0",
+  "version": "1.9.0",
   "minShell": 2,
-  "page": "versoes/telao-1.8.0.html",
-  "sha256": "b954ed4fa0dc05758a871b6cefc2271e83cbb80e2572cbfc6629dbcde9fe4d99",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.8.0",
+  "page": "versoes/telao-1.9.0.html",
+  "sha256": "5bdad5fafec198004a8f8293d17cf078f1703b4ca81ec7fdf69809456f6bf7cf",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.9.0",
   "notes": [
-    "Modo rápido: jogo em tela cheia ou sem bordas é capturado pelo caminho da tela inteira, bem mais rápido no Windows 10 (o som continua só do jogo)",
-    "Diagnóstico mostra o passo a passo da conexão com a sala"
+    "Chat da sala, que aparece por cima do jogo de quem transmite (botão 💬 na miniatura liga/desliga)",
+    "Reações personalizáveis: barra de 8 com emojis, textos e figurinhas do grupo",
+    "Figurinhas do grupo: qualquer um adiciona ou remove, e todo mundo da sala recebe",
+    "Foto de perfil (imagem ou GIF)",
+    "Tela privada: troca a sua transmissão por uma mensagem, sem cortar o som",
+    "Qualidades 360p e 540p, e Ultimate 120 fps (experimental)",
+    "Retransmissão: um amigo repassa o vídeo quando a internet de quem transmite está no limite",
+    "Modo rápido vem desligado (só ajuda no Windows 10)"
   ],
   "app": {
-    "version": "1.8.0",
-    "shell": 5,
+    "version": "1.9.0",
+    "shell": 6,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.8.0/app.asar",
-        "sha256": "7b096c1611976eaf1f200b619f4c6374d233f1d012ffed331d7596271d8c663d",
-        "size": 191310
+        "path": "versoes/app-1.9.0/app.asar",
+        "sha256": "0012136ad1ad970300779a66d62068cdf279d5e3d1fa7c3ace582444c5459ed1",
+        "size": 192167
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.8.0/telao-audio.exe",
+        "path": "versoes/app-1.9.0/telao-audio.exe",
         "sha256": "8a12183c7c83bfdc8da81f4ee0b81ad2fc7988769da6ce3c2b636b4c85ab0205",
         "size": 505856
       }

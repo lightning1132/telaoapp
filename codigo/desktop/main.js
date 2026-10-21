@@ -264,12 +264,30 @@ app.whenReady().then(() => {
     if (overlay && !overlay.isDestroyed()) overlay.hide();
     return true;
   });
+  // A camada some sozinha quando nada mais está animando (reação ~3,5 s; mensagem do chat ~9 s).
+  let overlayHideAt = 0;
+  const overlayKeep = ms => {
+    overlayHideAt = Math.max(overlayHideAt, Date.now() + ms);
+    clearTimeout(overlayHideTimer);
+    overlayHideTimer = setTimeout(() => { if (overlay && !overlay.isDestroyed()) overlay.hide(); overlayHideAt = 0; }, overlayHideAt - Date.now());
+  };
+  const overlayShowNow = () => { if (!overlay.isVisible()){ if (overlayBounds) overlay.setBounds(overlayBounds); overlay.showInactive(); } };
   ipcMain.on('telao:overlayReact', (_e, emoji, who) => {
     if (!overlayActive || !overlay || overlay.isDestroyed()) return;
-    if (!overlay.isVisible()){ if (overlayBounds) overlay.setBounds(overlayBounds); overlay.showInactive(); }
-    overlay.webContents.send('overlay:react', {e: String(emoji).slice(0, 4), who: String(who || '').slice(0, 24)});
-    clearTimeout(overlayHideTimer);
-    overlayHideTimer = setTimeout(() => { if (overlay && !overlay.isDestroyed()) overlay.hide(); }, 3500);
+    overlayShowNow();
+    overlay.webContents.send('overlay:item', {kind: 'react', text: String(emoji).slice(0, 4), who: String(who || '').slice(0, 24)});
+    overlayKeep(3500);
+  });
+  const IMG_URL = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
+  const cleanImg = v => typeof v === 'string' && v.length < 600000 && IMG_URL.test(v) ? v : '';
+  ipcMain.on('telao:overlayItem', (_e, it) => {
+    if (!overlayActive || !overlay || overlay.isDestroyed() || !it || typeof it !== 'object') return;
+    const kind = it.kind === 'chat' ? 'chat' : 'react';
+    const item = {kind, text: String(it.text || '').slice(0, kind === 'chat' ? 220 : 16), who: String(it.who || '').slice(0, 24), img: cleanImg(it.img), av: cleanImg(it.av)};
+    if (!item.text && !item.img) return;
+    overlayShowNow();
+    overlay.webContents.send('overlay:item', item);
+    overlayKeep(kind === 'chat' ? 9000 : 3500);
   });
 
   // ---- atualização automática ----

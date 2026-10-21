@@ -172,6 +172,11 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 #pip .pbar .ghost{padding:3px 9px}
 #pip .pdiag{padding:0 10px 8px;font-size:11px;line-height:1.35;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
 #pip .pdiag:empty{display:none}
+#privBtn.on,#pip .pbar #pipPriv.on{background:var(--warn);color:#201500;border-color:var(--warn)}
+#pip.private{border-color:var(--warn)}
+#pipPrivBox{display:flex;flex-direction:column;gap:4px;padding:0 10px 8px;font-size:11px;color:var(--warn)}
+#pipPrivBox[hidden]{display:none}
+#pipPrivBox input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;color:var(--text);font-size:13px;outline:none;cursor:text}
 #pip .pdiag .bad{color:var(--warn)}
 @media (max-width:600px){#pip{width:160px}}
 
@@ -225,6 +230,94 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 .dg-advice.warn{border-left-color:var(--warn)}
 .dg-advice button{margin-top:8px;padding:6px 12px}
 @media (max-width:600px){ .dg-table th:nth-child(5), .dg-table td:nth-child(5){display:none} }
+/* foto de perfil */
+.av{display:inline-grid;place-items:center;flex:none;border-radius:50%;overflow:hidden;color:#fff;font-weight:700;line-height:1;background:var(--panel2)}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.av-row{display:flex;align-items:flex-end;gap:12px}
+.av-row .grow{flex:1}
+.av-big{background:none;border:2px dashed var(--line);border-radius:50%;padding:2px;margin-bottom:12px;line-height:0}
+.av-big:hover{border-color:var(--accent)}
+.av-links{margin:-6px 0 14px;font-size:12px}
+.chip .av{margin-left:-4px}
+.tile .tag{display:flex;align-items:center;gap:6px}
+/* chat */
+#mainRow{flex:1;min-height:0;display:flex}
+#mainRow #stage{flex:1;min-width:0}
+#chat{width:310px;flex:none;display:flex;flex-direction:column;border-left:1px solid var(--line);background:var(--panel);position:relative}
+#chat[hidden]{display:none}
+@media (max-width:760px){#chat{position:fixed;right:0;top:0;bottom:0;z-index:12;width:min(100%,340px)}}
+.chat-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.chat-head .ghost{padding:2px 10px}
+#chatList{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.chat-empty{font-size:13px;padding:10px 0}
+.cmsg{font-size:13px;line-height:1.4}
+.chead{display:flex;align-items:center;gap:6px;margin-top:8px}
+.chead b{font-size:13px}
+.chead small{color:var(--muted);font-size:11px}
+.ctext{padding-left:26px;white-space:pre-wrap;word-break:break-word}
+.cmsg .cstk{display:block;max-width:110px;max-height:110px;margin:2px 0 2px 26px;border-radius:6px}
+.chat-foot{display:flex;gap:6px;padding:10px;border-top:1px solid var(--line)}
+.chat-foot input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;outline:none}
+.chat-foot input:focus{border-color:var(--accent)}
+.chat-foot .ghost{padding:6px 8px}
+#chatStk{position:absolute;left:10px;right:10px;bottom:58px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);max-height:50%;overflow:auto;display:flex;flex-direction:column;gap:8px}
+#chatStk[hidden]{display:none}
+#chatBtn.on{border-color:var(--accent)}
+.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.badge[hidden]{display:none}
+#pipChat.off{opacity:.45}
+/* figurinhas e barra de reações */
+.stk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.stk-cell{position:relative}
+.stk-cell > button:first-child{width:100%;aspect-ratio:1;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:4px;display:grid;place-items:center}
+.stk-cell > button:first-child:hover{border-color:var(--accent)}
+.stk-cell img{max-width:100%;max-height:100%;object-fit:contain}
+.stk-del{position:absolute;top:-6px;right:-6px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:11px;padding:0 6px;line-height:18px}
+.stk-del.confirm{background:var(--danger);color:#fff;border-color:var(--danger)}
+.stk-empty{grid-column:1/-1;font-size:12px}
+.tile .reacts .stk,.tile .reacts img{width:22px;height:22px;object-fit:contain}
+.tile .reacts .rx-txt{font-size:11px;font-weight:700}
+.tile .reacts button.more{font-size:15px;font-weight:700;color:#fff}
+.rx-panel{position:absolute;left:10px;bottom:86px;width:min(340px,calc(100% - 20px));max-height:60%;overflow:auto;z-index:6;
+  background:rgba(22,25,32,.97);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.rx-panel[hidden]{display:none}
+.rx-pfoot{display:flex;flex-wrap:wrap;gap:6px}
+.rx-pfoot .ghost{padding:5px 10px;font-size:12px}
+.fx .rx .rx-stk{width:64px;height:64px;object-fit:contain;display:block}
+#pip .fx .rx .rx-stk{width:40px;height:40px}
+.fx .rx i{display:flex;align-items:center;gap:4px}
+#rxSlots{display:flex;flex-wrap:wrap;gap:8px}
+.rx-slot{position:relative;width:52px;height:52px;background:var(--bg);border:2px solid var(--line);border-radius:10px;font-size:22px;display:grid;place-items:center;padding:4px}
+.rx-slot.sel{border-color:var(--accent)}
+.rx-slot img{max-width:100%;max-height:100%;object-fit:contain}
+.rx-slot .rx-txt{font-size:12px;font-weight:700}
+.rx-slot small{position:absolute;right:3px;bottom:1px;font-size:10px;color:var(--muted)}
+#rxEmoji,.op-lbl input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;outline:none;min-width:0}
+#rxEmoji{flex:1}
+.op-lbl{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.modal{position:fixed;inset:0;z-index:22;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
+.modal[hidden]{display:none}
+.op-card{width:min(640px,100%)}
+.crop-card{width:min(360px,100%)}
+.crop-body{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px}
+#cropCanvas{border-radius:8px;cursor:grab;touch-action:none;background:#000}
+/* retransmissão */
+#relayBar{display:flex;flex-direction:column;gap:6px;padding:8px 12px;font-size:13px;background:rgba(124,242,154,.08);border-bottom:1px solid var(--accent)}
+#relayBar[hidden]{display:none}
+#relayBar .rrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+#relayBar .rrow span{flex:1;min-width:240px}
+#relayBar .primary{padding:5px 12px}
+/* janela flutuante: chat */
+.fchat{position:fixed;left:8px;bottom:8px;width:min(70%,360px);z-index:7;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.fbubbles{display:flex;flex-direction:column;gap:4px}
+.fbubble{background:rgba(0,0,0,.7);color:#fff;border-radius:8px;padding:4px 8px;font-size:13px;transition:opacity .8s;word-break:break-word}
+.fbubble.fade{opacity:0}
+.fbubble .cstk{display:block;max-width:80px;max-height:80px;margin-top:2px}
+.finput{pointer-events:auto;opacity:0;transition:opacity .15s}
+.float-body:hover .finput,.finput:focus-within{opacity:1}
+.finput input{width:100%;background:rgba(0,0,0,.75);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:#fff;outline:none}
+.float-body .tile.floating .tbar{bottom:0}
 #toasts{position:fixed;left:50%;top:14px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:10;
   width:min(560px,calc(100% - 32px))}
 .toast{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;
@@ -246,9 +339,13 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
     <div class="ver-line"><span id="verTxt"></span> · <button type="button" class="linkish" id="newsBtn" aria-expanded="false">Novidades</button><span id="updCheckWrap" hidden> · <button type="button" class="linkish" id="updCheck">Procurar atualização</button></span></div>
     <div id="news" hidden></div>
     <p class="muted">Compartilhamento de tela entre amigos, direto de um PC pro outro. Sem conta, sem OBS, sem stream pública.</p>
-    <label>Seu nome
-      <input id="name" maxlength="24" placeholder="ex: Gui" autocomplete="off">
-    </label>
+    <div class="av-row">
+      <button type="button" class="av-pick av-big" title="Escolher foto de perfil (imagem ou GIF até 300 KB)"><span class="my-av" data-size="52"></span></button>
+      <label class="grow">Seu nome
+        <input id="name" maxlength="24" placeholder="ex: Gui" autocomplete="off">
+      </label>
+    </div>
+    <div class="av-links"><button type="button" class="linkish av-pick">Escolher foto de perfil</button> <button type="button" class="linkish av-remove" hidden>remover</button></div>
     <label>Código da sala
       <div class="row">
         <input id="code" maxlength="24" autocomplete="off" spellcheck="false">
@@ -295,8 +392,11 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
     <select id="quality" title="Qualidade da sua transmissão"></select>
     <select id="codec" title="Codec de vídeo. H.264 usa a placa de vídeo na maioria dos PCs, o que libera o processador."></select>
     <select id="audioSrc" title="Qual áudio vai junto com a sua tela"></select>
+    <button id="privBtn" class="ghost" hidden>🔒 Tela privada</button>
     <button id="shareBtn" class="primary">Compartilhar tela</button>
     <button id="clipsBtn" class="ghost" hidden title="O Telão está guardando os últimos 30 s de cada tela. Clique para desligar.">✂ Clipes ligados</button>
+    <button id="chatBtn" class="ghost" title="Chat da sala">💬 Chat <span id="chatBadge" class="badge" hidden></span></button>
+    <button id="optsBtn" class="ghost" title="Foto de perfil, tela privada, retransmissão, figurinhas">Opções</button>
     <button id="diagBtn" class="ghost" title="Diagnóstico de vídeo: placa de vídeo, encoder e transmissão">Diagnóstico</button>
     <button id="leaveBtn" class="ghost">Sair</button>
   </header>
@@ -305,7 +405,9 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
     <button id="netFix" class="primary">Configurar TURN</button>
     <button id="netClose" class="ghost" title="Fechar aviso">×</button>
   </div>
+  <div id="relayBar" hidden></div>
   <div id="hiddenBar" hidden></div>
+  <div id="mainRow">
   <main id="stage">
     <div id="empty">
       <h2 id="emptyTitle">Ninguém compartilhando ainda</h2>
@@ -313,15 +415,29 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
       A call de voz continua onde vocês já estão; aqui é só o vídeo.</div>
     </div>
   </main>
+  <aside id="chat" hidden>
+    <div class="chat-head"><b>Chat da sala</b><span class="grow"></span><button type="button" class="ghost" id="chatClose" title="Fechar">×</button></div>
+    <div id="chatList"></div>
+    <div id="chatStk" hidden><div id="chatStkGrid" class="stk-grid"></div><button type="button" class="ghost" id="chatStkAdd">+ Adicionar figurinha</button></div>
+    <div class="chat-foot">
+      <button type="button" class="ghost" id="chatStkBtn" title="Mandar figurinha do grupo">🖼️</button>
+      <input id="chatIn" maxlength="200" placeholder="Mensagem para a sala…" autocomplete="off">
+      <button type="button" class="primary" id="chatSend">Enviar</button>
+    </div>
+  </aside>
+  </div>
 </section>
 
 <div id="pip" hidden>
   <video id="pipVideo" autoplay playsinline muted></video>
   <div class="fx" id="pipFx"></div>
   <div class="pbar" title="Arraste para mover"><span class="rec"></span><span id="pipTxt">Transmitindo</span><span class="grow"></span>
+    <button class="ghost" id="pipPriv" title="Tela privada">🔒</button>
     <button class="ghost" id="pipOverlay" hidden title="Reações por cima do jogo: ligado. Clique para desligar.">🎮</button>
+    <button class="ghost" id="pipChat" hidden title="Chat por cima do jogo">💬</button>
     <button class="ghost" id="pipMin" title="Minimizar / expandir">–</button>
     <button class="primary stop" id="pipStop">Parar</button></div>
+  <div id="pipPrivBox" hidden><span>Tela privada ligada · seus amigos veem:</span><input id="pipPrivMsg" maxlength="80" placeholder="Volto já"></div>
   <div class="pdiag" id="pipDiag" title=""></div>
 </div>
 
@@ -339,7 +455,7 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
     <div class="pk-foot">
       <label class="pk-audio">Som: <select id="pkAudioSel"></select></label>
       <span id="pkAudioHint" class="muted"></span>
-      <label id="pkFastWrap" class="pk-fast" hidden title="Jogo em tela cheia ou janela sem bordas: o Telão captura o monitor inteiro em vez da janela. É o caminho mais rápido do Windows (a captura de janela trava em ~20 fps em alguns PCs). O som continua sendo só o da janela. Atenção: se você der Alt+Tab, aparece o que estiver na tela."><input type="checkbox" id="pkFast"> Modo rápido</label>
+      <label id="pkFastWrap" class="pk-fast" hidden title="Para quem usa Windows 10: lá a captura de janela costuma travar em ~20 fps. Com o jogo em tela cheia ou janela sem bordas, o Telão captura o monitor inteiro em vez da janela, que é bem mais rápido. O som continua sendo só o da janela. No Windows 11 a captura de janela já é rápida e isso não faz diferença. Atenção: se você der Alt+Tab, quem assiste vê o que estiver na tela."><input type="checkbox" id="pkFast"> Modo rápido <span id="pkFastNote" class="muted">(só ajuda no Windows 10)</span></label>
       <span class="grow"></span>
       <button type="button" class="ghost" id="pkCancel">Cancelar</button>
       <button type="button" class="primary" id="pkGo" disabled>Compartilhar</button>
@@ -385,6 +501,67 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
   </div>
 </div>
 
+<div id="opts" class="modal" hidden>
+  <div class="pk-card op-card" role="dialog" aria-label="Opções">
+    <div class="pk-head"><b>Opções</b></div>
+    <div class="dg-body">
+      <section>
+        <h3>Foto de perfil</h3>
+        <div class="av-row"><button type="button" class="av-pick av-big" title="Trocar foto"><span class="my-av" data-size="56"></span></button>
+          <div><button type="button" class="ghost av-pick">Trocar foto</button> <button type="button" class="ghost av-remove" hidden>Remover</button>
+          <p class="muted dg-p" style="margin-top:6px">Imagem (é recortada em quadrado) ou GIF até 300 KB. Aparece na lista da sala, no chat, nas reações e na tela privada.</p></div></div>
+      </section>
+      <section>
+        <h3>Tela privada</h3>
+        <label class="op-lbl">Mensagem que seus amigos veem<input id="optPrivMsg" maxlength="80" placeholder="Volto já"></label>
+      </section>
+      <section>
+        <h3>Reações e figurinhas</h3>
+        <p class="muted dg-p">Monte a sua barra de 8 reações e gerencie as figurinhas do grupo desta sala.</p>
+        <button type="button" class="ghost" id="optRx">Personalizar reações e figurinhas</button>
+      </section>
+      <section>
+        <h3>Retransmissão</h3>
+        <label class="chk"><input type="checkbox" id="optRelay"> Permitir que eu retransmita para amigos</label>
+        <p class="muted dg-p" style="margin-top:6px">Quando a internet de quem transmite está no limite, ou alguém não consegue receber direto, o Telão pede a quem já está assistindo para repassar o vídeo. Gasta o seu upload e a sua placa de vídeo enquanto estiver repassando. Dá pra parar a qualquer momento.</p>
+      </section>
+    </div>
+    <div class="pk-foot"><span class="grow"></span><button type="button" class="primary" id="optsClose">Fechar</button></div>
+  </div>
+</div>
+
+<div id="rxEdit" class="modal" hidden>
+  <div class="pk-card op-card" role="dialog" aria-label="Reações e figurinhas">
+    <div class="pk-head"><b>Reações e figurinhas</b></div>
+    <div class="dg-body">
+      <section>
+        <h3>Sua barra de reações</h3>
+        <p class="muted dg-p">Escolha um botão e troque por um emoji, um texto curto (até 6 letras) ou uma figurinha do grupo. Só você vê esta barra; as reações chegam pra todo mundo.</p>
+        <div id="rxSlots"></div>
+        <div class="dg-row"><input id="rxEmoji" maxlength="16" placeholder="Emoji ou texto (Win + . abre os emojis)"><button type="button" class="primary" id="rxEmojiOk">Usar</button>
+          <span class="grow"></span><button type="button" class="ghost" id="rxReset">Voltar ao padrão</button></div>
+      </section>
+      <section>
+        <h3>Figurinhas do grupo <span class="muted" id="rxStkCount"></span></h3>
+        <p class="muted dg-p">Ficam ligadas ao código desta sala e chegam pra todo mundo. Clique numa figurinha para colocá-la no botão escolhido acima. Qualquer um pode remover (some pra todos).</p>
+        <div id="rxStkGrid" class="stk-grid"></div>
+        <div class="dg-row"><button type="button" class="ghost" id="rxAddStk">+ Adicionar figurinha (imagem ou GIF até 300 KB)</button></div>
+      </section>
+    </div>
+    <div class="pk-foot"><span class="grow"></span><button type="button" class="primary" id="rxClose">Fechar</button></div>
+  </div>
+</div>
+
+<div id="cropper" class="modal" hidden>
+  <div class="pk-card crop-card" role="dialog" aria-label="Recortar foto">
+    <div class="pk-head"><b>Enquadrar a foto</b></div>
+    <div class="crop-body"><canvas id="cropCanvas" width="280" height="280"></canvas>
+      <label class="chk">Zoom <input type="range" id="cropZoom" min="100" max="400" value="100"></label>
+      <span class="muted" style="font-size:12px">Arraste a imagem para enquadrar.</span></div>
+    <div class="pk-foot"><span class="grow"></span><button type="button" class="ghost" id="cropCancel">Cancelar</button><button type="button" class="primary" id="cropOk">Usar esta foto</button></div>
+  </div>
+</div>
+
 <div id="toasts"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -395,17 +572,25 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.8.0';
+const TELAO_VERSION = '1.9.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 5;       // nível do app desktop mais novo (5: modo rápido de captura)
+const LATEST_SHELL = 6;       // nível do app desktop mais novo (6: chat e figurinhas por cima do jogo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.8.0', 'hoje', ['Modo rápido: jogo em tela cheia ou sem bordas é capturado pelo caminho da tela inteira, bem mais rápido no Windows 10 (o som continua só do jogo)',
+  ['1.9.0', 'hoje', ['Chat da sala, que aparece por cima do jogo de quem transmite (botão 💬 na miniatura liga/desliga)',
+                     'Reações personalizáveis: barra de 8 com emojis, textos e figurinhas do grupo',
+                     'Figurinhas do grupo: qualquer um adiciona ou remove, e todo mundo da sala recebe',
+                     'Foto de perfil (imagem ou GIF)',
+                     'Tela privada: troca a sua transmissão por uma mensagem, sem cortar o som',
+                     'Qualidades 360p e 540p, e Ultimate 120 fps (experimental)',
+                     'Retransmissão: um amigo repassa o vídeo quando a internet de quem transmite está no limite',
+                     'Modo rápido vem desligado (só ajuda no Windows 10)']],
+  ['1.8.0', '21/10', ['Modo rápido para Windows 10: jogo em tela cheia ou sem bordas é capturado pelo caminho da tela inteira, bem mais rápido (o som continua só do jogo)',
                      'Diagnóstico mostra o passo a passo da conexão com a sala']],
   ['1.7.1', '21/10', ['Entrar na sala funciona mesmo em redes que bloqueiam as conexões que você abre (quem segura a sala liga de volta)']],
   ['1.7.0', '21/10', ['O app também se atualiza sozinho: baixa só o necessário (~1 MB) e reinicia', 'Se a versão nova do app não abrir, volta sozinho para a anterior', 'Som escolhido junto com a tela: janela manda o som dela sozinha; tela inteira mostra os apps com som ali mesmo']],
@@ -558,11 +743,33 @@ function watchConnPc(c, label){
 
 const PREFIX = 'telao-v1-';
 const QUALITY = {
-  leve:   {label:'Leve · 720p 30fps',    w:1280, h:720,  fps:30, kbps:2500},
-  fluido: {label:'Fluido · 720p 60fps',  w:1280, h:720,  fps:60, kbps:4500},
-  nitido: {label:'Nítido · 1080p 30fps', w:1920, h:1080, fps:30, kbps:5000},
-  maximo: {label:'Máximo · 1080p 60fps', w:1920, h:1080, fps:60, kbps:8000},
+  eco30:  {label:'Econômico · 360p 30fps', w:640,  h:360,  fps:30, kbps:800},
+  eco60:  {label:'Econômico · 360p 60fps', w:640,  h:360,  fps:60, kbps:1300},
+  medio30:{label:'Médio · 540p 30fps',     w:960,  h:540,  fps:30, kbps:1500},
+  medio60:{label:'Médio · 540p 60fps',     w:960,  h:540,  fps:60, kbps:2500},
+  leve:   {label:'Leve · 720p 30fps',      w:1280, h:720,  fps:30, kbps:2500},
+  fluido: {label:'Fluido · 720p 60fps',    w:1280, h:720,  fps:60, kbps:4500},
+  nitido: {label:'Nítido · 1080p 30fps',   w:1920, h:1080, fps:30, kbps:5000},
+  maximo: {label:'Máximo · 1080p 60fps',   w:1920, h:1080, fps:60, kbps:8000},
+  ult720: {label:'Ultimate · 720p 120fps (experimental)',  w:1280, h:720,  fps:120, kbps:7000},
+  ult1080:{label:'Ultimate · 1080p 120fps (experimental)', w:1920, h:1080, fps:120, kbps:12000},
 };
+/* Frequência da tela de quem assiste (Hz). Quem tem monitor de 60 Hz recebe no máximo 60 fps,
+   mesmo se quem transmite estiver no Ultimate: não adianta mandar quadros que a tela não mostra. */
+let myHz = 0;
+function measureHz(){
+  if (document.hidden) return;
+  let n = 0, t0 = 0;
+  const step = ts => {
+    if (!t0) t0 = ts;
+    n++;
+    if (ts - t0 < 1000) return requestAnimationFrame(step);
+    const raw = (n - 1) * 1000 / (ts - t0);
+    const hz = [60, 75, 90, 100, 120, 144, 165, 180, 240].reduce((a, b) => Math.abs(b - raw) < Math.abs(a - raw) ? b : a, 60);
+    if (raw > 40 && hz !== myHz && hz >= myHz){ myHz = hz; if (typeof sendResAll === 'function') sendResAll(true); }
+  };
+  requestAnimationFrame(step);
+}
 const MAX_FAILS = 3;
 const CODECS = {
   H264: 'Codec: H.264 (placa de vídeo)',
@@ -709,6 +916,10 @@ function watchPc(pc, cb){
 function initLobby(){
   initVersion();
   initUpdates();
+  initAvatar();
+  for (const b of document.querySelectorAll('.av-pick')) b.onclick = pickAvatar;
+  for (const b of document.querySelectorAll('.av-remove')) b.onclick = () => { setMyAvatar(''); toast('Foto removida.'); };
+  $('#name').addEventListener('input', renderLobbyAvatar);
   if (window.telaoDesktop){
     const b = document.createElement('span'); b.className = 'desk-badge'; b.textContent = 'Desktop';
     document.querySelector('.card h1').appendChild(b);
@@ -727,6 +938,8 @@ function initLobby(){
     setTimeout(() => { $('#turnBox').scrollIntoView({block: 'center'}); $('#turnLink').focus(); }, 50);
   }
 
+  measureHz();
+  document.addEventListener('visibilitychange', measureHz);
   for (const [k, q] of Object.entries(QUALITY)){
     const o = document.createElement('option'); o.value = k; o.textContent = q.label; $('#quality').appendChild(o);
   }
@@ -846,6 +1059,7 @@ async function join(){
   }, 12000);
 
   me.on('open', () => { clearTimeout(openTimeout); netLog('servidor de sinalização ok'); showRoom(); ensureHub(); });
+  loadStickers();
   me.on('call', onIncomingCall);
   me.on('connection', onIncomingData);
   me.on('disconnected', () => {
@@ -886,6 +1100,11 @@ function showRoom(){
   $('#clipsBtn').onclick = () => { setClips(false); toast('Clipes desligados: o Telão parou de guardar as telas.'); };
   syncClipBuffers();
   initPip();
+  initPrivate();
+  initChat();
+  initRxEdit();
+  initOpts();
+  $('#pipChat').onclick = toggleChatOverlay;
   initDiag();
   $('#leaveBtn').onclick = leave;
   $('#quality').onchange = onQualityChange;
@@ -929,6 +1148,7 @@ function tryClaimHub(){
 
 function runHub(hp){
   const mem = new Map();
+  const chatLog = chatMsgs.slice(-CHAT_KEEP).map(m => ({id: m.id, from: m.from, n: m.n, x: m.x, st: m.st, at: m.at}));   // quem assume a sala continua o histórico
   const send = () => {
     const list = [...mem].map(([id, m]) => ({id, name: m.name, sharing: m.sharing}));
     for (const m of mem.values()) if (m.conn.open) try{ m.conn.send({t:'list', list}); }catch{}
@@ -939,12 +1159,19 @@ function runHub(hp){
       if (!msg || typeof msg !== 'object') return;
       if (msg.t === 'hello'){
         mem.set(conn.peer, {name: String(msg.name || '?').slice(0, 24), sharing: !!msg.sharing, conn, seen: Date.now()});
-        send(); return;
+        send();
+        if (chatLog.length) try{ conn.send({t: 'chatlog', list: chatLog}); }catch{}
+        return;
       }
       const m = mem.get(conn.peer);
       if (!m || m.conn !== conn) return;
       m.seen = Date.now();
       if (msg.t === 'state'){ m.sharing = !!msg.sharing; send(); }
+      else if (msg.t === 'chatkeep' && msg.m && validChat(msg.m) && !chatLog.some(x => x.id === msg.m.id)){
+        const x = msg.m;
+        chatLog.push({id: x.id, from: conn.peer, n: String(x.n || m.name).slice(0, 24), x: String(x.x || '').slice(0, CHAT_MAX_LEN), st: validHash(x.st) ? x.st : '', at: +x.at || Date.now()});
+        while (chatLog.length > CHAT_KEEP) chatLog.shift();
+      }
       else if (msg.t === 'relay' && typeof msg.to === 'string'){
         const dst = mem.get(msg.to);
         if (dst && dst.conn.open) try{ dst.conn.send({t:'relay', from: conn.peer, data: msg.data}); }catch{}
@@ -1019,6 +1246,7 @@ function wireHubConn(c){
     lastHubMsg = Date.now();
     if (msg && msg.t === 'list') onList(msg.list);
     else if (msg && msg.t === 'relay' && msg.data) onRelay(msg.from, msg.data);
+    else if (msg && msg.t === 'chatlog' && Array.isArray(msg.list)){ for (const m of msg.list.slice(-CHAT_KEEP)) addChat(m, {history: true, via: hubConn && hubConn.peer}); }
   });
   const lost = () => { if (c === hubConn) scheduleHubRecovery(); };
   c.on('close', lost); c.on('error', lost);
@@ -1049,8 +1277,11 @@ function scheduleHubRecovery(){
   }, 400 + Math.random() * 1600);
 }
 
+let bulletinTick = 0;
 function tickClient(){
   if (!me || me.destroyed) return;
+  if (++bulletinTick % 3 === 0) sendBulletin();
+  pumpBlobs();
   if (hubConn && hubConn.open) try{ hubConn.send({t:'ping'}); }catch{}
   if (Date.now() - lastHubMsg > 15000) scheduleHubRecovery();
   updatePip();
@@ -1072,7 +1303,7 @@ function onList(list){
   syncWaits();
   if (localStream){
     for (const m of members){
-      if (m.id === me.id || outCalls.has(m.id)) continue;
+      if (m.id === me.id || outCalls.has(m.id) || relayVia.has(m.id)) continue;
       if ((failCount.get(m.id) || 0) >= MAX_FAILS) continue;
       callPeer(m.id);
     }
@@ -1089,7 +1320,8 @@ const VER_GRACE = 8000;
 function announceTo(pid){
   if (announced.has(pid)) return;
   announced.add(pid);
-  hubSend({t:'relay', to: pid, data: {k:'hi', v: TELAO_VERSION, d: DESKTOP}});
+  hubSend({t:'relay', to: pid, data: {k:'hi', v: TELAO_VERSION, d: DESKTOP, av: myAvatar || ''}});
+  sendStickersTo(pid);
 }
 function syncVersions(){
   if (!me) return;
@@ -1099,7 +1331,7 @@ function syncVersions(){
     if (!firstSeen.has(m.id)) firstSeen.set(m.id, now);
     announceTo(m.id);
   }
-  for (const id of [...firstSeen.keys()]) if (!ids.has(id)){ firstSeen.delete(id); peerVer.delete(id); announced.delete(id); }
+  for (const id of [...firstSeen.keys()]) if (!ids.has(id)){ firstSeen.delete(id); peerVer.delete(id); announced.delete(id); bulletins.delete(id); }
   checkOutdated();
 }
 function newestVersion(){
@@ -1131,7 +1363,7 @@ function renderMembers(){
     c.className = 'chip' + (m.sharing ? ' sharing' : '') + (isMe ? ' me' : '');
     const dot = document.createElement('span'); dot.className = 'live';
     const n = document.createElement('span'); n.textContent = m.name + (isMe ? ' (você)' : '');
-    c.append(dot, n);
+    c.append(dot, avatarNode(isMe ? '__me' : m.id, m.name, 20), n);
     const vi = versionInfo(m);
     let verTxt = 'versão: verificando…';
     if (vi && vi.v) verTxt = 'Telão ' + vi.v + (vi.d ? ' Desktop' : ' no navegador');
@@ -1524,7 +1756,7 @@ function openPicker(){
 
     for (const b of box.querySelectorAll('.pk-tabs button')) b.onclick = () => { pickerTab = b.dataset.t; render(); };
     const fast = $('#pkFast');
-    const syncFast = () => { $('#pkFastWrap').hidden = !fastCaptureAvailable() || !selected || selected.type !== 'window'; fast.checked = fastCaptureOn(); };
+    const syncFast = () => { $('#pkFastWrap').hidden = !fastCaptureAvailable() || !selected || selected.type !== 'window'; fast.checked = fastCaptureOn(); $('#pkFastNote').textContent = fastNote(); };
     fast.onchange = () => store.set('fastWindow', fast.checked);
     syncFast();
     renderAudio();
@@ -1620,6 +1852,7 @@ async function startShare(){
   }
   failCount.clear();
   $('#pipVideo').srcObject = s; $('#pip').hidden = false;
+  syncPrivateUi();
   $('#pip').classList.toggle('mini', store.get('pipMini', false));
   restorePip();
   $('#shareBtn').textContent = 'Parar transmissão'; $('#shareBtn').classList.add('stop');
@@ -1632,19 +1865,109 @@ function stopShare(){
   if (!localStream) return;
   localStream.getTracks().forEach(t => t.stop());
   localStream = null;
+  privateOn = false; clearInterval(privateTimer);
+  if (privateTrack){ try{ privateTrack.stop(); }catch{} privateTrack = null; }
+  syncPrivateUi();
   stopHelperAudio();
   hideOverlay();
   for (const c of outCalls.values()) try{ c.close(); }catch{}
   outCalls.clear(); failCount.clear();
+  relayVia.clear(); relayReqs.clear(); relayTried.clear(); noConnSince.clear(); bwSince = 0;
   $('#pipVideo').srcObject = null; $('#pip').hidden = true;
   $('#shareBtn').textContent = 'Compartilhar tela'; $('#shareBtn').classList.remove('stop');
   hubSend({t:'state', sharing:false});
 }
 
+/* ---------- Tela privada ----------
+   Troca o vídeo que sai (para todo mundo) por uma tela com a sua mensagem. O jogo continua normal aqui
+   e o áudio continua indo (a trilha do jogo segue tocando pra quem assiste). */
+let privateOn = false, privateSince = 0, privateCanvas = null, privateTrack = null, privateTimer = null;
+const privateMsg = () => String(store.get('privateMsg', 'Volto já') || 'Volto já').slice(0, 80);
+function activeVideoTrack(){ return privateOn && privateTrack ? privateTrack : (localStream && localStream.getVideoTracks()[0]); }
+// O que vai para quem assiste: o vídeo ativo (jogo ou tela privada) + o áudio de sempre.
+function outStream(){
+  if (!localStream) return null;
+  const vt = activeVideoTrack();
+  return new MediaStream([...(vt ? [vt] : []), ...localStream.getAudioTracks()]);
+}
+function wrapText(g, text, maxW){
+  const words = text.split(/\s+/), lines = [];
+  let cur = '';
+  for (const w of words){
+    const t = cur ? cur + ' ' + w : w;
+    if (g.measureText(t).width > maxW && cur){ lines.push(cur); cur = w; } else cur = t;
+  }
+  if (cur) lines.push(cur);
+  return lines.slice(0, 3);
+}
+function drawPrivate(){
+  const c = privateCanvas; if (!c) return;
+  const g = c.getContext('2d'), W = c.width, H = c.height;
+  const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#11151b'); bg.addColorStop(1, '#1b2129');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const cx = W / 2;
+  drawAvatar(g, me && me.id, myName, cx, 190, 72);
+  g.fillStyle = '#e9ebee'; g.font = '600 34px system-ui, "Segoe UI", sans-serif';
+  g.fillText(myName, cx, 300);
+  g.font = '700 64px system-ui, "Segoe UI", sans-serif'; g.fillStyle = '#7cf29a';
+  const lines = wrapText(g, privateMsg(), W - 160);
+  lines.forEach((l, i) => g.fillText(l, cx, 400 + i * 76));
+  const min = Math.floor((Date.now() - privateSince) / 60000);
+  g.font = '26px system-ui, "Segoe UI", sans-serif'; g.fillStyle = '#8a93a2';
+  g.fillText('🔒 tela privada · ' + (min < 1 ? 'agora há pouco' : 'há ' + min + ' min'), cx, H - 60);
+}
+function setPrivate(on){
+  on = !!on && !!localStream;
+  if (on === privateOn){ syncPrivateUi(); return; }
+  if (on){
+    if (!privateCanvas){ privateCanvas = document.createElement('canvas'); privateCanvas.width = 1280; privateCanvas.height = 720; }
+    privateSince = Date.now(); privateOn = true; drawPrivate();
+    if (!privateTrack || privateTrack.readyState !== 'live'){
+      privateTrack = privateCanvas.captureStream(5).getVideoTracks()[0];
+      try{ privateTrack.contentHint = 'detail'; }catch{}
+    }
+    clearInterval(privateTimer); privateTimer = setInterval(drawPrivate, 400);
+  } else {
+    privateOn = false; clearInterval(privateTimer);
+  }
+  swapOutgoingVideo();
+  syncPrivateUi();
+}
+function swapOutgoingVideo(){
+  const vt = activeVideoTrack();
+  if (!vt) return;
+  for (const [pid, c] of outCalls){
+    const pc = c.peerConnection; if (!pc) continue;
+    for (const snd of pc.getSenders()) if (snd.track && snd.track.kind === 'video' && snd.track !== vt) snd.replaceTrack(vt).then(() => applyQuality(pc, pid)).catch(() => {});
+  }
+  $('#pipVideo').srcObject = privateOn ? new MediaStream([privateTrack]) : localStream;
+}
+function syncPrivateUi(){
+  const on = privateOn && !!localStream;
+  $('#privBtn').hidden = !localStream;
+  $('#privBtn').classList.toggle('on', on);
+  $('#privBtn').textContent = on ? '🔒 Tela privada ligada' : '🔒 Tela privada';
+  $('#privBtn').title = on ? 'Seus amigos estão vendo a sua mensagem. Clique para voltar a mostrar o jogo.' : 'Troca a sua transmissão por uma tela com a sua mensagem (o som continua). Bom para digitar senha ou ler mensagem pessoal.';
+  $('#pipPriv').classList.toggle('on', on);
+  $('#pipPriv').title = $('#privBtn').title;
+  $('#pipPrivBox').hidden = !on;
+  if (on && document.activeElement !== $('#pipPrivMsg')) $('#pipPrivMsg').value = privateMsg();
+  $('#pip').classList.toggle('private', on);
+  if (localStream && !$('#pip').hidden) restorePip();   // a miniatura cresceu/encolheu: mantém inteira na tela
+}
+function initPrivate(){
+  $('#privBtn').onclick = () => setPrivate(!privateOn);
+  $('#pipPriv').onclick = () => setPrivate(!privateOn);
+  $('#pipPrivMsg').oninput = () => { store.set('privateMsg', $('#pipPrivMsg').value.slice(0, 80)); drawPrivate(); };
+  $('#pipPrivMsg').addEventListener('pointerdown', e => e.stopPropagation());
+  syncPrivateUi();
+}
+
 function callPeer(pid){
   if (!localStream || !me || me.destroyed) return;
   const codec = currentCodec();
-  const call = me.call(pid, localStream, {metadata: {name: myName, codec}, sdpTransform: makeSdpTransform(codec)});
+  const call = me.call(pid, outStream(), {metadata: {name: myName, codec}, sdpTransform: makeSdpTransform(codec)});
   if (!call) return;
   outCalls.set(pid, call);
   const pc = call.peerConnection;
@@ -1677,21 +2000,27 @@ function callPeer(pid){
 /* Resolução sob demanda: cada espectador diz a altura em que a minha tela aparece pra ele.
    Mando reduzido só pra ele (menos encode aqui, menos banda e decodificação lá). */
 const wantH = new Map();   // id do espectador → altura desejada em pixels
+const wantHz = new Map();  // id do espectador → frequência da tela dele
 function videoPlan(pid){
   const q = QUALITY[currentQ()];
-  const vt = localStream && localStream.getVideoTracks()[0];
+  const vt = activeVideoTrack();
   const srcH = (vt && vt.getSettings && vt.getSettings().height) || q.h;
-  const want = wantH.get(pid);
+  return planFor(q, srcH, wantH.get(pid), wantHz.get(pid));
+}
+function planFor(q, srcH, want, hz){
   const scale = want && srcH > want ? srcH / want : 1;
-  // bitrate acompanha a área da imagem, com um piso para não ficar borrado
-  const kbps = Math.round(Math.min(q.kbps, Math.max(800, q.kbps / Math.pow(scale, 1.5))));
-  return {scale, kbps, fps: q.fps};
+  // quadros por segundo: até o que a tela de quem assiste mostra (60 Hz → 60 fps)
+  const fps = hz && hz >= 50 && hz < q.fps ? Math.max(60, hz) : q.fps;
+  // bitrate acompanha a área da imagem e os quadros, com um piso para não ficar borrado
+  const k = q.kbps * Math.pow(Math.min(1, fps / q.fps), 0.7);
+  const kbps = Math.round(Math.min(k, Math.max(Math.min(800, q.kbps), k / Math.pow(scale, 1.5))));
+  return {scale, kbps, fps: Math.min(fps, q.fps)};
 }
 
 async function applyQuality(pc, pid){
   if (!pc) return;
   const plan = videoPlan(pid);
-  const active = !pausedBy.get(pid);   // false = esse espectador ocultou minha tela
+  const active = !pausedBy.get(pid) || isRelayHub(pid);   // false = esse espectador ocultou minha tela (a não ser que esteja repassando)
   for (const s of pc.getSenders()){
     if (!s.track) continue;
     const kind = s.track.kind;
@@ -1781,9 +2110,10 @@ function restorePip(){
 const SW_ENC = /libvpx|openh264|libaom|svt|software/i;
 async function updateSendStats(){
   const el = $('#pipDiag');
-  if (!localStream){ el.textContent = ''; return; }
-  let worst = null, capFps = null;
-  for (const c of outCalls.values()){
+  relayStats();
+  if (!localStream){ el.textContent = ''; relayTick(false); return; }
+  let worst = null, capFps = null, upTotal = 0, bwLimited = false;
+  for (const [pid, c] of outCalls){
     const pc = c.peerConnection;
     if (!pc || pc.connectionState !== 'connected') continue;
     try{
@@ -1793,8 +2123,11 @@ async function updateSendStats(){
         if (r.type === 'codec') codecs[r.id] = r;
         if (r.type === 'outbound-rtp' && r.kind === 'video') out = r;
         if (r.type === 'media-source' && r.kind === 'video' && r.framesPerSecond != null) capFps = r.framesPerSecond;
+        if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded' && r.availableOutgoingBitrate) upTotal += r.availableOutgoingBitrate / 1000;
       });
       if (!out) continue;
+      if (out.qualityLimitationReason === 'bandwidth' && !pausedBy.get(pid)) bwLimited = true;
+      if (out.powerEfficientEncoder != null) noteUpload(0, !!out.powerEfficientEncoder);
       const fps = out.framesPerSecond || 0;
       if (!worst || fps < worst.fps){
         worst = {fps, h: out.frameHeight, reason: out.qualityLimitationReason, impl: out.encoderImplementation || '',
@@ -1820,6 +2153,30 @@ async function updateSendStats(){
     span.textContent = p; el.appendChild(span);
   });
   el.title = worst ? 'Encoder: ' + (worst.impl || 'desconhecido') + ' · limitação: ' + (worst.reason || 'nenhuma') : '';
+  noteUpload(upTotal, worst && worst.impl ? (worst.hw != null ? !!worst.hw : !SW_ENC.test(worst.impl)) : null);
+  relayTick(bwLimited);
+}
+// Quem retransmite também mede o próprio upload (é o teste real de quem nunca transmitiu).
+let relayBwSince = 0;
+async function relayStats(){
+  if (!relayOut.size){ relayBwSince = 0; return; }
+  let up = 0, limited = false;
+  for (const ent of relayOut.values()){
+    const pc = ent.call && ent.call.peerConnection;
+    if (!pc || pc.connectionState !== 'connected') continue;
+    try{ (await pc.getStats()).forEach(r => {
+      if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded' && r.availableOutgoingBitrate) up += r.availableOutgoingBitrate / 1000;
+      if (r.type === 'outbound-rtp' && r.kind === 'video' && r.qualityLimitationReason === 'bandwidth' && !ent.paused) limited = true;
+    }); }catch{}
+  }
+  noteUpload(up, null);
+  // a minha internet também ficou no limite repassando: devolve, e quem transmite tenta o próximo da lista
+  if (limited || window.__relayForceMyBw) relayBwSince = relayBwSince || Date.now(); else relayBwSince = 0;
+  if (relayBwSince && Date.now() - relayBwSince > 25000){
+    relayBwSince = 0;
+    for (const s of new Set([...relayOut.values()].map(e => e.s))) relayStopFor(s, true);
+    toast('Sua internet também ficou no limite repassando o vídeo; a retransmissão passou para outra pessoa.', 'warn', 8000);
+  }
 }
 
 function updatePip(){
@@ -1827,10 +2184,15 @@ function updatePip(){
   let n = 0, paused = 0;
   for (const [pid, c] of outCalls){
     if (!c.peerConnection || c.peerConnection.connectionState !== 'connected') continue;
-    if (pausedBy.get(pid)) paused++; else n++;
+    if (pausedBy.get(pid) && !isRelayHub(pid)) paused++; else n++;
   }
+  for (const v of relayVia.keys()) if (members.some(m => m.id === v) && !outCalls.has(v)) n++;
   let txt = n ? ('Transmitindo para ' + n + (n === 1 ? ' pessoa' : ' pessoas')) : (paused ? 'Ninguém assistindo agora' : 'Transmitindo (aguardando quem assista)');
   if (paused) txt += ' · ' + paused + (paused === 1 ? ' ocultou' : ' ocultaram');
+  // quem está recebendo por um amigo (retransmissão)
+  const via = new Map();
+  for (const [v, r] of relayVia) if (members.some(m => m.id === v)) via.set(r, (via.get(r) || 0) + 1);
+  for (const [r, k] of via) txt += ' · ' + k + ' via ' + nameOf(r);
   $('#pipTxt').textContent = txt;
 }
 
@@ -1841,7 +2203,10 @@ const pausedBy = new Map();     // (quem transmite) id do espectador → ocultou
 const hiddenIds = new Set();    // (quem assiste) ids que eu ocultei
 const hiddenNames = new Set();  // mesmos, por nome: vale de novo se a pessoa reconectar
 
-function sendPause(pid, on){ hubSend({t:'relay', to: pid, data: {k:'pause', on: !!on}}); }
+function sendPause(pid, on){
+  const t = tiles.get(pid);
+  hubSend({t:'relay', to: (t && t.via) || pid, data: {k:'pause', on: !!on, s: pid}});
+}
 function resendPauses(){
   for (const pid of hiddenIds) if (tiles.has(pid)) sendPause(pid, true);
   sendResAll(true);
@@ -1868,7 +2233,7 @@ function sendResAll(force){
     const h = wantedHeight(t);
     if (!h || (!force && t.sentH === h)) continue;
     t.sentH = h;
-    hubSend({t:'relay', to: pid, data: {k:'res', h}});
+    hubSend({t:'relay', to: t.via || pid, data: {k:'res', h, hz: myHz || 0, s: pid}});
   }
 }
 document.addEventListener('fullscreenchange', scheduleRes);
@@ -1876,8 +2241,18 @@ document.addEventListener('fullscreenchange', scheduleRes);
 function onRelay(from, data){
   if (!from || !data) return;
   if (data.k === 'react'){ onReact(from, data); return; }
+  if (data.k === 'chat'){ onChat(from, data); return; }
+  if (data.k === 'stk'){ onStickers(from, data); return; }
+  if (data.k === 'breq'){ onBlobReq(from, data.h); return; }
+  if (data.k === 'bpart'){ onBlobPart(from, data); return; }
+  if (data.k === 'bul'){ onBulletin(from, data); return; }
+  if (data.k === 'rly-req'){ onRelayReq(from, data); return; }
+  if (/^rly-(ok|no|fail|stop|lost)$/.test(data.k)){ onRelayMsgForStreamer(from, data); return; }
   if (data.k === 'hi'){
     peerVer.set(from, {v: String(data.v || '').slice(0, 20), d: !!data.d});
+    const av = validHash(data.av) ? data.av : '';
+    if (av !== (peerAvatar.get(from) || '')){ if (av) peerAvatar.set(from, av); else peerAvatar.delete(from); }
+    if (av) wantBlob(av, from);
     if (!firstSeen.has(from)) firstSeen.set(from, Date.now());
     announceTo(from);   // se a pessoa me viu antes de eu vê-la, responde
     checkOutdated();
@@ -1886,15 +2261,18 @@ function onRelay(from, data){
   }
   if (data.k === 'recall'){
     failCount.delete(from);
+    relayVia.delete(from);
     const c = outCalls.get(from);
     if (c){ outCalls.delete(from); try{ c.close(); }catch{} }
     if (localStream) setTimeout(() => { if (localStream && !outCalls.has(from)) callPeer(from); }, 500);
     return;
   }
   if (data.k === 'res'){
-    const h = Math.round(+data.h);
+    const h = Math.round(+data.h), hz = Math.round(+data.hz || 0);
+    if (data.s && me && data.s !== me.id){ relayRes(data.s, from, h, hz); return; }   // sou retransmissor desta tela
     if (h > 0){
       wantH.set(from, h);
+      if (hz > 0) wantHz.set(from, hz);
       const c = outCalls.get(from);
       if (c) applyQuality(c.peerConnection, from);
     }
@@ -1902,6 +2280,7 @@ function onRelay(from, data){
   }
   if (data.k !== 'pause') return;
   const on = !!data.on;
+  if (data.s && me && data.s !== me.id){ relayPause(data.s, from, on); return; }   // sou retransmissor desta tela
   if (on) pausedBy.set(from, true); else pausedBy.delete(from);
   const c = outCalls.get(from);
   if (c) applyQuality(c.peerConnection, from);
@@ -1960,7 +2339,8 @@ function onPullCall(call){
   const codec = !avoid.includes(pref) ? pref : (['VP9', 'VP8', 'H264'].find(c => !avoid.includes(c)) || pref);
   const old = outCalls.get(pid);
   if (old && old !== call){ outCalls.delete(pid); try{ old.close(); }catch{} }
-  call.answer(localStream, {sdpTransform: makeSdpTransform(codec)});
+  relayVia.delete(pid);   // pediu direto: não precisa mais do repasse
+  call.answer(outStream(), {sdpTransform: makeSdpTransform(codec)});
   outCalls.set(pid, call);
   failCount.delete(pid);
   const pc = call.peerConnection;
@@ -1994,14 +2374,30 @@ function pullFrom(pid, force){
 
 function onIncomingCall(call){
   if (call.metadata && call.metadata.pull) return onPullCall(call);
+  if (call.metadata && typeof call.metadata.relayOf === 'string'){
+    // um amigo está repassando a tela de outra pessoa pra mim
+    const s = call.metadata.relayOf;
+    if (!me || s === me.id || !members.some(m => m.id === s && m.sharing) || !members.some(m => m.id === call.peer)){ try{ call.close(); }catch{} return; }
+    const sender = CODECS[call.metadata.codec] ? call.metadata.codec : null;
+    call.answer(undefined, {sdpTransform: makeSdpTransform(answerCodec(sender))});
+    attachIncoming(call, s, call.peer);
+    return;
+  }
   const sender = call.metadata && CODECS[call.metadata.codec] ? call.metadata.codec : null;
   call.answer(undefined, {sdpTransform: makeSdpTransform(answerCodec(sender))});
   attachIncoming(call, call.peer);
 }
 
-function attachIncoming(call, pid){
-  call.on('stream', stream => addTile(pid, call, stream));
-  const gone = () => { const t = tiles.get(pid); if (t && t.call === call) removeTile(pid); };
+function attachIncoming(call, pid, via){
+  call.on('stream', stream => addTile(pid, call, stream, via));
+  const gone = () => {
+    const t = tiles.get(pid);
+    if (t && t.call === call){
+      removeTile(pid);
+      // o vídeo vinha por um amigo e caiu: avisa quem transmite para voltar a mandar direto
+      if (via && members.some(m => m.id === pid && m.sharing)) hubSend({t: 'relay', to: pid, data: {k: 'rly-lost'}});
+    }
+  };
   call.on('close', gone); call.on('error', gone);
   watchPc(call.peerConnection, state => {
     const t = tiles.get(pid);
@@ -2021,11 +2417,13 @@ function buildTile(pid){
   const el = document.createElement('div'); el.className = 'tile'; el.tabIndex = 0;
   el.innerHTML =
     '<video autoplay playsinline></video>' +
-    '<div class="tag"></div>' +
+    '<div class="tag"><span class="av-slot"></span><span class="tname"></span></div>' +
     '<div class="tmsg">Conectando…</div>' +
     '<div class="clickplay">Clique para assistir</div>' +
     '<div class="fx"></div>' +
-    '<div class="reacts">' + REACTS.map((e, i) => '<button type="button" data-e="' + i + '" title="Reagir (tecla ' + (i + 1) + ')">' + e + '</button>').join('') + '</div>' +
+    '<div class="reacts"></div>' +
+    '<div class="rx-panel" hidden><div class="stk-grid"></div><div class="rx-pfoot"><button type="button" class="ghost add">+ Adicionar figurinha</button>' +
+    '<button type="button" class="ghost edit">Personalizar barra</button></div></div>' +
     '<div class="tbar"><span class="stats"></span><span class="grow"></span>' +
     '<button class="clip" title="Clipar os últimos 30 segundos">' + ICON.clip + '</button>' +
     '<button class="mute" title="Mudo">' + ICON.vol + '</button>' +
@@ -2037,7 +2435,10 @@ function buildTile(pid){
   const t = {
     el, call: null,
     video: el.querySelector('video'),
-    nameEl: el.querySelector('.tag'),
+    nameEl: el.querySelector('.tname'),
+    avEl: el.querySelector('.av-slot'),
+    reactsEl: el.querySelector('.reacts'),
+    rxPanel: el.querySelector('.rx-panel'),
     statsEl: el.querySelector('.stats'),
     msgEl: el.querySelector('.tmsg'),
     fxEl: el.querySelector('.fx'),
@@ -2051,11 +2452,14 @@ function buildTile(pid){
   t.vol.oninput = () => { t.video.volume = t.vol.value / 100; t.video.muted = false; store.set('vol', +t.vol.value); syncMute(); };
   t.muteBtn.onclick = () => { t.video.muted = !t.video.muted; syncMute(); };
   el.querySelector('.hide').onclick = () => setHidden(pid, true);
-  for (const b of el.querySelectorAll('.reacts button')) b.onclick = () => sendReact(pid, +b.dataset.e);
+  fillReactButtons(t.reactsEl, pid);
+  t.rxPanel.querySelector('.add').onclick = stickerFilePicker;
+  t.rxPanel.querySelector('.edit').onclick = openRxEdit;
+  t.rxPanel.addEventListener('click', e => e.stopPropagation());
   el.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
     const i = +e.key - 1;
-    if (i >= 0 && i < REACTS.length){ sendReact(pid, i); e.preventDefault(); }
+    if (i >= 0 && i < BAR_SIZE){ sendReact(pid, reactBar()[i]); e.preventDefault(); }
   });
   t.clipBtn.onclick = () => clipTile(pid);
   el.querySelector('.focus').onclick = () => { focusId = focusId === pid ? null : pid; layout(); };
@@ -2074,11 +2478,12 @@ function buildTile(pid){
   return t;
 }
 
-function addTile(pid, call, stream){
+function addTile(pid, call, stream, via){
   let t = tiles.get(pid);
   if (t && t.call && t.call !== call){ const old = t.call; t.call = call; try{ old.close(); }catch{} }
   if (!t){ t = buildTile(pid); tiles.set(pid, t); $('#stage').appendChild(t.el); }
   t.call = call;
+  if ((t.via || null) !== (via || null)){ t.via = via || null; t.sentH = 0; scheduleRes(); }
   if (t.video.srcObject !== stream){
     t.video.srcObject = stream;
     stream.addEventListener('addtrack', t.syncAudio);
@@ -2090,6 +2495,8 @@ function addTile(pid, call, stream){
     t.msgEl.textContent = 'Conectando…';
   }
   t.nameEl.textContent = nameOf(pid, call);
+  renderTileAvatars();
+  if (!via) relayRefresh(pid);   // se eu repasso esta tela, os repasses passam a usar a conexão nova
   t.syncAudio();
   if (hiddenIds.has(pid) || hiddenNames.has(t.nameEl.textContent)){
     // continua oculta (inclusive se a pessoa reconectou) e avisa de novo quem transmite
@@ -2104,35 +2511,928 @@ function addTile(pid, call, stream){
   syncClipBuffers();
 }
 
-/* ---------- Reações ----------
-   Quem assiste toca num emoji: aparece flutuando na tela de quem transmite (na miniatura dele)
-   e na mesma tela pra todo mundo que está assistindo. */
-const REACTS = ['👏', '🔥', '😂', '😮', '💀', 'GG'];
+/* ---------- Arquivos entre amigos (fotos de perfil e figurinhas) ----------
+   Cada imagem é guardada aqui (IndexedDB) pelo "hash" do conteúdo. Quem não tem pede pra quem anunciou,
+   e ela vem em pedaços pela sala. Depois de guardada, nunca mais é baixada. */
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try{
+      const r = indexedDB.open('telao', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    }catch(e){ rej(e); }
+  }));
+  const run = async (mode, fn) => {
+    const db = await open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction('kv', mode), req = fn(tx.objectStore('kv'));
+      tx.oncomplete = () => res(req ? req.result : undefined);
+      tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+    });
+  };
+  return {
+    get: k => run('readonly', st => st.get(k)).catch(() => undefined),
+    set: (k, v) => run('readwrite', st => st.put(v, k)).catch(() => {}),
+    del: k => run('readwrite', st => st.delete(k)).catch(() => {}),
+  };
+})();
+// Hash simples e igual em todo lugar (não precisa ser criptográfico: é só pra identificar e conferir a imagem).
+function blobHash(str){
+  const h = seed => {
+    let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+    for (let i = 0; i < str.length; i++){ const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
+  };
+  return h(1) + h(7);
+}
+const validHash = h => typeof h === 'string' && /^[0-9a-f]{32}$/.test(h);
+const IMG_URL_RE = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
+const BLOB_CHUNK = 14000, BLOB_MAX_PARTS = 40;
+const blobs = new Map();        // hash → dataURL (na memória)
+const blobImgs = new Map();     // hash → <img> pronto (para desenhar em canvas)
+const blobWanted = new Map();   // hash → {sources: Set, asked, tries}
+const blobIncoming = new Map(); // hash → {n, parts, got}
+async function blobGet(h){
+  if (blobs.has(h)) return blobs.get(h);
+  const v = await idb.get('blob:' + h);
+  if (typeof v === 'string' && IMG_URL_RE.test(v)){ blobs.set(h, v); return v; }
+  return null;
+}
+async function blobPut(url){
+  const h = blobHash(url);
+  blobs.set(h, url);
+  await idb.set('blob:' + h, url);
+  return h;
+}
+function blobImg(h){
+  if (!blobs.has(h)) return null;
+  let im = blobImgs.get(h);
+  if (!im){ im = new Image(); im.src = blobs.get(h); blobImgs.set(h, im); }
+  return im.complete && im.naturalWidth ? im : null;
+}
+// Garante que a imagem está aqui; se não estiver, pede para quem a anunciou.
+async function wantBlob(h, from){
+  if (!validHash(h)) return;
+  if (blobs.has(h)) return;
+  if (await blobGet(h)){ blobReady(h); return; }
+  let w = blobWanted.get(h);
+  if (!w){ w = {sources: new Set(), asked: 0, tries: 0}; blobWanted.set(h, w); }
+  if (from) w.sources.add(from);
+  pumpBlobs();
+}
+function pumpBlobs(){
+  const now = Date.now();
+  for (const [h, w] of blobWanted){
+    if (blobs.has(h)){ blobWanted.delete(h); continue; }
+    if (now - w.asked < 12000) continue;
+    const live = [...w.sources].filter(id => members.some(m => m.id === id));
+    if (!live.length) continue;
+    const src = live[w.tries++ % live.length];
+    w.asked = now;
+    hubSend({t: 'relay', to: src, data: {k: 'breq', h}});
+  }
+}
+async function onBlobReq(from, h){
+  if (!validHash(h)) return;
+  const u = await blobGet(h);
+  if (!u) return;
+  const n = Math.ceil(u.length / BLOB_CHUNK);
+  if (n > BLOB_MAX_PARTS) return;
+  for (let i = 0; i < n; i++){
+    hubSend({t: 'relay', to: from, data: {k: 'bpart', h, i, n, d: u.slice(i * BLOB_CHUNK, (i + 1) * BLOB_CHUNK)}});
+    if (i % 6 === 5) await sleep(40);   // não entope a conexão com a sala
+  }
+}
+function onBlobPart(from, d){
+  const h = d.h, n = +d.n, i = +d.i;
+  if (!validHash(h) || blobs.has(h) || !blobWanted.has(h)) return;
+  if (!(n > 0 && n <= BLOB_MAX_PARTS && i >= 0 && i < n) || typeof d.d !== 'string' || d.d.length > BLOB_CHUNK) return;
+  let inc = blobIncoming.get(h);
+  if (!inc || inc.n !== n){ inc = {n, parts: new Array(n), got: 0}; blobIncoming.set(h, inc); }
+  if (inc.parts[i] == null){ inc.parts[i] = d.d; inc.got++; }
+  if (inc.got < n) return;
+  blobIncoming.delete(h);
+  const u = inc.parts.join('');
+  if (blobHash(u) !== h || !IMG_URL_RE.test(u)) return;   // não confere: descarta e pede de novo depois
+  blobs.set(h, u); idb.set('blob:' + h, u);
+  blobWanted.delete(h);
+  blobReady(h);
+}
+let blobRenderTimer = null;
+function blobReady(){
+  clearTimeout(blobRenderTimer);
+  blobRenderTimer = setTimeout(() => { renderMembers(); renderTileAvatars(); renderReactBars(); renderChat(); renderStickerPanels(); }, 60);
+}
+// Lê um arquivo de imagem do usuário. GIF vai como está (até maxGif); o resto é reduzido pra caber em `side`.
+function readImageFile(file, side, maxGif){
+  return new Promise((res, rej) => {
+    if (!file || !/^image\//.test(file.type)) return rej(new Error('escolha um arquivo de imagem'));
+    if (file.type === 'image/gif'){
+      if (file.size > maxGif) return rej(new Error('GIF grande demais (' + Math.round(file.size / 1024) + ' KB; o limite é ' + Math.round(maxGif / 1024) + ' KB)'));
+      const fr = new FileReader(); fr.onload = () => res({gif: true, url: fr.result}); fr.onerror = () => rej(new Error('não consegui ler o arquivo')); fr.readAsDataURL(file);
+      return;
+    }
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(url); res({gif: false, img: im}); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('não consegui abrir a imagem')); };
+    im.src = url;
+  });
+}
+function canvasToSmallUrl(c, maxChars){
+  for (const q of [0.88, 0.8, 0.7, 0.6, 0.5]){
+    let u = ''; try{ u = c.toDataURL('image/webp', q); }catch{}
+    if (!/^data:image\/webp/.test(u)) u = c.toDataURL('image/jpeg', q);
+    if (u.length <= maxChars) return u;
+  }
+  return c.toDataURL('image/jpeg', 0.45);
+}
+
+/* ---------- Foto de perfil ---------- */
+const AVATAR_GIF_MAX = 300 * 1024;
+let myAvatar = '';                 // hash da minha foto
+const peerAvatar = new Map();      // id → hash
+async function initAvatar(){
+  const h = store.get('avatar', '');
+  if (validHash(h) && await blobGet(h)) myAvatar = h;
+  renderLobbyAvatar();
+}
+const avatarOf = id => (me && id === me.id) ? myAvatar : (peerAvatar.get(id) || '');
+function nameColor(name){ let x = 0; for (const ch of String(name)) x = (x * 31 + ch.codePointAt(0)) >>> 0; return 'hsl(' + (x % 360) + ',45%,42%)'; }
+function initials(name){
+  const p = String(name || '?').trim().split(/\s+/).filter(Boolean);
+  return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+}
+// Elemento de foto (ou iniciais) para usar em qualquer lugar da interface.
+function avatarNode(id, name, size, doc){
+  const d = doc || document;
+  const h = id === '__me' ? myAvatar : avatarOf(id);
+  const el = d.createElement('span'); el.className = 'av'; el.style.width = el.style.height = size + 'px';
+  if (h && blobs.has(h)){
+    const im = d.createElement('img'); im.src = blobs.get(h); im.alt = ''; el.appendChild(im);
+  } else {
+    el.textContent = initials(name); el.style.background = nameColor(name); el.style.fontSize = Math.round(size * 0.42) + 'px';
+  }
+  return el;
+}
+function drawAvatar(g, id, name, cx, cy, r){
+  const h = id ? avatarOf(id) : myAvatar;
+  const im = h ? blobImg(h) : null;
+  g.save(); g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.closePath();
+  if (im){
+    g.clip();
+    const s = Math.min(im.naturalWidth, im.naturalHeight);
+    g.drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, cx - r, cy - r, r * 2, r * 2);
+  } else {
+    g.fillStyle = nameColor(name); g.fill();
+    g.fillStyle = '#fff'; g.font = '700 ' + Math.round(r * 0.8) + 'px system-ui, "Segoe UI", sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(initials(name), cx, cy + 2);
+  }
+  g.restore();
+}
+function renderLobbyAvatar(){
+  for (const box of document.querySelectorAll('.my-av')){
+    box.textContent = '';
+    box.appendChild(avatarNode('__me', $('#name').value.trim() || store.get('name', '') || '?', +box.dataset.size || 44));
+  }
+  for (const b of document.querySelectorAll('.av-remove')) b.hidden = !myAvatar;
+}
+async function setMyAvatar(url){
+  myAvatar = url ? await blobPut(url) : '';
+  store.set('avatar', myAvatar);
+  renderLobbyAvatar();
+  if (me){
+    // conta de novo pra todo mundo da sala (a foto vai junto do "oi")
+    announced.clear(); syncVersions(); renderMembers(); renderTileAvatars();
+    if (privateOn) drawPrivate();
+  }
+}
+function pickAvatar(){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp,image/gif';
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    try{
+      const r = await readImageFile(f, 128, AVATAR_GIF_MAX);
+      if (r.gif){ await setMyAvatar(r.url); toast('Foto de perfil trocada.'); return; }
+      openCropper(r.img, async url => { await setMyAvatar(url); toast('Foto de perfil trocada.'); });
+    }catch(e){ toast('Não deu pra usar essa imagem: ' + e.message + '.', 'warn', 7000); }
+  };
+  inp.click();
+}
+// Recorte quadrado: arrasta pra enquadrar, controle de zoom.
+function openCropper(img, done){
+  const box = $('#cropper'), cv = $('#cropCanvas'), zoom = $('#cropZoom'), g = cv.getContext('2d');
+  const S = cv.width, base = S / Math.min(img.naturalWidth, img.naturalHeight);
+  let z = 1, ox = 0, oy = 0, drag = null;
+  const clamp = () => {
+    const w = img.naturalWidth * base * z, h = img.naturalHeight * base * z;
+    ox = Math.min(0, Math.max(S - w, ox)); oy = Math.min(0, Math.max(S - h, oy));
+  };
+  const center = () => { ox = (S - img.naturalWidth * base * z) / 2; oy = (S - img.naturalHeight * base * z) / 2; };
+  const draw = () => {
+    clamp();
+    g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
+    g.drawImage(img, ox, oy, img.naturalWidth * base * z, img.naturalHeight * base * z);
+    g.save(); g.fillStyle = 'rgba(0,0,0,.55)'; g.beginPath(); g.rect(0, 0, S, S); g.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2, true); g.fill(); g.restore();
+  };
+  zoom.value = 100; center(); draw();
+  zoom.oninput = () => { const cx = S / 2 - ox, cy = S / 2 - oy, old = z; z = zoom.value / 100; ox = S / 2 - cx * z / old; oy = S / 2 - cy * z / old; draw(); };
+  cv.onpointerdown = e => { drag = {x: e.clientX - ox, y: e.clientY - oy}; cv.setPointerCapture(e.pointerId); };
+  cv.onpointermove = e => { if (drag){ ox = e.clientX - drag.x; oy = e.clientY - drag.y; draw(); } };
+  cv.onpointerup = cv.onpointercancel = () => { drag = null; };
+  cv.onwheel = e => { e.preventDefault(); zoom.value = Math.max(100, Math.min(400, +zoom.value - Math.sign(e.deltaY) * 10)); zoom.oninput(); };
+  const close = () => { box.hidden = true; cv.onpointerdown = cv.onpointermove = cv.onwheel = null; };
+  $('#cropCancel').onclick = close;
+  $('#cropOk').onclick = () => {
+    const out = document.createElement('canvas'); out.width = out.height = 128;
+    const k = 128 / S;
+    out.getContext('2d').drawImage(img, ox * k, oy * k, img.naturalWidth * base * z * k, img.naturalHeight * base * z * k);
+    close(); done(canvasToSmallUrl(out, 40000));
+  };
+  box.hidden = false;
+}
+function renderTileAvatars(){
+  for (const [pid, t] of tiles){
+    if (!t.avEl) continue;
+    const n = avatarNode(pid, t.nameEl.textContent, 22, t.el.ownerDocument);
+    t.avEl.replaceWith(n); t.avEl = n;
+  }
+}
+
+/* ---------- Reações personalizáveis e figurinhas do grupo ----------
+   Barra pessoal de 8 botões (emoji, texto curto ou figurinha), guardada neste PC.
+   Figurinhas do grupo: ficam ligadas ao código da sala; qualquer um adiciona ou remove, e a mudança
+   se espalha entre quem estiver na sala (cada um guarda uma cópia). */
+const REACTS = ['👏', '🔥', '😂', '😮', '💀', 'GG'];   // conjunto antigo (versões < 1.9 só entendem estes)
+const BAR_DEFAULT = ['👏', '🔥', '😂', '😮', '💀', 'GG', '❤️', '👀'].map(v => ({t: 'e', v}));
+const BAR_SIZE = 8, STICKER_MAX = 40, STICKER_GIF_MAX = 300 * 1024;
+const validEmoji = v => typeof v === 'string' && v.trim().length > 0 && v.length <= 16 && !/[<>]/.test(v);
+function reactBar(){
+  const b = store.get('reactBar', null);
+  const out = [];
+  for (let i = 0; i < BAR_SIZE; i++){
+    const x = Array.isArray(b) ? b[i] : null;
+    if (x && x.t === 'e' && validEmoji(x.v)) out.push({t: 'e', v: x.v});
+    else if (x && x.t === 's' && validHash(x.v) && stickerActive(x.v)) out.push({t: 's', v: x.v});
+    else out.push(BAR_DEFAULT[i]);
+  }
+  return out;
+}
+function setBarSlot(i, item){ const b = reactBar(); b[i] = item; store.set('reactBar', b); renderReactBars(); }
+
+let stickers = new Map();   // hash → {h, by, at, rm, t}
+let stickerRoom = '';
+let stickerSaveTimer = null;
+const stickerActive = h => { const x = stickers.get(h); return !!(x && !x.rm); };
+const activeStickers = () => [...stickers.values()].filter(x => !x.rm).sort((a, b) => a.at - b.at);
+async function loadStickers(){
+  stickerRoom = room;
+  const v = await idb.get('stk:' + room);
+  stickers = new Map();
+  if (v && Array.isArray(v.items)) for (const it of v.items) if (validHash(it.h)) stickers.set(it.h, it);
+  for (const x of activeStickers()) blobGet(x.h);
+  setTimeout(blobReady, 100);
+}
+function saveStickers(){
+  clearTimeout(stickerSaveTimer);
+  const r = stickerRoom;
+  stickerSaveTimer = setTimeout(() => idb.set('stk:' + r, {items: [...stickers.values()].slice(-200)}), 300);
+}
+const stickerSummary = () => [...stickers.values()].slice(-200).map(x => ({h: x.h, by: x.by, at: x.at, rm: !!x.rm, t: x.t}));
+function sendStickersTo(pid){ if (stickers.size) hubSend({t: 'relay', to: pid, data: {k: 'stk', items: stickerSummary()}}); }
+function broadcastStickers(items){ for (const m of members) if (me && m.id !== me.id) hubSend({t: 'relay', to: m.id, data: {k: 'stk', live: true, items}}); }
+function onStickers(from, d){
+  if (!Array.isArray(d.items)) return;
+  let changed = false;
+  for (const it of d.items.slice(0, 200)){
+    if (!it || !validHash(it.h)) continue;
+    const e = {h: it.h, by: String(it.by || '?').slice(0, 24), at: +it.at || 0, rm: !!it.rm, t: +it.t || 0};
+    const cur = stickers.get(e.h);
+    if (cur && cur.t >= e.t) continue;
+    const wasActive = cur && !cur.rm;
+    stickers.set(e.h, e); changed = true;
+    if (!e.rm) wantBlob(e.h, from);
+    if (d.live){
+      if (!e.rm && !wasActive) toast(e.by + ' adicionou uma figurinha ao grupo.');
+      if (e.rm && wasActive) toast(nameOf(from) + ' removeu uma figurinha do grupo.');
+    }
+  }
+  if (changed){ saveStickers(); renderReactBars(); renderStickerPanels(); }
+}
+async function addStickerFile(file){
+  if (activeStickers().length >= STICKER_MAX){ toast('O grupo já tem ' + STICKER_MAX + ' figurinhas. Remova alguma antes de adicionar outra.', 'warn'); return; }
+  try{
+    const r = await readImageFile(file, 160, STICKER_GIF_MAX);
+    let url = r.url;
+    if (!r.gif){
+      const im = r.img, k = Math.min(1, 160 / Math.max(im.naturalWidth, im.naturalHeight));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      url = canvasToSmallUrl(c, 28000);
+    }
+    const h = await blobPut(url);
+    const now = Date.now();
+    const e = {h, by: myName, at: now, rm: false, t: now};
+    stickers.set(h, e); saveStickers();
+    broadcastStickers([e]);
+    renderReactBars(); renderStickerPanels();
+    toast('Figurinha adicionada ao grupo. Todo mundo da sala recebe.');
+    return h;
+  }catch(err){ toast('Não deu pra usar essa imagem: ' + err.message + '.', 'warn', 7000); }
+}
+function removeSticker(h){
+  const cur = stickers.get(h); if (!cur || cur.rm) return;
+  const e = {...cur, rm: true, t: Math.max(Date.now(), cur.t + 1)};
+  stickers.set(h, e); saveStickers();
+  broadcastStickers([e]);
+  renderReactBars(); renderStickerPanels();
+}
+function stickerFilePicker(){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp,image/gif';
+  inp.onchange = () => { const f = inp.files && inp.files[0]; if (f) addStickerFile(f); };
+  inp.click();
+}
+// Conteúdo visual de uma reação (emoji/texto ou figurinha)
+function reactNode(item, doc, cls){
+  const d = doc || document;
+  if (item.t === 's'){
+    if (blobs.has(item.v)){ const im = d.createElement('img'); im.src = blobs.get(item.v); im.alt = 'figurinha'; im.className = cls || 'stk'; return im; }
+    const s = d.createElement('span'); s.textContent = '🖼️'; return s;
+  }
+  const s = d.createElement('span'); s.textContent = item.v; if ([...item.v].length > 2 && /[A-Za-z0-9]/.test(item.v)) s.className = 'rx-txt'; return s;
+}
+function fillReactButtons(container, pid){
+  const d = container.ownerDocument;
+  container.textContent = '';
+  reactBar().forEach((item, i) => {
+    const b = d.createElement('button'); b.type = 'button';
+    b.title = 'Reagir (tecla ' + (i + 1) + ')';
+    b.appendChild(reactNode(item, d));
+    b.onclick = () => sendReact(pid, item);
+    container.appendChild(b);
+  });
+  const more = d.createElement('button'); more.type = 'button'; more.className = 'more'; more.textContent = '…';
+  more.title = 'Figurinhas do grupo e personalizar a barra';
+  more.onclick = e => { e.stopPropagation(); toggleRxPanel(pid); };
+  container.appendChild(more);
+}
+function renderReactBars(){
+  for (const [pid, t] of tiles){ if (t.reactsEl) fillReactButtons(t.reactsEl, pid); }
+}
+// Painel "…" de uma tela: figurinhas do grupo + atalhos
+function toggleRxPanel(pid){
+  const t = tiles.get(pid); if (!t) return;
+  const open = t.rxPanel && !t.rxPanel.hidden;
+  for (const x of tiles.values()) if (x.rxPanel) x.rxPanel.hidden = true;
+  if (open) return;
+  t.rxPanel.hidden = false;
+  renderStickerPanels();
+}
+function renderStickerGrid(grid, onPick, opts){
+  const d = grid.ownerDocument;
+  grid.textContent = '';
+  const list = activeStickers();
+  if (!list.length){
+    const e = d.createElement('div'); e.className = 'muted stk-empty';
+    e.textContent = 'O grupo ainda não tem figurinhas. Adicione uma imagem ou GIF: todo mundo da sala recebe.';
+    grid.appendChild(e);
+  }
+  for (const x of list){
+    const cell = d.createElement('div'); cell.className = 'stk-cell';
+    const b = d.createElement('button'); b.type = 'button'; b.title = 'Adicionada por ' + x.by;
+    b.appendChild(reactNode({t: 's', v: x.h}, d));
+    b.onclick = () => onPick(x.h);
+    cell.appendChild(b);
+    if (opts && opts.removable){
+      const del = d.createElement('button'); del.type = 'button'; del.className = 'stk-del'; del.textContent = '×';
+      del.title = 'Remover do grupo (some pra todo mundo)';
+      del.onclick = () => {
+        if (!del.classList.contains('confirm')){ del.classList.add('confirm'); del.textContent = 'remover?'; setTimeout(() => { del.classList.remove('confirm'); del.textContent = '×'; }, 3000); return; }
+        removeSticker(x.h);
+      };
+      cell.appendChild(del);
+    }
+    grid.appendChild(cell);
+  }
+}
+function renderStickerPanels(){
+  for (const [pid, t] of tiles){
+    if (!t.rxPanel || t.rxPanel.hidden) continue;
+    renderStickerGrid(t.rxPanel.querySelector('.stk-grid'), h => { sendReact(pid, {t: 's', v: h}); t.rxPanel.hidden = true; });
+  }
+  if (!$('#rxEdit').hidden) renderRxEdit();
+  if (!$('#chatStk').hidden) renderStickerGrid($('#chatStkGrid'), h => { sendChat('', h); $('#chatStk').hidden = true; });
+}
+// Editor da barra pessoal + figurinhas do grupo
+let rxEditSlot = 0;
+function openRxEdit(){
+  for (const x of tiles.values()) if (x.rxPanel) x.rxPanel.hidden = true;
+  rxEditSlot = 0; $('#rxEdit').hidden = false; renderRxEdit();
+  $('#rxEmoji').value = '';
+}
+function renderRxEdit(){
+  const slots = $('#rxSlots'); slots.textContent = '';
+  reactBar().forEach((item, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'rx-slot' + (i === rxEditSlot ? ' sel' : '');
+    const k = document.createElement('small'); k.textContent = i + 1;
+    b.append(reactNode(item), k);
+    b.onclick = () => { rxEditSlot = i; renderRxEdit(); $('#rxEmoji').focus(); };
+    slots.appendChild(b);
+  });
+  $('#rxStkCount').textContent = activeStickers().length + ' de ' + STICKER_MAX;
+  renderStickerGrid($('#rxStkGrid'), h => { setBarSlot(rxEditSlot, {t: 's', v: h}); rxEditSlot = (rxEditSlot + 1) % BAR_SIZE; renderRxEdit(); }, {removable: true});
+}
+function initRxEdit(){
+  const apply = () => {
+    const v = $('#rxEmoji').value.trim();
+    if (!validEmoji(v) || [...v].length > 6){ toast('Use um emoji ou um texto de até 6 caracteres.', 'warn'); return; }
+    setBarSlot(rxEditSlot, {t: 'e', v}); $('#rxEmoji').value = ''; rxEditSlot = (rxEditSlot + 1) % BAR_SIZE; renderRxEdit();
+  };
+  $('#rxEmojiOk').onclick = apply;
+  $('#rxEmoji').addEventListener('keydown', e => { if (e.key === 'Enter') apply(); });
+  $('#rxReset').onclick = () => { store.set('reactBar', null); renderReactBars(); renderRxEdit(); };
+  $('#rxAddStk').onclick = stickerFilePicker;
+  $('#rxClose').onclick = () => { $('#rxEdit').hidden = true; };
+  $('#rxEdit').onclick = e => { if (e.target === $('#rxEdit')) $('#rxEdit').hidden = true; };
+}
+
 let lastReactAt = 0;
 const reactSeen = new Map();   // limite por pessoa (anti-spam)
-function sendReact(streamerId, i){
-  if (!REACTS[i] || !me) return;
+function sendReact(streamerId, item){
+  if (!item || !me) return;
   const now = Date.now();
   if (now - lastReactAt < 350) return;
   lastReactAt = now;
-  const data = {k: 'react', e: i, s: streamerId, n: myName};
+  // "e": índice no conjunto antigo, para quem ainda está numa versão anterior (-1 = essa pessoa não vê)
+  const legacy = item.t === 'e' ? REACTS.indexOf(item.v) : -1;
+  const data = {k: 'react', e: legacy, x: {t: item.t, v: item.v}, s: streamerId, n: myName};
   for (const m of members) if (m.id !== me.id) hubSend({t: 'relay', to: m.id, data});
-  showReact(streamerId, i, myName);   // retorno imediato pra quem clicou
+  showReact(streamerId, item, myName, me.id);   // retorno imediato pra quem clicou
 }
 function onReact(from, data){
-  const i = +data.e;
-  if (!REACTS[i] || typeof data.s !== 'string') return;
+  if (typeof data.s !== 'string') return;
+  let item = null;
+  const x = data.x;
+  if (x && x.t === 'e' && validEmoji(x.v)) item = {t: 'e', v: x.v};
+  else if (x && x.t === 's' && validHash(x.v)) item = {t: 's', v: x.v};
+  else if (REACTS[+data.e]) item = {t: 'e', v: REACTS[+data.e]};
+  if (!item) return;
   const now = Date.now();
   if (now - (reactSeen.get(from) || 0) < 250) return;
   reactSeen.set(from, now);
   const who = (members.find(m => m.id === from) || {}).name || String(data.n || '').slice(0, 24) || 'alguém';
-  showReact(data.s, i, who);
+  if (item.t === 's' && !blobs.has(item.v)){
+    // figurinha que ainda não chegou aqui: pede e mostra assim que chegar (até 4 s)
+    wantBlob(item.v, from);
+    const t0 = Date.now();
+    const wait = () => { if (blobs.has(item.v)) showReact(data.s, item, who, from); else if (Date.now() - t0 < 4000) setTimeout(wait, 250); };
+    setTimeout(wait, 250);
+    return;
+  }
+  showReact(data.s, item, who, from);
 }
+
+/* ---------- Chat ----------
+   As mensagens vão direto pra cada um da sala; quem segura a sala guarda as últimas 50 para quem chegar depois.
+   Quem transmite vê todas por cima do jogo (app), fora da transmissão. */
+const CHAT_KEEP = 50, CHAT_MAX_LEN = 200;
+const chatMsgs = [];             // {id, from, n, x, st, at}
+const chatIds = new Set();
+let chatUnread = 0, lastChatAt = 0;
+function validChat(m){
+  return m && typeof m.id === 'string' && m.id.length <= 40 && (typeof m.x === 'string' || validHash(m.st)) &&
+    String(m.x || '').length <= CHAT_MAX_LEN && (!m.st || validHash(m.st));
+}
+function addChat(m, opts){
+  if (!validChat(m) || chatIds.has(m.id)) return false;
+  const msg = {id: m.id, from: String(m.from || ''), n: String(m.n || '?').slice(0, 24), x: String(m.x || ''), st: m.st && validHash(m.st) ? m.st : '', at: +m.at || Date.now()};
+  chatIds.add(msg.id); chatMsgs.push(msg);
+  chatMsgs.sort((a, b) => a.at - b.at);
+  while (chatMsgs.length > 200){ chatIds.delete(chatMsgs.shift().id); }
+  if (msg.st) wantBlob(msg.st, opts && opts.via ? opts.via : msg.from);
+  if (msg.from && msg.from !== (me && me.id)) wantAvatarFor(msg.from);
+  renderChat();
+  if (!(opts && opts.history)){
+    if ($('#chat').hidden && msg.from !== (me && me.id)){ chatUnread++; syncChatBtn(); }
+    if (msg.from !== (me && me.id)){
+      const item = {kind: 'chat', who: msg.n, text: msg.x, av: blobs.get(avatarOf(msg.from)) || ''};
+      if (msg.st){
+        if (blobs.has(msg.st)) item.img = blobs.get(msg.st);
+        else { const t0 = Date.now(); const w = () => { if (blobs.has(msg.st)){ item.img = blobs.get(msg.st); overlaySend(item); floatChat(msg); } else if (Date.now() - t0 < 4000) setTimeout(w, 250); }; setTimeout(w, 250); return true; }
+      }
+      overlaySend(item);
+    }
+    floatChat(msg);
+  }
+  return true;
+}
+function wantAvatarFor(id){ const h = peerAvatar.get(id); if (h) wantBlob(h, id); }
+function sendChat(text, st){
+  if (!me) return;
+  text = String(text || '').trim().slice(0, CHAT_MAX_LEN);
+  if (!text && !st) return;
+  const now = Date.now();
+  if (now - lastChatAt < 300) return;
+  lastChatAt = now;
+  const m = {id: genCode() + now.toString(36), from: me.id, n: myName, x: text, st: st || '', at: now};
+  for (const p of members) if (p.id !== me.id) hubSend({t: 'relay', to: p.id, data: {k: 'chat', m}});
+  hubSend({t: 'chatkeep', m});   // histórico com quem segura a sala
+  addChat(m);
+}
+function onChat(from, d){
+  const m = d.m; if (!m) return;
+  m.from = from;   // quem mandou é quem a sala diz, não o que vem na mensagem
+  addChat(m);
+}
+function fmtTime(t){ const d = new Date(t), z = n => String(n).padStart(2, '0'); return z(d.getHours()) + ':' + z(d.getMinutes()); }
+let chatRenderTimer = null;
+function renderChat(){
+  clearTimeout(chatRenderTimer);
+  chatRenderTimer = setTimeout(() => {
+    const list = $('#chatList'); if (!list) return;
+    const stick = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+    list.textContent = '';
+    if (!chatMsgs.length){ const e = document.createElement('div'); e.className = 'muted chat-empty'; e.textContent = 'Nenhuma mensagem ainda. As mensagens aparecem por cima do jogo de quem está transmitindo.'; list.appendChild(e); }
+    let prev = null;
+    for (const m of chatMsgs){
+      const row = document.createElement('div'); row.className = 'cmsg' + (me && m.from === me.id ? ' mine' : '');
+      const same = prev && prev.from === m.from && m.at - prev.at < 120000;
+      if (!same){
+        const head = document.createElement('div'); head.className = 'chead';
+        head.appendChild(avatarNode(me && m.from === me.id ? '__me' : m.from, m.n, 20));
+        const nm = document.createElement('b'); nm.textContent = m.n;
+        const tm = document.createElement('small'); tm.textContent = fmtTime(m.at);
+        head.append(nm, tm); row.appendChild(head);
+      }
+      if (m.x){ const p = document.createElement('div'); p.className = 'ctext'; p.textContent = m.x; row.appendChild(p); }
+      if (m.st) row.appendChild(reactNode({t: 's', v: m.st}, document, 'cstk'));
+      list.appendChild(row); prev = m;
+    }
+    if (stick) list.scrollTop = list.scrollHeight;
+  }, 30);
+}
+function syncChatBtn(){
+  const b = $('#chatBtn');
+  b.classList.toggle('on', !$('#chat').hidden);
+  $('#chatBadge').hidden = !chatUnread || !$('#chat').hidden;
+  $('#chatBadge').textContent = chatUnread > 9 ? '9+' : String(chatUnread);
+}
+function toggleChat(force){
+  const open = force != null ? force : $('#chat').hidden;
+  $('#chat').hidden = !open;
+  store.set('chatOpen', open);
+  if (open){ chatUnread = 0; renderChat(); setTimeout(() => { const l = $('#chatList'); l.scrollTop = l.scrollHeight; $('#chatIn').focus(); }, 40); }
+  syncChatBtn();
+  scheduleRes();
+}
+function initChat(){
+  $('#chatBtn').onclick = () => toggleChat();
+  $('#chatClose').onclick = () => toggleChat(false);
+  const send = () => { sendChat($('#chatIn').value); $('#chatIn').value = ''; };
+  $('#chatSend').onclick = send;
+  $('#chatIn').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); } });
+  $('#chatStkBtn').onclick = e => { e.stopPropagation(); $('#chatStk').hidden = !$('#chatStk').hidden; renderStickerPanels(); };
+  $('#chatStkAdd').onclick = stickerFilePicker;
+  document.addEventListener('click', e => {
+    if (!$('#chatStk').hidden && !e.target.closest('#chatStk') && !e.target.closest('#chatStkBtn')) $('#chatStk').hidden = true;
+    if (!e.target.closest('.rx-panel') && !e.target.closest('.reacts .more')) for (const x of tiles.values()) if (x.rxPanel) x.rxPanel.hidden = true;
+  });
+  if (store.get('chatOpen', false)) toggleChat(true);
+  renderChat(); syncChatBtn();
+}
+// Janela flutuante: mensagens aparecem por cima do vídeo e dá pra responder ali mesmo.
+function floatChat(m){
+  const f = floatState; if (!f || f.kind !== 'doc' || !f.chatBox) return;
+  const d = f.win.document;
+  const b = d.createElement('div'); b.className = 'fbubble';
+  const who = d.createElement('b'); who.textContent = m.n + ': ';
+  b.appendChild(who);
+  if (m.x){ const t = d.createElement('span'); t.textContent = m.x; b.appendChild(t); }
+  if (m.st) b.appendChild(reactNode({t: 's', v: m.st}, d, 'cstk'));
+  f.chatBox.appendChild(b);
+  while (f.chatBox.childElementCount > 5) f.chatBox.firstChild.remove();
+  setTimeout(() => b.classList.add('fade'), 8000);
+  setTimeout(() => b.remove(), 9000);
+}
+function buildFloatChat(f){
+  const d = f.win.document;
+  const wrap = d.createElement('div'); wrap.className = 'fchat';
+  const box = d.createElement('div'); box.className = 'fbubbles';
+  const row = d.createElement('div'); row.className = 'finput';
+  const inp = d.createElement('input'); inp.maxLength = CHAT_MAX_LEN; inp.placeholder = 'Mensagem para a sala…';
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ sendChat(inp.value); inp.value = ''; } e.stopPropagation(); });
+  row.appendChild(inp); wrap.append(box, row);
+  d.body.appendChild(wrap);
+  f.chatBox = box;
+}
+
+/* ---------- Camada por cima do jogo: reações e chat ---------- */
+const overlayItemAvailable = () => DESKTOP && !!window.telaoDesktop.overlayItem;
+const chatOverlayOn = () => !!store.get('overlayChat', true);
+function overlaySend(item){
+  if (!me || !localStream || !overlayAvailable()) return;
+  if (item.kind === 'chat' ? !chatOverlayOn() : !overlayOn()) return;
+  if (overlayItemAvailable()){ try{ window.telaoDesktop.overlayItem(item); }catch{} return; }
+  // app antigo: só emojis curtos
+  if (item.kind === 'react' && item.text && item.text.length <= 4) window.telaoDesktop.overlayReact(item.text, item.who);
+}
+
+/* ---------- Retransmissão entre amigos ----------
+   Quem transmite com a internet no limite (ou que não consegue chegar em alguém) pede a um amigo que já está
+   assistindo para repassar o vídeo aos outros. O amigo pode parar quando quiser (e desligar de vez nas Opções). */
+const RELAY_BW_HOLD = 20000, RELAY_UNREACH_MS = 45000, RELAY_MIN_VER = '1.9.0';
+let myUp = (store.get('upKbps', null) || {}).v || 0;   // maior upload já medido aqui (kbps)
+let myHw = store.get('hwEnc', null);                    // este PC codifica pela placa de vídeo?
+const relayAllowed = () => store.get('relayOk', true) !== false;
+const bulletins = new Map();     // id → {up, hw, ok, sh, w: [ids que recebe direto], d, n, t}
+// lado de quem transmite
+const relayVia = new Map();      // espectador → retransmissor
+const relayReqs = new Map();     // retransmissor → {vs, at, why}
+const relayExcluded = new Map(); // retransmissor → até quando não pedir de novo
+const relayTried = new Map();    // espectador → Set de retransmissores que não conseguiram
+const noConnSince = new Map();   // espectador → desde quando não recebe direto
+let bwSince = 0, lastRelayTick = 0, relayCooldown = 0;
+// lado de quem retransmite
+const relayOut = new Map();      // "S|V" → {s, v, call, ok, want, paused}
+const relayPlanOf = new Map();   // S → {q, codec}
+const supportsRelay = id => { const x = peerVer.get(id); return !!(x && x.v && cmpVer(x.v, RELAY_MIN_VER) >= 0); };
+const isRelayHub = id => [...relayVia.values()].includes(id);
+
+function sendBulletin(){
+  if (!me) return;
+  const w = [...tiles].filter(([pid, t]) => t.firstFrame && !t.via && !t.el.hidden && t.video.srcObject).map(([pid]) => pid);
+  const data = {k: 'bul', up: Math.round(myUp), hw: myHw, ok: relayAllowed(), sh: !!localStream, w, d: DESKTOP, n: relayOut.size};
+  for (const m of members) if (m.id !== me.id && supportsRelay(m.id)) hubSend({t: 'relay', to: m.id, data});
+}
+function onBulletin(from, d){
+  bulletins.set(from, {up: Math.max(0, +d.up || 0), hw: d.hw === true ? true : d.hw === false ? false : null, ok: d.ok !== false, sh: !!d.sh,
+    w: Array.isArray(d.w) ? d.w.filter(x => typeof x === 'string').slice(0, 10) : [], d: !!d.d, n: +d.n || 0, t: Date.now()});
+}
+// Mede o upload (estimativa do próprio WebRTC) e se o encoder é da placa de vídeo.
+function noteUpload(totalKbps, hw){
+  if (totalKbps > myUp * 1.05 && totalKbps > 300){
+    myUp = totalKbps;
+    store.set('upKbps', {v: Math.round(myUp), at: Date.now()});
+  }
+  if (hw === true || hw === false){ if (myHw !== hw){ myHw = hw; store.set('hwEnc', hw); } }
+}
+function directViewers(){
+  const out = [];
+  for (const [pid, c] of outCalls){
+    if (pausedBy.get(pid) || relayVia.has(pid)) continue;
+    const pc = c.peerConnection;
+    if (pc && pc.connectionState === 'connected') out.push(pid);
+  }
+  return out;
+}
+function relayScore(id, b){
+  return (b.up || 0) / 1000 + (b.hw ? 3 : 0) + (b.d ? 1 : 0) - (b.sh ? 4 : 0) - (b.n || 0) * 2 + (id === lastGoodRelay ? 1 : 0);
+}
+let lastGoodRelay = '';
+function pickRelay(exclude, forV){
+  const now = Date.now();
+  let best = null, bestScore = -Infinity;
+  for (const [id, b] of bulletins){
+    if (now - b.t > 30000 || !b.ok || exclude.includes(id)) continue;
+    if (!members.some(m => m.id === id) || !supportsRelay(id)) continue;
+    if ((relayExcluded.get(id) || 0) > now) continue;
+    if (!b.w.includes(me.id)) continue;                       // precisa estar recebendo a minha tela direto
+    if (forV && relayTried.has(forV) && relayTried.get(forV).has(id)) continue;
+    const sc = relayScore(id, b);
+    if (sc > bestScore){ best = id; bestScore = sc; }
+  }
+  return best;
+}
+function startRelay(r, vs, why){
+  vs = vs.filter(v => v !== r && supportsRelay(v));
+  if (!vs.length) return;
+  for (const v of vs) relayVia.set(v, r);
+  relayReqs.set(r, {vs, at: Date.now(), why});
+  const q = QUALITY[currentQ()];
+  netLog('retransmissão: pedindo a ' + nameOf(r) + ' para repassar a ' + vs.map(v => nameOf(v)).join(', ') + ' (' + why + ')');
+  hubSend({t: 'relay', to: r, data: {k: 'rly-req', vs, why: /internet/.test(why) ? 'bw' : 'conn', q: {w: q.w, h: q.h, fps: q.fps, kbps: q.kbps}, codec: currentCodec()}});
+}
+// Volta a mandar direto para quem estava passando por `r`.
+function relayFallback(r, vs, why, excludeMs){
+  if (excludeMs) relayExcluded.set(r, Date.now() + excludeMs);
+  relayCooldown = Date.now() + 12000;   // espera os boletins novos (quem estava recebendo pelo retransmissor volta a receber direto)
+  for (const v of vs){
+    if (relayVia.get(v) !== r) continue;
+    relayVia.delete(v);
+    if (!relayTried.has(v)) relayTried.set(v, new Set());
+    relayTried.get(v).add(r);
+    if (localStream && members.some(m => m.id === v) && !outCalls.has(v)) callPeer(v);
+  }
+  if (why) netLog('retransmissão por ' + nameOf(r) + ' terminou: ' + why);
+  updatePip();
+}
+function relayTick(bwLimited){
+  const now = Date.now();
+  if (now - lastRelayTick < 4000) return;
+  lastRelayTick = now;
+  if (!localStream || !me){ relayVia.clear(); relayReqs.clear(); bwSince = 0; noConnSince.clear(); return; }
+  const here = new Set(members.map(m => m.id));
+  // retransmissor ou espectador que saiu da sala
+  for (const [v, r] of [...relayVia]){
+    if (!here.has(v)){ relayVia.delete(v); continue; }
+    if (!here.has(r)) relayFallback(r, [v], 'saiu da sala');
+  }
+  for (const [r, q] of [...relayReqs]) if (now - q.at > 15000){ relayReqs.delete(r); relayFallback(r, q.vs, 'não respondeu', 5 * 60000); }
+  // 1) internet de quem transmite no limite
+  if (bwLimited || window.__relayForceBw) bwSince = bwSince || now; else bwSince = 0;
+  const direct = directViewers();
+  if (bwSince && now - bwSince >= RELAY_BW_HOLD && direct.length >= 2 && !relayReqs.size && now > relayCooldown){
+    const r = pickRelay([], null);
+    if (r && direct.includes(r)){ startRelay(r, direct.filter(v => v !== r), 'internet de quem transmite no limite'); bwSince = now; }
+  }
+  // 2) alguém que não recebe direto de jeito nenhum
+  for (const m of members){
+    const v = m.id;
+    if (v === me.id || relayVia.has(v) || pausedBy.get(v) || !supportsRelay(v)) { noConnSince.delete(v); continue; }
+    const c = outCalls.get(v);
+    const ok = c && c.peerConnection && c.peerConnection.connectionState === 'connected';
+    if (ok){ noConnSince.delete(v); continue; }
+    if (!noConnSince.has(v)) noConnSince.set(v, now);
+    const stuck = (failCount.get(v) || 0) >= MAX_FAILS || now - noConnSince.get(v) > (window.__relayUnreachMs || RELAY_UNREACH_MS);
+    if (!stuck || [...relayReqs.values()].some(q => q.vs.includes(v))) continue;
+    const r = pickRelay([v], v);
+    if (r){ startRelay(r, [v], 'não consegue receber direto'); noConnSince.set(v, now); }
+  }
+}
+function onRelayMsgForStreamer(from, d){
+  const vs = Array.isArray(d.vs) ? d.vs.filter(x => typeof x === 'string') : [];
+  if (d.k === 'rly-ok'){
+    relayReqs.delete(from); lastGoodRelay = from;
+    netLog('retransmissão: ' + nameOf(from) + ' aceitou');
+    updatePip();
+  } else if (d.k === 'rly-no'){
+    relayReqs.delete(from); relayFallback(from, vs, 'recusou ou não está recebendo a tela', 5 * 60000);
+  } else if (d.k === 'rly-fail'){
+    relayFallback(from, vs, 'não conseguiu chegar em ' + vs.map(v => nameOf(v)).join(', '));
+  } else if (d.k === 'rly-stop'){
+    relayReqs.delete(from);
+    relayFallback(from, vs.length ? vs : [...relayVia].filter(([, r]) => r === from).map(([v]) => v), 'parou de retransmitir', 10 * 60000);
+    if (bwSince === 0) bwSince = Date.now() - RELAY_BW_HOLD + 6000;   // se a rede ainda estiver no limite, tenta outro logo
+  } else if (d.k === 'rly-lost'){
+    // espectador perdeu o vídeo que vinha pelo retransmissor: volta a mandar direto
+    const r = relayVia.get(from);
+    if (r) relayFallback(r, [from], nameOf(from) + ' perdeu o vídeo pela retransmissão');
+  }
+}
+// ----- lado de quem retransmite -----
+function onRelayReq(from, d){
+  const vs = (Array.isArray(d.vs) ? d.vs : []).filter(v => typeof v === 'string' && v !== me.id && v !== from).slice(0, 8);
+  const t = tiles.get(from);
+  if (!relayAllowed() || !t || !t.video.srcObject || t.via || !vs.length){
+    hubSend({t: 'relay', to: from, data: {k: 'rly-no', vs}}); return;
+  }
+  const q = d.q || {};
+  const plan = {q: {w: Math.min(3840, +q.w || 1920), h: Math.min(2160, +q.h || 1080), fps: Math.min(240, +q.fps || 60), kbps: Math.min(20000, Math.max(300, +q.kbps || 4500))},
+                codec: CODECS[d.codec] ? d.codec : currentCodec()};
+  plan.why = d.why === 'conn' ? 'conn' : 'bw';
+  relayPlanOf.set(from, plan);
+  for (const v of vs) relayStartTo(from, v, plan.codec);
+  hubSend({t: 'relay', to: from, data: {k: 'rly-ok', vs}});
+  if (!relayToastShown){ relayToastShown = true; toast('Você está repassando a tela de ' + nameOf(from) + (plan.why === 'conn' ? ' para quem não consegue receber direto' : ' para ajudar a internet dele') + '. Dá pra parar na faixa lá em cima.', 'ok', 8000); }
+  renderRelayBar();
+}
+let relayToastShown = false;
+function relayStartTo(s, v, codec){
+  const key = s + '|' + v;
+  const old = relayOut.get(key);
+  if (old){ relayOut.delete(key); try{ old.call.close(); }catch{} }
+  const t = tiles.get(s);
+  if (!t || !t.video.srcObject || !me) return;
+  const src = t.video.srcObject;
+  const stream = new MediaStream([...src.getVideoTracks(), ...src.getAudioTracks()]);
+  let call = null;
+  try{ call = me.call(v, stream, {metadata: {name: nameOf(s), codec, relayOf: s, relayName: myName}, sdpTransform: makeSdpTransform(codec)}); }catch{}
+  if (!call){ hubSend({t: 'relay', to: s, data: {k: 'rly-fail', vs: [v]}}); return; }
+  const ent = {s, v, call, ok: false, want: null, paused: false};
+  relayOut.set(key, ent);
+  applyRelayQuality(ent);
+  setTimeout(() => {
+    if (relayOut.get(key) === ent && !ent.ok){
+      relayOut.delete(key); try{ call.close(); }catch{}
+      hubSend({t: 'relay', to: s, data: {k: 'rly-fail', vs: [v]}});
+      renderRelayBar();
+    }
+  }, 20000);
+  watchPc(call.peerConnection, st => {
+    if (st === 'connected'){ ent.ok = true; applyRelayQuality(ent); renderRelayBar(); }
+    if ((st === 'failed' || st === 'closed') && relayOut.get(key) === ent){
+      relayOut.delete(key); renderRelayBar();
+      if (st === 'failed') hubSend({t: 'relay', to: s, data: {k: 'rly-fail', vs: [v]}});
+    }
+  });
+  const forget = () => { if (relayOut.get(key) === ent){ relayOut.delete(key); renderRelayBar(); } };
+  call.on('close', forget); call.on('error', forget);
+}
+async function applyRelayQuality(ent){
+  const pc = ent.call && ent.call.peerConnection; if (!pc) return;
+  const plan0 = relayPlanOf.get(ent.s) || {q: QUALITY.fluido};
+  const t = tiles.get(ent.s);
+  const vt = t && t.video.srcObject && t.video.srcObject.getVideoTracks()[0];
+  const srcH = (t && t.video.videoHeight) || (vt && vt.getSettings && vt.getSettings().height) || plan0.q.h;
+  const plan = planFor(plan0.q, srcH, ent.want && ent.want.h, ent.want && ent.want.hz);
+  for (const snd of pc.getSenders()){
+    if (!snd.track) continue;
+    try{
+      const p = snd.getParameters();
+      if (!p.encodings || !p.encodings.length) continue;
+      p.encodings.forEach(e => { e.active = !ent.paused; });
+      if (snd.track.kind === 'video'){
+        p.encodings[0].maxBitrate = plan.kbps * 1000; p.encodings[0].maxFramerate = plan.fps; p.encodings[0].scaleResolutionDownBy = plan.scale;
+        p.degradationPreference = 'maintain-framerate';
+      } else p.encodings[0].maxBitrate = 128000;
+      await snd.setParameters(p);
+    }catch{}
+  }
+}
+function relayRes(s, v, h, hz){
+  const ent = relayOut.get(s + '|' + v); if (!ent) return;
+  ent.want = {h, hz}; applyRelayQuality(ent);
+}
+function relayPause(s, v, on){
+  const ent = relayOut.get(s + '|' + v); if (!ent) return;
+  ent.paused = !!on; applyRelayQuality(ent);
+}
+// A tela que eu repasso chegou de novo (conexão nova): troca o vídeo nos repasses.
+function relayRefresh(s){
+  const t = tiles.get(s); if (!t || !t.video.srcObject) return;
+  const src = t.video.srcObject;
+  for (const ent of relayOut.values()){
+    if (ent.s !== s) continue;
+    const pc = ent.call.peerConnection; if (!pc) continue;
+    for (const snd of pc.getSenders()){
+      if (!snd.track) continue;
+      const nt = snd.track.kind === 'video' ? src.getVideoTracks()[0] : src.getAudioTracks()[0];
+      if (nt && nt !== snd.track) snd.replaceTrack(nt).catch(() => {});
+    }
+  }
+}
+function relayStopFor(s, notify){
+  const vs = [];
+  for (const [key, ent] of [...relayOut]){
+    if (ent.s !== s) continue;
+    relayOut.delete(key); vs.push(ent.v);
+    try{ ent.call.close(); }catch{}
+  }
+  if (notify && vs.length) hubSend({t: 'relay', to: s, data: {k: 'rly-stop', vs}});
+  renderRelayBar();
+}
+function renderRelayBar(){
+  const bar = $('#relayBar'); if (!bar) return;
+  const bySrc = new Map();
+  for (const ent of relayOut.values()){ if (!bySrc.has(ent.s)) bySrc.set(ent.s, []); bySrc.get(ent.s).push(ent); }
+  bar.textContent = '';
+  bar.hidden = !bySrc.size;
+  for (const [s, ents] of bySrc){
+    const row = document.createElement('div'); row.className = 'rrow';
+    const n = ents.length, ok = ents.filter(e => e.ok).length;
+    const txt = document.createElement('span');
+    const why = (relayPlanOf.get(s) || {}).why === 'conn' ? (n === 1 ? ', que não consegue receber direto de ' : ', que não conseguem receber direto de ') + nameOf(s) + '.' : ', porque a internet de quem transmite está no limite.';
+    txt.textContent = '📡 Você está repassando a tela de ' + nameOf(s) + ' para ' + n + (n === 1 ? ' amigo' : ' amigos') + (ok < n ? ' (conectando…)' : '') + why;
+    const stop = document.createElement('button'); stop.className = 'primary stop'; stop.textContent = 'Parar';
+    stop.onclick = () => { relayStopFor(s, true); toast('Retransmissão parada. Quem assistia por você volta a receber direto (ou por outro amigo).'); };
+    const never = document.createElement('button'); never.className = 'linkish'; never.textContent = 'Não retransmitir mais';
+    never.onclick = () => { store.set('relayOk', false); syncOpts(); for (const x of [...bySrc.keys()]) relayStopFor(x, true); toast('Ok: você não vai mais retransmitir. Dá pra religar em Opções.'); };
+    row.append(txt, stop, never); bar.appendChild(row);
+  }
+}
+
+/* ---------- Opções ---------- */
+function syncOpts(){
+  $('#optRelay').checked = relayAllowed();
+  $('#optPrivMsg').value = privateMsg();
+  renderLobbyAvatar();
+}
+function initOpts(){
+  $('#optsBtn').onclick = () => { syncOpts(); $('#opts').hidden = false; };
+  $('#optsClose').onclick = () => { $('#opts').hidden = true; };
+  $('#opts').onclick = e => { if (e.target === $('#opts')) $('#opts').hidden = true; };
+  $('#optRelay').onchange = () => {
+    store.set('relayOk', $('#optRelay').checked);
+    if (!$('#optRelay').checked) for (const s of new Set([...relayOut.values()].map(e => e.s))) relayStopFor(s, true);
+    sendBulletin();
+  };
+  $('#optPrivMsg').oninput = () => { store.set('privateMsg', $('#optPrivMsg').value.slice(0, 80)); if (privateOn) drawPrivate(); };
+  $('#optRx').onclick = () => { $('#opts').hidden = true; openRxEdit(); };
+}
+
 /* Modo rápido (app 1.7.2+): janela de jogo que ocupa o monitor inteiro é capturada pelo caminho da tela inteira
    (Desktop Duplication), que no Windows 10 é bem mais rápido que a captura de janela. O som continua vindo só da janela. */
 let fastCapture = false, fastWatch = null;
 const fastCaptureAvailable = () => DESKTOP && !!window.telaoDesktop.screenForWindow;
-const fastCaptureOn = () => !!store.get('fastWindow', true);
+const fastCaptureOn = () => !!store.get('fastWindow', false);
+// Windows 10 ou 11? (platformVersion 13+ = Windows 11). Só muda a dica do seletor.
+let winGen = 0;
+try{ navigator.userAgentData && navigator.userAgentData.platform === 'Windows' &&
+  navigator.userAgentData.getHighEntropyValues(['platformVersion']).then(v => { const m = parseInt(v.platformVersion, 10); winGen = m >= 13 ? 11 : m > 0 ? 10 : 0; }).catch(() => {}); }catch{}
+const fastNote = () => winGen === 11 ? '(não precisa no Windows 11)' : winGen === 10 ? '(ajuda no Windows 10)' : '(só ajuda no Windows 10)';
 const coversMonitor = r => r && r.ok && r.w > 0 && r.mw > 0 &&
   r.x <= r.mx + 2 && r.y <= r.my + 2 && r.x + r.w >= r.mx + r.mw - 2 && r.y + r.h >= r.my + r.mh - 2;
 async function fastScreenFor(hwnd){
@@ -2162,7 +3462,7 @@ const overlayAvailable = () => DESKTOP && !!window.telaoDesktop.overlayShow;
 const overlayOn = () => !!store.get('overlay', true);
 async function showOverlay(){
   syncOverlayBtn();
-  if (!overlayAvailable() || !overlayOn() || !localStream) return;
+  if (!overlayAvailable() || (!overlayOn() && !chatOverlayOn()) || !localStream) return;
   const c = lastChosen;
   let rect = null;
   if (c && c.type === 'window'){
@@ -2173,6 +3473,11 @@ async function showOverlay(){
 }
 function hideOverlay(){ if (overlayAvailable()) window.telaoDesktop.overlayHide().catch(() => {}); }
 function syncOverlayBtn(){
+  const c = $('#pipChat');
+  c.hidden = !DESKTOP;
+  c.classList.toggle('off', !overlayItemAvailable() || !chatOverlayOn());
+  c.title = !overlayItemAvailable() ? 'Chat por cima do jogo: precisa do app 1.9 (ele se atualiza sozinho; reinicie quando aparecer o aviso).'
+    : 'Chat por cima do jogo: ' + (chatOverlayOn() ? 'ligado' : 'desligado') + '. Clique para ' + (chatOverlayOn() ? 'desligar' : 'ligar') + '.';
   const b = $('#pipOverlay');
   b.hidden = !DESKTOP;
   if (!overlayAvailable()){
@@ -2192,19 +3497,29 @@ function toggleOverlay(){
     return;
   }
   store.set('overlay', !overlayOn());
-  if (overlayOn()) showOverlay(); else { hideOverlay(); syncOverlayBtn(); }
+  if (overlayOn() || chatOverlayOn()) showOverlay(); else { hideOverlay(); syncOverlayBtn(); }
+}
+function toggleChatOverlay(){
+  if (!overlayItemAvailable()){ toast('O chat por cima do jogo precisa do app 1.9. O app se atualiza sozinho: quando aparecer "Reiniciar e atualizar", é só clicar.', 'warn', 9000); return; }
+  store.set('overlayChat', !chatOverlayOn());
+  if (overlayOn() || chatOverlayOn()) showOverlay(); else { hideOverlay(); syncOverlayBtn(); }
 }
 
-function showReact(streamerId, i, who){
-  if (me && streamerId === me.id && localStream && overlayAvailable() && overlayOn()) window.telaoDesktop.overlayReact(REACTS[i], who);
+function showReact(streamerId, item, who, fromId){
+  if (me && streamerId === me.id && localStream){
+    const ov = {kind: 'react', who, av: blobs.get(avatarOf(fromId)) || ''};
+    if (item.t === 's') ov.img = blobs.get(item.v) || ''; else ov.text = item.v;
+    overlaySend(ov);
+  }
   let box = null;
   if (me && streamerId === me.id){ if (localStream) box = $('#pipFx'); }
   else { const t = tiles.get(streamerId); if (t && !t.el.hidden) box = t.fxEl; }
   if (!box || box.childElementCount > 24) return;
-  const el = document.createElement('div'); el.className = 'rx';
+  const d = box.ownerDocument;
+  const el = d.createElement('div'); el.className = 'rx';
   el.style.left = (8 + Math.random() * 78) + '%';
-  const b = document.createElement('b'); b.textContent = REACTS[i];
-  const n = document.createElement('i'); n.textContent = who;
+  const b = d.createElement('b'); b.appendChild(reactNode(item, d, 'rx-stk'));
+  const n = d.createElement('i'); n.appendChild(avatarNode(fromId === (me && me.id) ? '__me' : fromId, who, 14, d)); n.append(' ' + who);
   el.append(b, n);
   el.addEventListener('animationend', () => el.remove());
   box.appendChild(el);
@@ -2515,6 +3830,7 @@ async function toggleFloat(pid){
     t.video.play().catch(() => {});
     const f = {pid, kind: 'doc', win: w, holder};
     floatState = f;
+    buildFloatChat(f);
     const gone = () => { if (floatState === f) returnFloat(); };
     w.addEventListener('pagehide', gone);
     w.addEventListener('resize', scheduleRes);
@@ -2560,6 +3876,7 @@ function closeFloat(){
 function removeTile(pid){
   const t = tiles.get(pid);
   if (!t) return;
+  relayStopFor(pid, false);   // eu repassava esta tela: os repasses acabam junto
   if (floatState && floatState.pid === pid) closeFloat();
   try{ t.call && t.call.close(); }catch{}
   t.video.srcObject = null;
@@ -2682,6 +3999,7 @@ async function updateStats(){
       if (v.framesPerSecond) parts.push(Math.round(v.framesPerSecond) + 'fps');
       if (mbps > 0) parts.push(mbps.toFixed(1) + ' Mbps');
       if (relay) parts.push('via TURN');
+      if (t.via) parts.push('via ' + nameOf(t.via));
       t.statsEl.textContent = parts.join(' · ');
     }catch{}
   }

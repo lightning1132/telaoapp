@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   overlayShow: (sourceId, rect) => ipcRenderer.invoke('telao:overlayShow', sourceId, rect),
   overlayHide: () => ipcRenderer.invoke('telao:overlayHide'),
   overlayReact: (emoji, who) => ipcRenderer.send('telao:overlayReact', emoji, who),
+  overlayItem: item => ipcRenderer.send('telao:overlayItem', item),
   screenForWindow: m => ipcRenderer.invoke('telao:screenFor', m),
   floatWindows: true,
 });
