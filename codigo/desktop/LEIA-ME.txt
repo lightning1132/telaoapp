@@ -1,0 +1,22 @@
+TELÃO DESKTOP
+Compartilhamento de tela entre amigos, direto de PC pra PC. Versão em aplicativo para Windows.
+
+COMO ABRIR
+1. Extraia a pasta inteira em algum lugar fixo (ex.: Documentos\Telao). Não rode de dentro do zip.
+2. Abra o Telao.exe. Se quiser, crie um atalho dele na área de trabalho.
+   Na primeira vez o Windows pode avisar "O Windows protegeu o computador":
+   clique em "Mais informações" e depois em "Executar assim mesmo".
+   (O app não tem assinatura digital paga.)
+
+O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
+- Seletor próprio: ao compartilhar, aparece a lista de janelas e telas com miniaturas.
+- Áudio automático: com "Áudio da janela compartilhada", vai só o som do jogo que você escolheu,
+  sem o Discord. Não precisa abrir o Telão Audio separado nem VB-CABLE: já vem embutido.
+- Continua transmitindo liso com o app minimizado ou atrás do jogo.
+- Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
+
+DICAS
+- Para tela inteira (aba "Telas inteiras"), escolha no seletor de áudio do topo de qual app vem o som
+  ("Só o app: seu jogo").
+- Jogos da Microsoft Store/Xbox às vezes não entregam o áudio pela janela; use "Só o app" nesses casos.
+- F12 abre as ferramentas de diagnóstico, caso eu peça um print de erro.

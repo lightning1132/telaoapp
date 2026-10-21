@@ -1,0 +1,16 @@
+{
+  "name": "telao",
+  "productName": "Telão",
+  "version": "1.5.0",
+  "description": "Compartilhamento de tela entre amigos, direto de PC pra PC.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack:win": "electron-packager . Telao --platform=win32 --arch=x64 --out=dist --overwrite --asar --extra-resource=telao-audio.exe --ignore=^/dist --ignore=^/node_modules/.bin"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "44.9.2"
+  }
+}

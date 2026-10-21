@@ -1,0 +1,13 @@
+{
+  "version": "1.5.0",
+  "minShell": 2,
+  "page": "telao.html",
+  "sha256": "aa90992568aee868735a32090b5099337e88d0ac168de3543e3ad893ee2df18a",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.5.0",
+  "notes": [
+    "Atualização automática",
+    "Sala de sempre: salas recentes e entrada automática",
+    "Reações (emojis) sobre a tela de quem transmite",
+    "Clipe dos últimos 30 segundos de qualquer tela"
+  ]
+}

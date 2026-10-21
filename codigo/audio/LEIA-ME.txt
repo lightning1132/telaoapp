@@ -1,0 +1,32 @@
+TELÃO AUDIO
+Manda só o som do jogo na transmissão do Telão, sem o Discord junto.
+
+Precisa: Windows 10 (versão 2004 ou mais nova) ou Windows 11, e Chrome ou Edge.
+Só quem vai TRANSMITIR precisa disso. Quem só assiste não precisa de nada.
+
+COMO USAR
+1. Abra o telao-audio.exe e deixe a janela preta aberta.
+   Na primeira vez o Windows pode mostrar "O Windows protegeu o computador".
+   Clique em "Mais informações" e depois em "Executar assim mesmo".
+   (Aparece porque o programa não tem assinatura digital paga; o código-fonte vai junto.)
+2. Abra o jogo e entre no Telão.
+3. No seletor de áudio do Telão, escolha "Só o app: <seu jogo>".
+   O jogo aparece na lista depois que ele começa a tocar algum som.
+4. Clique em Compartilhar tela.
+
+OPÇÕES DE ÁUDIO NO TELÃO
+- Só o app: <jogo>              → só o som daquele jogo. O recomendado.
+- Tudo menos o Discord          → todo o som do PC, menos o Discord. Também pega o som
+                                   das telas dos amigos que você estiver assistindo no Telão.
+- Sistema inteiro               → tudo, inclusive o Discord (é o que causava o eco).
+
+SEGURANÇA
+- O programa só escuta conexões do próprio PC (127.0.0.1), nunca da rede.
+- Aceita automaticamente o Telão aberto como arquivo. Se um site tentar se conectar,
+  a janela pergunta antes. A lista de sites aprovados fica em telao-audio-origens.txt.
+- Não injeta nada no jogo: quem entrega o áudio é o próprio Windows. Não mexe com anti-cheat.
+
+PROBLEMAS
+- "Porta ocupada": o Telão Audio já está aberto em outra janela.
+- O jogo não aparece na lista: faça o jogo tocar algum som e espere uns 5 segundos.
+- O Telão diz "abra o Telão Audio" com ele aberto: recarregue a página do Telão.
