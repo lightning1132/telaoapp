@@ -392,7 +392,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.7.0';
+const TELAO_VERSION = '1.7.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -401,7 +401,8 @@ const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenc
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
 const LATEST_SHELL = 4;       // nível do app desktop mais novo (4: o app se atualiza sozinho)
 const CHANGELOG = [
-  ['1.7.0', 'hoje', ['O app também se atualiza sozinho: baixa só o necessário (~1 MB) e reinicia', 'Se a versão nova do app não abrir, volta sozinho para a anterior', 'Som escolhido junto com a tela: janela manda o som dela sozinha; tela inteira mostra os apps com som ali mesmo']],
+  ['1.7.1', 'hoje', ['Entrar na sala funciona mesmo em redes que bloqueiam as conexões que você abre (quem segura a sala liga de volta)']],
+  ['1.7.0', '21/10', ['O app também se atualiza sozinho: baixa só o necessário (~1 MB) e reinicia', 'Se a versão nova do app não abrir, volta sozinho para a anterior', 'Som escolhido junto com a tela: janela manda o som dela sozinha; tela inteira mostra os apps com som ali mesmo']],
   ['1.6.1', '21/10', ['Mostra a versão do app junto da versão do Telão', 'Botão 🎮 avisa quando o app precisa ser atualizado para as reações por cima do jogo']],
   ['1.6.0', '21/10', ['Reações aparecem por cima do jogo de quem transmite (app desktop)', 'Janela flutuante: assista um amigo numa janela sempre por cima']],
   ['1.5.0', '21/10', ['Atualização automática', 'Sala de sempre: salas recentes e entrada automática', 'Reações (emojis) sobre a tela de quem transmite', 'Clipe dos últimos 30 segundos de qualquer tela']],
@@ -801,6 +802,7 @@ async function join(){
 
   me.on('open', () => { clearTimeout(openTimeout); showRoom(); ensureHub(); });
   me.on('call', onIncomingCall);
+  me.on('connection', onIncomingData);
   me.on('disconnected', () => {
     setStatus('Reconectando ao servidor…', 'warn');
     setTimeout(() => { if (me && !me.destroyed && me.disconnected) try{ me.reconnect(); }catch{} }, 1000);
@@ -885,7 +887,8 @@ function runHub(hp){
     const list = [...mem].map(([id, m]) => ({id, name: m.name, sharing: m.sharing}));
     for (const m of mem.values()) if (m.conn.open) try{ m.conn.send({t:'list', list}); }catch{}
   };
-  hp.on('connection', conn => {
+  // Conexão de um participante (aberta por ele, ou pelo hub no caminho invertido).
+  const attach = conn => {
     conn.on('data', msg => {
       if (!msg || typeof msg !== 'object') return;
       if (msg.t === 'hello'){
@@ -903,6 +906,22 @@ function runHub(hp){
     });
     const drop = () => { const m = mem.get(conn.peer); if (m && m.conn === conn){ mem.delete(conn.peer); send(); } };
     conn.on('close', drop); conn.on('error', drop);
+  };
+  // Caminho invertido na entrada da sala: há redes em que as conexões que a pessoa ABRE não fecham,
+  // mas as que CHEGAM até ela funcionam. O pedido dela chega aqui mesmo assim; se não abrir em 6 s,
+  // o hub liga de volta para ela.
+  const reversed = new Map();   // id → quando tentou
+  hp.on('connection', conn => {
+    attach(conn);
+    setTimeout(() => {
+      if (hp.destroyed || conn.open) return;
+      const m = mem.get(conn.peer);
+      if (m && m.conn.open) return;
+      if (Date.now() - (reversed.get(conn.peer) || 0) < 15000) return;
+      reversed.set(conn.peer, Date.now());
+      const rc = hp.connect(conn.peer, {reliable: true, serialization: 'json', metadata: {telaoReverse: true}});
+      if (rc) attach(rc);
+    }, 6000);
   });
   const ticker = setInterval(() => {
     const now = Date.now();
@@ -917,15 +936,27 @@ function connectHub(){
   if (hubConn || !me || me.destroyed) return;
   const c = me.connect(hubId(), {reliable: true, serialization: 'json'});
   if (!c) return;
+  wireHubConn(c);
+}
+// O hub ligou de volta (a conexão que eu abri não fechou): passa a usar esta.
+function onIncomingData(c){
+  if (!me || c.peer !== hubId()){ try{ c.close(); }catch{} return; }
+  if (hubConn && hubConn.open){ try{ c.close(); }catch{} return; }
+  const old = hubConn;
+  wireHubConn(c);
+  try{ old && old.close(); }catch{}
+}
+function wireHubConn(c){
   hubConn = c; lastHubMsg = Date.now();
-  c.on('open', () => {
+  const onOpen = () => {
     c._opened = true;
     hubFailStreak = 0;
     hideNetBanner();
     c.send({t:'hello', name: myName, sharing: !!localStream});
     resendPauses();
     setStatus('Na sala', 'ok');
-  });
+  };
+  if (c.open) onOpen(); else c.on('open', onOpen);
   c.on('data', msg => {
     if (c !== hubConn) return;
     lastHubMsg = Date.now();

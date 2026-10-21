@@ -1,26 +1,24 @@
 {
-  "version": "1.7.0",
+  "version": "1.7.1",
   "minShell": 2,
-  "page": "versoes/telao-1.7.0.html",
-  "sha256": "82f885e803c5c84169dfb0db422322d7a47973c474f7dea94e37ef6439c63ee9",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.7.0",
+  "page": "versoes/telao-1.7.1.html",
+  "sha256": "6fe2f1515a1e2aa308d58937b4b070102289e912be1beb65856359119ef5b0d5",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.7.1",
   "notes": [
-    "O app também se atualiza sozinho: baixa só o necessário (~1 MB) e reinicia",
-    "Se a versão nova do app não abrir, volta sozinho para a anterior",
-    "Som escolhido junto com a tela: janela manda o som dela sozinha; tela inteira mostra os apps com som ali mesmo"
+    "Entrar na sala funciona mesmo em redes que bloqueiam as conexões que você abre (quem segura a sala liga de volta)"
   ],
   "app": {
-    "version": "1.7.0",
+    "version": "1.7.1",
     "shell": 4,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.7.0/app.asar",
-        "sha256": "9e0b7d05109abd37fea4b77a013dc75cc300e27f7a0045b8804eccb5f410188f",
-        "size": 181731
+        "path": "versoes/app-1.7.1/app.asar",
+        "sha256": "3db8081102d78e67abbcda5a9807528a148efa3feff53ec558fc9d9d9a99d5a9",
+        "size": 183174
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.7.0/telao-audio.exe",
+        "path": "versoes/app-1.7.1/telao-audio.exe",
         "sha256": "8a12183c7c83bfdc8da81f4ee0b81ad2fc7988769da6ce3c2b636b4c85ab0205",
         "size": 505856
       }
