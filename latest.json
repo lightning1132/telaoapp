@@ -1,7 +1,7 @@
 {
   "version": "1.6.0",
   "minShell": 2,
-  "page": "telao.html",
+  "page": "versoes/telao-1.6.0.html",
   "sha256": "158fa977acb25a496ee498f9841868ea0b0279f1d1c4b9a6404fba8f1c6f4303",
   "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.6.0",
   "notes": [

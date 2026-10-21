@@ -1,0 +1,2794 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telão</title>
+<style>
+:root{
+  --bg:#0d0f12;--panel:#161920;--panel2:#1e222a;--line:#2a303a;
+  --text:#e9ebee;--muted:#8a93a2;--accent:#7cf29a;--accent-ink:#0a1a0f;
+  --danger:#ff6b6b;--warn:#ffc857;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.muted{color:var(--muted)}
+[hidden]{display:none!important}
+svg.i{width:18px;height:18px;fill:currentColor;display:block}
+
+/* Botões */
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:8px 14px;font-weight:600}
+.primary:hover{filter:brightness(1.08)}
+.primary:disabled{opacity:.5;cursor:default}
+.primary.stop{background:var(--danger);color:#1a0606}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.ghost:hover{background:var(--panel2)}
+.big{width:100%;padding:12px;font-size:15px}
+
+/* Lobby */
+#lobby{min-height:100%;display:grid;place-items:center;padding:16px}
+.card{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+.card h1{margin:0 0 4px;font-size:28px;letter-spacing:-.5px}
+.card h1 span{color:var(--accent)}
+.card p{margin:0 0 18px}
+.ver-line{font-size:12px;color:var(--muted);margin:2px 0 14px}
+.linkish{background:none;border:0;padding:0;color:var(--accent);font-size:12px;text-decoration:underline;text-underline-offset:2px}
+#news{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 16px;max-height:240px;overflow:auto;font-size:13px}
+#news h4{margin:8px 0 4px;font-size:13px} #news h4:first-child{margin-top:0}
+#news h4 small{color:var(--muted);font-weight:400}
+#news ul{margin:0;padding-left:18px;color:var(--muted)} #news li{margin:2px 0}
+.bver{font-weight:400;font-size:11px;color:var(--muted)}
+#upd{position:sticky;top:0;z-index:15;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;
+  background:var(--panel2);border-bottom:2px solid var(--accent);font-size:13px}
+#upd[hidden]{display:none}
+#upd span{flex:1;min-width:220px}
+#upd button{padding:6px 12px}
+body:has(#upd:not([hidden])) #room{height:calc(100% - 50px)}
+.card label{display:block;margin:0 0 12px;color:var(--muted);font-size:13px}
+.card input[type=text],.card input:not([type]){display:block;width:100%;margin-top:6px;background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:10px 12px;color:var(--text);outline:none}
+.card input:focus{border-color:var(--accent)}
+.row{display:flex;gap:8px;align-items:flex-end}
+.row input{flex:1}
+.row .ghost{margin-top:6px;height:42px}
+.hint{font-size:12px;color:var(--muted);margin:-4px 0 16px!important}
+#recent{margin:0 0 16px}
+.rc-head{font-size:12px;color:var(--muted);margin-bottom:6px}
+#recentList{display:flex;flex-wrap:wrap;gap:6px}
+.rc{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.rc button{background:transparent;border:0;padding:5px 8px;color:var(--text);font-size:13px}
+.rc .rc-code{font-family:ui-monospace,Consolas,monospace;letter-spacing:1px;padding-left:4px}
+.rc .rc-star{color:var(--muted);padding-right:2px}
+.rc.fav{border-color:var(--accent)} .rc.fav .rc-star{color:var(--accent)}
+.rc .rc-x{color:var(--muted);padding-left:2px}
+.rc button:hover{background:var(--panel2)}
+.rc-auto{margin-top:10px;font-size:12px}
+.rc-auto-msg{margin-top:8px;font-size:13px;color:var(--accent)}
+details{margin-top:16px;color:var(--muted);font-size:13px}
+details summary{cursor:pointer}
+details .fields{margin-top:10px}
+.warn{color:var(--warn);font-size:13px;margin-top:14px!important}
+
+/* Sala */
+#room{height:100%;display:flex;flex-direction:column}
+#bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{font-weight:700;display:flex;align-items:center;gap:8px;margin-right:4px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--accent)}.dot.warn{background:var(--warn)}.dot.danger{background:var(--danger)}
+.pill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--muted)}
+.pill b{color:var(--text);letter-spacing:1px;font-family:ui-monospace,Consolas,monospace}
+.pill:hover{border-color:var(--accent)}
+#members{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--panel2);border-radius:999px;padding:4px 10px;font-size:13px}
+.chip .live{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.chip.sharing .live{background:var(--danger);box-shadow:0 0 0 3px rgba(255,107,107,.18)}
+.chip.me{border:1px solid var(--line)}
+.chip .ver{font-size:11px;color:var(--warn)}
+.chip.old{border:1px solid var(--warn)}
+.grow{flex:1}
+#status{font-size:12px}
+select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 8px}
+.chk{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;cursor:pointer}
+
+#netBanner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;font-size:13px;
+  background:rgba(255,200,87,.10);border-bottom:1px solid var(--warn)}
+#netBanner[hidden]{display:none}
+#netBanner span{flex:1;min-width:220px}
+#netBanner button{padding:6px 12px}
+#hiddenBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);
+  font-size:13px;color:var(--muted)}
+#hiddenBar[hidden]{display:none}
+#hiddenBar .hchip{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:999px;padding:3px 4px 3px 10px;color:var(--text)}
+#hiddenBar .hchip button{background:transparent;border:0;border-radius:999px;padding:3px 9px;color:var(--accent);font-weight:600}
+#hiddenBar .hchip button:hover{background:rgba(124,242,154,.12)}
+#stage{flex:1;min-height:0;display:grid;gap:10px;padding:10px;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));align-content:center;overflow:auto}
+#stage.focused{grid-template-columns:1fr minmax(180px,22%);grid-auto-rows:min-content;align-content:start}
+#stage.focused .tile.is-focus{grid-column:1;grid-row:1 / span 20;max-height:calc(100vh - 90px)}
+#stage.focused .tile:not(.is-focus){grid-column:2}
+@media (max-width:760px){
+  #stage.focused{grid-template-columns:1fr}
+  #stage.focused .tile.is-focus,#stage.focused .tile:not(.is-focus){grid-column:1;grid-row:auto}
+}
+.tile{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9;width:100%;
+  max-height:calc(100vh - 90px);border:1px solid var(--line)}
+.tile video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
+.tile .tbar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;padding:8px 10px;
+  background:linear-gradient(transparent,rgba(0,0,0,.75));opacity:0;transition:opacity .15s}
+.tile:hover .tbar,.tile:focus-within .tbar{opacity:1}
+.tile .name{font-weight:600}
+.tile .stats{font-size:12px;color:#c7ccd4;font-family:ui-monospace,Consolas,monospace}
+.tile .tbar button{background:rgba(255,255,255,.08);border:0;border-radius:6px;padding:6px;color:#fff}
+.tile .tbar button:hover{background:rgba(255,255,255,.18)}
+.tile input[type=range]{width:90px;accent-color:var(--accent)}
+.tile .tag{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);border-radius:6px;padding:3px 8px;font-size:12px}
+.tile.weak::after{content:"conexão instável…";position:absolute;top:8px;right:8px;background:var(--warn);color:#201500;
+  border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600}
+/* reações */
+.fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:3}
+.fx .rx{position:absolute;bottom:8%;display:flex;flex-direction:column;align-items:center;animation:rise 2.6s ease-out forwards;will-change:transform,opacity}
+.fx .rx b{font-size:42px;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+.fx .rx i{font-style:normal;font-size:11px;color:#fff;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 6px;margin-top:2px;white-space:nowrap}
+#pip .fx .rx b{font-size:26px}
+@keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}12%{transform:translateY(-10%) scale(1.15);opacity:1}
+  70%{opacity:1}100%{transform:translateY(-260%) scale(1);opacity:0}}
+.tile .reacts{position:absolute;left:10px;bottom:46px;display:flex;gap:4px;opacity:0;transition:opacity .15s;z-index:4}
+.tile:hover .reacts,.tile:focus-within .reacts{opacity:1}
+.tile .reacts button{background:rgba(0,0,0,.55);border:0;border-radius:999px;width:34px;height:34px;font-size:18px;line-height:1;padding:0;cursor:pointer}
+.tile .reacts button:hover{background:rgba(0,0,0,.8);transform:scale(1.12)}
+.tile .clip.on{color:var(--accent)}
+.tile.floating{width:100vw;height:100vh;max-height:none;aspect-ratio:auto;border:0;border-radius:0}
+.float-body{margin:0;background:#000;overflow:hidden}
+.tile.float-holder .wbox b{color:var(--text)}
+#pipOverlay.off{opacity:.45}
+.tile .clip.busy{opacity:.5;pointer-events:none}
+#clipsBtn{border-color:var(--accent);color:var(--accent)}
+.tile .tmsg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;color:var(--muted);font-size:14px;pointer-events:none}
+.tile .tmsg:empty{display:none}
+.tile.wait{display:grid;place-items:center;background:var(--panel);border-style:dashed}
+.tile.wait .wbox{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--muted);text-align:center;padding:16px}
+.tile.wait .wbox button{padding:6px 14px}
+.tile .clickplay{position:absolute;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);font-weight:600;cursor:pointer}
+.tile.needs-click .clickplay{display:grid}
+.tile:fullscreen{border:0;border-radius:0;max-height:none}
+
+#empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 16px}
+#empty h2{color:var(--text);margin:0 0 8px;font-size:20px}
+
+#pip{position:fixed;right:16px;bottom:16px;width:260px;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:5;
+  cursor:grab;touch-action:none;user-select:none}
+#pip.dragging{cursor:grabbing;opacity:.92;box-shadow:0 14px 40px rgba(0,0,0,.65)}
+#pip video{width:100%;aspect-ratio:16/9;background:#000;display:block;object-fit:contain;pointer-events:none}
+#pip.mini video{display:none}
+#pip .pbar{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:12px}
+#pip .pbar .grow{flex:1}
+#pip .rec{width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none}
+#pip .pbar button{padding:4px 10px;font-size:12px;cursor:pointer}
+#pip .pbar .ghost{padding:3px 9px}
+#pip .pdiag{padding:0 10px 8px;font-size:11px;line-height:1.35;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
+#pip .pdiag:empty{display:none}
+#pip .pdiag .bad{color:var(--warn)}
+@media (max-width:600px){#pip{width:160px}}
+
+#picker{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
+#picker[hidden]{display:none}
+.pk-card{width:min(980px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.pk-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.pk-head b{font-size:16px;margin-right:auto}
+.pk-tabs{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px}
+.pk-tabs button{background:transparent;border:0;border-radius:6px;padding:6px 12px;color:var(--muted)}
+.pk-tabs button.on{background:var(--panel2);color:var(--text)}
+#pkGrid{flex:1;overflow:auto;padding:14px 16px;display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));align-content:start}
+.pk-item{background:var(--bg);border:2px solid transparent;border-radius:10px;padding:8px;text-align:left;display:flex;flex-direction:column;gap:8px}
+.pk-item:hover{border-color:var(--line)}
+.pk-item.sel{border-color:var(--accent)}
+.pk-item .th{aspect-ratio:16/9;background:#000;border-radius:6px;display:grid;place-items:center;overflow:hidden}
+.pk-item .th img{width:100%;height:100%;object-fit:contain}
+.pk-item .nm{display:flex;align-items:center;gap:6px;font-size:13px;line-height:1.3;min-width:0}
+.pk-item .nm img{width:16px;height:16px;flex:none}
+.pk-item .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:30px}
+.pk-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line);font-size:13px}
+.pk-foot .grow{flex:1}
+.desk-badge{display:inline-block;margin-left:8px;font-size:11px;font-weight:600;color:var(--accent);
+  border:1px solid var(--accent);border-radius:999px;padding:1px 8px;vertical-align:middle;letter-spacing:0}
+#diag{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
+#diag[hidden]{display:none}
+.dg-card{width:min(760px,100%)}
+.dg-body{flex:1;overflow:auto;padding:4px 16px 12px}
+.dg-body section{padding:12px 0;border-bottom:1px solid var(--line)}
+.dg-body section:last-child{border-bottom:0}
+.dg-body h3{margin:0 0 8px;font-size:14px}
+.dg-p{margin:0 0 10px;font-size:13px}
+.dg-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px;font-size:13px}
+.dg-opt{margin-top:10px}
+.dg-kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px}
+.dg-kv span:nth-child(odd){color:var(--muted)}
+.dg-ok{color:var(--accent)} .dg-bad{color:var(--warn)} .dg-off{color:var(--muted)}
+.dg-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}
+.dg-table th{text-align:left;color:var(--muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line)}
+.dg-table td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.dg-table td:last-child{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--muted);word-break:break-all}
+.dg-advice{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--panel2);border-left:4px solid var(--accent);font-size:13px}
+.dg-advice.warn{border-left-color:var(--warn)}
+.dg-advice button{margin-top:8px;padding:6px 12px}
+@media (max-width:600px){ .dg-table th:nth-child(5), .dg-table td:nth-child(5){display:none} }
+#toasts{position:fixed;left:50%;top:14px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:10;
+  width:min(560px,calc(100% - 32px))}
+.toast{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;
+  padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.toast.warn{border-left-color:var(--warn)}.toast.danger{border-left-color:var(--danger)}
+</style>
+</head>
+<body>
+
+<div id="upd" hidden>
+  <span id="updText"></span>
+  <button type="button" class="primary" id="updGo"></button>
+  <button type="button" class="ghost" id="updLater">Depois</button>
+</div>
+
+<section id="lobby">
+  <div class="card">
+    <h1>Tel<span>ã</span>o</h1>
+    <div class="ver-line"><span id="verTxt"></span> · <button type="button" class="linkish" id="newsBtn" aria-expanded="false">Novidades</button><span id="updCheckWrap" hidden> · <button type="button" class="linkish" id="updCheck">Procurar atualização</button></span></div>
+    <div id="news" hidden></div>
+    <p class="muted">Compartilhamento de tela entre amigos, direto de um PC pro outro. Sem conta, sem OBS, sem stream pública.</p>
+    <label>Seu nome
+      <input id="name" maxlength="24" placeholder="ex: Gui" autocomplete="off">
+    </label>
+    <label>Código da sala
+      <div class="row">
+        <input id="code" maxlength="24" autocomplete="off" spellcheck="false">
+        <button id="newCode" class="ghost" type="button">Novo</button>
+      </div>
+    </label>
+    <p class="hint">Quem entrar com o mesmo código cai na mesma sala.</p>
+    <div id="recent" hidden>
+      <div class="rc-head">Salas recentes <span class="muted">· ★ = sala de sempre</span></div>
+      <div id="recentList"></div>
+      <label class="chk rc-auto"><input type="checkbox" id="autoJoin"> Entrar sozinho na sala ★ ao abrir o Telão</label>
+      <div id="autoMsg" class="rc-auto-msg" hidden><span></span> <button type="button" class="linkish" id="autoCancel">Cancelar</button></div>
+    </div>
+    <button id="joinBtn" class="primary big">Entrar</button>
+    <details id="turnBox">
+      <summary>Avançado: servidor TURN (se você não vê os outros na sala)</summary>
+      <div class="fields">
+        <p class="hint" style="margin:0 0 12px!important">Só quem tem problema de conexão precisa preencher. Use o link da Metered <b>ou</b> um servidor próprio.</p>
+        <label>Link de credenciais da Metered
+          <input id="turnLink" placeholder="https://seuapp.metered.live/api/v1/turn/credentials?apiKey=…" spellcheck="false">
+        </label>
+        <label>Ou: URL(s) do TURN, separadas por vírgula
+          <input id="turnUrl" placeholder="turn:exemplo.com:3478" spellcheck="false">
+        </label>
+        <label>Usuário <input id="turnUser" spellcheck="false"></label>
+        <label>Senha <input id="turnPass" spellcheck="false"></label>
+        <div class="row" style="align-items:center">
+          <button id="turnTest" class="ghost" type="button">Testar TURN</button>
+          <span id="turnTestOut" class="muted" style="font-size:13px"></span>
+        </div>
+      </div>
+    </details>
+    <p id="envWarn" class="warn" hidden></p>
+  </div>
+</section>
+
+<section id="room" hidden>
+  <header id="bar">
+    <div class="brand"><span class="dot" id="dot"></span>Telão <span class="bver" id="barVer"></span></div>
+    <button class="pill" id="codePill" title="Copiar">sala <b id="codeTxt"></b></button>
+    <div id="members"></div>
+    <div class="grow"></div>
+    <span id="status" class="muted"></span>
+    <select id="quality" title="Qualidade da sua transmissão"></select>
+    <select id="codec" title="Codec de vídeo. H.264 usa a placa de vídeo na maioria dos PCs, o que libera o processador."></select>
+    <select id="audioSrc" title="Qual áudio vai junto com a sua tela"></select>
+    <button id="shareBtn" class="primary">Compartilhar tela</button>
+    <button id="clipsBtn" class="ghost" hidden title="O Telão está guardando os últimos 30 s de cada tela. Clique para desligar.">✂ Clipes ligados</button>
+    <button id="diagBtn" class="ghost" title="Diagnóstico de vídeo: placa de vídeo, encoder e transmissão">Diagnóstico</button>
+    <button id="leaveBtn" class="ghost">Sair</button>
+  </header>
+  <div id="netBanner" hidden>
+    <span id="netText"></span>
+    <button id="netFix" class="primary">Configurar TURN</button>
+    <button id="netClose" class="ghost" title="Fechar aviso">×</button>
+  </div>
+  <div id="hiddenBar" hidden></div>
+  <main id="stage">
+    <div id="empty">
+      <h2 id="emptyTitle">Ninguém compartilhando ainda</h2>
+      <div>Clique em <b>Compartilhar tela</b> e escolha o jogo. Quem estiver na sala vê na hora.<br>
+      A call de voz continua onde vocês já estão; aqui é só o vídeo.</div>
+    </div>
+  </main>
+</section>
+
+<div id="pip" hidden>
+  <video id="pipVideo" autoplay playsinline muted></video>
+  <div class="fx" id="pipFx"></div>
+  <div class="pbar" title="Arraste para mover"><span class="rec"></span><span id="pipTxt">Transmitindo</span><span class="grow"></span>
+    <button class="ghost" id="pipOverlay" hidden title="Reações por cima do jogo: ligado. Clique para desligar.">🎮</button>
+    <button class="ghost" id="pipMin" title="Minimizar / expandir">–</button>
+    <button class="primary stop" id="pipStop">Parar</button></div>
+  <div class="pdiag" id="pipDiag" title=""></div>
+</div>
+
+<div id="picker" hidden>
+  <div class="pk-card" role="dialog" aria-label="Escolher o que compartilhar">
+    <div class="pk-head">
+      <b>O que você quer compartilhar?</b>
+      <div class="pk-tabs">
+        <button type="button" data-t="window" class="on">Janelas</button>
+        <button type="button" data-t="screen">Telas inteiras</button>
+      </div>
+      <button type="button" class="ghost" id="pkRefresh" title="Atualizar lista">Atualizar</button>
+    </div>
+    <div id="pkGrid"></div>
+    <div class="pk-foot">
+      <span id="pkAudio" class="muted"></span>
+      <span class="grow"></span>
+      <button type="button" class="ghost" id="pkCancel">Cancelar</button>
+      <button type="button" class="primary" id="pkGo" disabled>Compartilhar</button>
+    </div>
+  </div>
+</div>
+
+<div id="diag" hidden>
+  <div class="pk-card dg-card" role="dialog" aria-label="Diagnóstico de vídeo">
+    <div class="pk-head"><b>Diagnóstico de vídeo</b></div>
+    <div class="dg-body">
+      <section id="dgGpuSec" hidden>
+        <h3>Placa de vídeo</h3>
+        <div id="dgGpu" class="muted">Carregando…</div>
+        <label class="chk dg-opt"><input type="checkbox" id="dgFeat"> Liberar a placa de vídeo para transmitir (H.264 e AV1)</label>
+        <label class="chk dg-opt"><input type="checkbox" id="dgBlock"> Forçar uso da placa de vídeo (ignorar a lista de bloqueio do Chromium)</label>
+        <div class="dg-row">
+          <button type="button" class="primary" id="dgRestart" hidden>Reiniciar o app para aplicar</button>
+          <button type="button" class="ghost" id="dgGpuPage">Detalhes técnicos</button>
+        </div>
+      </section>
+      <section>
+        <h3>Teste de encoder</h3>
+        <p class="muted dg-p">Codifica alguns segundos de vídeo em cada formato e mostra quem fez o trabalho: a placa de vídeo ou o processador. Leva uns 20 segundos.</p>
+        <div class="dg-row"><button type="button" class="primary" id="dgRun">Testar</button><span id="dgRunMsg" class="muted"></span></div>
+        <table class="dg-table" id="dgTable" hidden>
+          <thead><tr><th>Formato</th><th>Quem codifica</th><th>FPS</th><th>Tempo/quadro</th><th>Encoder</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="dgAdvice" class="dg-advice" hidden></div>
+      </section>
+      <section id="dgLiveSec" hidden>
+        <h3>Sua transmissão agora</h3>
+        <div id="dgLive"></div>
+      </section>
+    </div>
+    <div class="pk-foot">
+      <span id="dgVer" class="muted"></span>
+      <span class="grow"></span>
+      <button type="button" class="ghost" id="dgCopy">Copiar relatório</button>
+      <button type="button" class="primary" id="dgClose">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+
+/* ---------- Config ---------- */
+/* ---------- Versão ----------
+   Fonte única da versão (o app desktop é empacotado com o mesmo número). */
+const TELAO_VERSION = '1.6.0';
+// Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
+// (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
+const REQUIRES_SHELL = 2;
+const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
+const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
+const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
+const LATEST_SHELL = 3;       // nível do app desktop mais novo (reações por cima do jogo, janela flutuante completa)
+const CHANGELOG = [
+  ['1.6.0', 'hoje', ['Reações aparecem por cima do jogo de quem transmite (app desktop)', 'Janela flutuante: assista um amigo numa janela sempre por cima']],
+  ['1.5.0', '21/10', ['Atualização automática', 'Sala de sempre: salas recentes e entrada automática', 'Reações (emojis) sobre a tela de quem transmite', 'Clipe dos últimos 30 segundos de qualquer tela']],
+  ['1.4.0', '21/10', ['Versão de cada pessoa na sala (passe o mouse no nome)', 'Aviso quando alguém da sala está numa versão mais nova ou mais antiga', 'Esta lista de novidades']],
+  ['1.3.0', '21/10', ['FPS não cai mais pela metade com o app minimizado (Windows 11)', 'Telão Audio fecha junto com o app']],
+  ['1.2.0', '21/10', ['H.264 pela placa de vídeo (perfil Main)', 'AV1 pela placa de vídeo no app']],
+  ['1.1.0', '21/10', ['Painel de Diagnóstico com teste de encoder']],
+  ['1.0.0', '20/10', ['Versão desktop: seletor de janelas e áudio só da janela', 'Resolução sob demanda e começo nítido', 'Caminho invertido quando a conexão direta falha', 'Troca automática de formato de vídeo']],
+];
+function cmpVer(a, b){
+  const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0), pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
+  return 0;
+}
+/* ---------- Faixa de atualização ---------- */
+let updInfo = null, updWarned = false;
+function showUpdate(info){
+  if (!info || !info.version || cmpVer(info.version, TELAO_VERSION) <= 0) return;
+  if (store.get('updLater', '') === info.version + '|' + new Date().toDateString()) return;   // "Depois" vale até amanhã
+  updInfo = info;
+  const notes = (info.notes || []).slice(0, 3).join(' · ');
+  if (info.kind === 'page'){
+    $('#updText').textContent = 'Telão ' + info.version + ' baixado e pronto.' + (notes ? ' Novidades: ' + notes : '');
+    $('#updGo').textContent = 'Atualizar agora';
+  } else if (info.kind === 'app'){
+    $('#updText').textContent = 'Telão ' + info.version + ' precisa de um app novo (o arquivo completo).' + (notes ? ' Novidades: ' + notes : '');
+    $('#updGo').textContent = 'Baixar';
+    $('#updGo').hidden = !info.download;
+  } else {
+    $('#updText').textContent = 'Telão ' + info.version + ' disponível.' + (notes ? ' Novidades: ' + notes : '');
+    $('#updGo').textContent = info.url ? 'Abrir a versão nova' : 'OK';
+  }
+  $('#upd').hidden = false;
+}
+function initUpdates(){
+  $('#updLater').onclick = () => { if (updInfo) store.set('updLater', updInfo.version + '|' + new Date().toDateString()); $('#upd').hidden = true; };
+  $('#updGo').onclick = () => {
+    if (!updInfo) return;
+    if (updInfo.kind === 'page'){
+      if (me && !updWarned){
+        updWarned = true;
+        toast('Atualizar agora recarrega o Telão e você sai da sala por alguns segundos' + (localStream ? ' (sua transmissão para)' : '') + '. Clique de novo para confirmar.', 'warn', 8000);
+        return;
+      }
+      teardown(); window.telaoDesktop.applyUpdate();
+    } else if (updInfo.download || updInfo.url){
+      window.open(updInfo.download || updInfo.url, '_blank');
+    } else $('#upd').hidden = true;
+  };
+  if (DESKTOP && (window.telaoDesktop.shell || 0) < LATEST_SHELL && RELEASES_URL
+      && store.get('updLater', '') !== 'app' + LATEST_SHELL + '|' + new Date().toDateString()){
+    updInfo = {kind: 'app', version: 'app' + LATEST_SHELL, download: RELEASES_URL};
+    $('#updText').textContent = 'Tem app novo do Telão: reações por cima do jogo e janela flutuante completa. Precisa baixar o arquivo uma vez.';
+    $('#updGo').textContent = 'Baixar'; $('#updGo').hidden = false;
+    $('#upd').hidden = false;
+  }
+  if (DESKTOP){
+    if (window.telaoDesktop.onUpdate) window.telaoDesktop.onUpdate(showUpdate);
+    if (window.telaoDesktop.ready) window.telaoDesktop.ready(TELAO_VERSION);
+    if (window.telaoDesktop.checkUpdate){
+      $('#updCheckWrap').hidden = false;
+      $('#updCheck').onclick = async () => {
+        $('#updCheck').textContent = 'Procurando…';
+        let r; try{ r = await window.telaoDesktop.checkUpdate(); }catch{ r = {status: 'erro'}; }
+        $('#updCheck').textContent = 'Procurar atualização';
+        const msg = {'atualizado': 'Você já está na versão mais nova.', 'baixada': 'Versão nova baixada.', 'pronta': 'Versão nova pronta.',
+                     'precisa-app': 'Tem versão nova do app para baixar.', 'sem-endereco': 'Este app não tem endereço de atualização configurado.',
+                     'ignorada': 'A versão nova falhou ao abrir neste PC e foi ignorada.'}[r && r.status] || ('Não consegui verificar agora' + (r && r.error ? ' (' + r.error + ')' : '') + '.');
+        toast(msg, r && /baixada|pronta|precisa-app/.test(r.status) ? 'ok' : (r && r.status === 'atualizado' ? 'ok' : 'warn'));
+      };
+    }
+  } else if (UPDATE_MANIFEST){
+    // Navegador: só avisa e aponta para a versão web (sempre atualizada).
+    $('#updCheckWrap').hidden = true;
+    fetch(UPDATE_MANIFEST, {cache: 'no-store'}).then(r => r.ok ? r.json() : null).then(m => {
+      if (m && typeof m.version === 'string') showUpdate({kind: 'web', version: m.version, notes: m.notes, url: WEB_URL || null});
+    }).catch(() => {});
+  }
+}
+
+function initVersion(){
+  const kind = window.telaoDesktop ? 'Desktop' : 'Navegador';
+  $('#verTxt').textContent = 'v' + TELAO_VERSION + ' · ' + kind;
+  $('#barVer').textContent = 'v' + TELAO_VERSION;
+  $('#barVer').title = 'Telão ' + TELAO_VERSION + ' (' + kind + ')';
+  const news = $('#news');
+  for (const [v, when, items] of CHANGELOG){
+    const h = document.createElement('h4'); h.textContent = v + ' '; const sm = document.createElement('small'); sm.textContent = when; h.appendChild(sm);
+    const ul = document.createElement('ul');
+    for (const it of items){ const li = document.createElement('li'); li.textContent = it; ul.appendChild(li); }
+    news.append(h, ul);
+  }
+  $('#newsBtn').onclick = () => { news.hidden = !news.hidden; $('#newsBtn').setAttribute('aria-expanded', String(!news.hidden)); };
+}
+
+const PREFIX = 'telao-v1-';
+const QUALITY = {
+  leve:   {label:'Leve · 720p 30fps',    w:1280, h:720,  fps:30, kbps:2500},
+  fluido: {label:'Fluido · 720p 60fps',  w:1280, h:720,  fps:60, kbps:4500},
+  nitido: {label:'Nítido · 1080p 30fps', w:1920, h:1080, fps:30, kbps:5000},
+  maximo: {label:'Máximo · 1080p 60fps', w:1920, h:1080, fps:60, kbps:8000},
+};
+const MAX_FAILS = 3;
+const CODECS = {
+  H264: 'Codec: H.264 (placa de vídeo)',
+  VP9:  'Codec: VP9',
+  VP8:  'Codec: VP8 (processador)',
+};
+const currentCodec = () => $('#codec').value || 'H264';
+
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('telao:'+k); return v === null ? d : JSON.parse(v); }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem('telao:'+k, JSON.stringify(v)); }catch{} }
+};
+
+const ICON = {
+  vol:  '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  mute: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  hide: '<svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3"/><path d="M4 20L20 4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  float:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="11" y="11" width="8" height="6" rx="1"/></svg>',
+  focus:'<svg class="i" viewBox="0 0 24 24"><path d="M4 4h7v2H6v5H4zM20 20h-7v-2h5v-5h2z"/></svg>',
+  clip: '<svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 7.5L20 18M8.5 16.5L20 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  fs:   '<svg class="i" viewBox="0 0 24 24"><path d="M3 3h6v2H5v4H3zM21 3v6h-2V5h-4V3zM3 21v-6h2v4h4v2zM21 21h-6v-2h4v-4h2z"/></svg>',
+};
+
+/* ---------- Estado ---------- */
+let me = null, hubPeer = null, hubConn = null, lastHubMsg = 0;
+let room = '', myName = '';
+let localStream = null;
+let members = [];
+let focusId = null;
+let hubBusy = false, hubRetryTimer = null;
+const outCalls = new Map();   // peerId -> MediaConnection (eu enviando)
+const tiles = new Map();      // peerId -> {el, video, call, ...}
+const failCount = new Map();
+const statPrev = new Map();
+
+const hubId = () => PREFIX + 'hub-' + room;
+
+/* ---------- Utilidades ---------- */
+function toast(msg, kind = 'ok', ms = 4500){
+  const d = document.createElement('div');
+  d.className = 'toast ' + kind; d.textContent = msg;
+  $('#toasts').appendChild(d);
+  setTimeout(() => d.remove(), ms);
+}
+function setStatus(txt, kind = ''){
+  $('#status').textContent = txt;
+  $('#dot').className = 'dot ' + kind;
+}
+function genCode(){
+  const a = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let s = '';
+  for (const b of crypto.getRandomValues(new Uint8Array(6))) s += a[b % a.length];
+  return s;
+}
+const cleanCode = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 24);
+const currentQ = () => $('#quality').value || 'fluido';
+
+/* ---------- TURN ----------
+   Quando a rede de duas pessoas bloqueia conexão direta, o TURN serve de ponte.
+   Basta um dos dois lados ter TURN configurado. */
+let linkIce = [];   // servidores vindos do link da Metered
+
+function manualTurn(t){
+  if (!t || !t.url) return [];
+  return [{
+    urls: t.url.split(',').map(s => s.trim()).filter(Boolean),
+    username: t.user || undefined,
+    credential: t.pass || undefined,
+  }];
+}
+function iceConfig(){
+  const servers = [
+    {urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']},
+    {urls:'stun:stun.cloudflare.com:3478'},
+    ...manualTurn(store.get('turn', null)),
+    ...linkIce,
+  ];
+  return {iceServers: servers};
+}
+const hasTurn = () => iceConfig().iceServers.some(s => [].concat(s.urls).some(u => /^turns?:/i.test(u)));
+
+async function fetchTurnLink(link){
+  if (!link) return [];
+  if (!/^https:\/\//i.test(link)) throw new Error('o link precisa começar com https://');
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 7000);
+  try{
+    const r = await fetch(link, {signal: ctl.signal, cache: 'no-store'});
+    if (!r.ok) throw new Error('resposta ' + r.status + (r.status === 401 || r.status === 403 ? ' (chave inválida?)' : ''));
+    const j = await r.json();
+    const arr = Array.isArray(j) ? j : (j && j.iceServers) || [];
+    if (!arr.length) throw new Error('o link não devolveu nenhum servidor');
+    store.set('turnCache', {link, servers: arr});
+    return arr;
+  }catch(e){
+    const c = store.get('turnCache', null);
+    if (c && c.link === link && Array.isArray(c.servers)) return c.servers;   // última credencial boa
+    throw new Error(e.name === 'AbortError' ? 'tempo esgotado' : e.message);
+  }finally{ clearTimeout(timer); }
+}
+
+// Testa se o TURN configurado nos campos realmente entrega um endereço de ponte (candidato "relay").
+async function testTurn(){
+  const out = $('#turnTestOut');
+  out.textContent = 'Testando…'; out.style.color = '';
+  let servers;
+  try{
+    servers = [
+      ...manualTurn({url: $('#turnUrl').value.trim(), user: $('#turnUser').value.trim(), pass: $('#turnPass').value}),
+      ...(await fetchTurnLink($('#turnLink').value.trim())),
+    ].filter(s => [].concat(s.urls).some(u => /^turns?:/i.test(u)));
+  }catch(e){ out.textContent = 'Falhou: ' + e.message; out.style.color = 'var(--danger)'; return; }
+  if (!servers.length){ out.textContent = 'Nenhum TURN preenchido.'; out.style.color = 'var(--warn)'; return; }
+  const pc = new RTCPeerConnection({iceServers: servers, iceTransportPolicy: 'relay'});
+  const ok = await new Promise(resolve => {
+    const timer = setTimeout(() => resolve(false), 9000);
+    pc.onicecandidate = e => {
+      if (e.candidate && (e.candidate.type === 'relay' || / typ relay /.test(e.candidate.candidate))){ clearTimeout(timer); resolve(true); }
+    };
+    pc.createDataChannel('teste');
+    pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => resolve(false));
+  });
+  pc.close();
+  out.textContent = ok ? 'Funcionando ✓' : 'Não respondeu. Confira o link ou usuário/senha.';
+  out.style.color = ok ? 'var(--accent)' : 'var(--danger)';
+}
+
+/* Aviso de rede: aparece quando não conseguimos entrar na sala ou falar com alguém. */
+let netDismissed = false;
+function showNetBanner(text){
+  if (netDismissed) return;
+  $('#netText').textContent = text;
+  $('#netBanner').hidden = false;
+}
+function hideNetBanner(){ $('#netBanner').hidden = true; }
+const newPeer = id => new Peer(id, {config: iceConfig(), debug: 1});
+
+function watchPc(pc, cb){
+  if (!pc) return;
+  pc.addEventListener('connectionstatechange', () => cb(pc.connectionState));
+}
+
+/* ---------- Entrada ---------- */
+function initLobby(){
+  initVersion();
+  initUpdates();
+  if (window.telaoDesktop){
+    const b = document.createElement('span'); b.className = 'desk-badge'; b.textContent = 'Desktop';
+    document.querySelector('.card h1').appendChild(b);
+  }
+  $('#name').value = store.get('name', '');
+  const fromHash = cleanCode((location.hash.match(/sala=([^&]+)/) || [])[1]);
+  const openTurn = store.get('openTurn', false);
+  $('#code').value = fromHash || (openTurn && store.get('lastRoom', '')) || genCode();
+  const t = store.get('turn', {});
+  $('#turnUrl').value = t.url || ''; $('#turnUser').value = t.user || ''; $('#turnPass').value = t.pass || '';
+  $('#turnLink').value = t.link || '';
+  $('#turnTest').onclick = testTurn;
+  if (openTurn){
+    store.set('openTurn', false);
+    $('#turnBox').open = true;
+    setTimeout(() => { $('#turnBox').scrollIntoView({block: 'center'}); $('#turnLink').focus(); }, 50);
+  }
+
+  for (const [k, q] of Object.entries(QUALITY)){
+    const o = document.createElement('option'); o.value = k; o.textContent = q.label; $('#quality').appendChild(o);
+  }
+  $('#quality').value = store.get('quality', 'fluido');
+  for (const [k, l] of Object.entries(CODECS)){
+    const o = document.createElement('option'); o.value = k; o.textContent = l; $('#codec').appendChild(o);
+  }
+  $('#codec').value = store.get('codec', 'H264');
+  populateAudio();
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener)
+    navigator.mediaDevices.addEventListener('devicechange', () => populateAudio());
+  $('#audioSrc').addEventListener('blur', () => { if (audioRebuildPending){ audioRebuildPending = false; populateAudio(); } });
+  helperConnect();
+  setInterval(() => helperSend({cmd: 'list'}), 5000);
+
+  const warn = [];
+  if (typeof Peer === 'undefined') warn.push('Não consegui carregar a biblioteca de conexão (sem internet ou bloqueio de rede).');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia)
+    warn.push('Este navegador não consegue compartilhar a tela (dá pra assistir). Para transmitir, use Chrome ou Edge no PC.');
+  if (warn.length){ $('#envWarn').hidden = false; $('#envWarn').textContent = warn.join(' '); }
+
+  $('#newCode').onclick = () => { $('#code').value = genCode(); cancelAutoJoin(); };
+  renderRecent();
+  $('#autoJoin').onchange = () => { store.set('autoJoin', $('#autoJoin').checked); if (!$('#autoJoin').checked) cancelAutoJoin(); };
+  $('#autoCancel').onclick = cancelAutoJoin;
+  for (const el of [$('#name'), $('#code')]) el.addEventListener('input', cancelAutoJoin);
+  if (!openTurn) maybeAutoJoin(!!fromHash);
+  $('#joinBtn').onclick = join;
+  for (const el of [$('#name'), $('#code')]) el.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
+}
+
+let joining = false;
+/* ---------- Sala de sempre ----------
+   Últimas 5 salas com um clique; uma delas pode ser a ★ (favorita), com entrada automática ao abrir. */
+let autoTimer = null;
+function recentRooms(){ const r = store.get('recentRooms', []); return Array.isArray(r) ? r.filter(x => x && typeof x.code === 'string') : []; }
+function pushRecent(code){
+  const list = recentRooms().filter(x => x.code !== code);
+  list.unshift({code, t: Date.now()});
+  const fav = store.get('favRoom', '');
+  // a favorita nunca sai da lista por falta de espaço
+  const keep = list.slice(0, 5);
+  if (fav && !keep.some(x => x.code === fav)){ const f = list.find(x => x.code === fav); if (f) keep[keep.length - 1] = f; }
+  store.set('recentRooms', keep);
+}
+function renderRecent(){
+  const list = recentRooms(), fav = store.get('favRoom', '');
+  $('#recent').hidden = !list.length;
+  const box = $('#recentList'); box.textContent = '';
+  for (const r of list){
+    const el = document.createElement('span'); el.className = 'rc' + (r.code === fav ? ' fav' : '');
+    const star = document.createElement('button'); star.type = 'button'; star.className = 'rc-star';
+    star.textContent = r.code === fav ? '★' : '☆'; star.title = r.code === fav ? 'Tirar como sala de sempre' : 'Marcar como sala de sempre';
+    star.onclick = () => { store.set('favRoom', r.code === fav ? '' : r.code); renderRecent(); };
+    const code = document.createElement('button'); code.type = 'button'; code.className = 'rc-code'; code.textContent = r.code; code.title = 'Entrar nesta sala';
+    code.onclick = () => { $('#code').value = r.code; join(); };
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'rc-x'; x.textContent = '×'; x.title = 'Remover da lista';
+    x.onclick = () => {
+      store.set('recentRooms', recentRooms().filter(y => y.code !== r.code));
+      if (r.code === fav) store.set('favRoom', '');
+      renderRecent();
+    };
+    el.append(star, code, x); box.appendChild(el);
+  }
+  const auto = $('#autoJoin');
+  auto.checked = !!store.get('autoJoin', false);
+  auto.disabled = !store.get('favRoom', '');
+  auto.parentElement.title = auto.disabled ? 'Marque uma sala com ☆ primeiro' : '';
+}
+function cancelAutoJoin(){ clearTimeout(autoTimer); autoTimer = null; $('#autoMsg').hidden = true; }
+function maybeAutoJoin(fromHash){
+  const fav = store.get('favRoom', '');
+  if (fromHash || !fav || !store.get('autoJoin', false) || !store.get('name', '')) return;
+  $('#code').value = fav;
+  let left = 3;
+  const tick = () => {
+    if (left <= 0){ cancelAutoJoin(); join(); return; }
+    $('#autoMsg span').textContent = 'Entrando na sala ★ ' + fav + ' em ' + left + ' s…';
+    $('#autoMsg').hidden = false; left--;
+    autoTimer = setTimeout(tick, 1000);
+  };
+  tick();
+}
+
+async function join(){
+  if (joining || me) return;
+  if (typeof Peer === 'undefined'){ toast('Biblioteca de conexão não carregou. Verifique a internet e recarregue.', 'danger'); return; }
+  myName = $('#name').value.trim().slice(0, 24) || 'Anônimo';
+  room = cleanCode($('#code').value);
+  if (room.length < 4){ toast('O código da sala precisa de pelo menos 4 caracteres.', 'warn'); return; }
+  store.set('name', myName);
+  store.set('lastRoom', room);
+  pushRecent(room);
+  cancelAutoJoin();
+  const link = $('#turnLink').value.trim();
+  store.set('turn', {url: $('#turnUrl').value.trim(), user: $('#turnUser').value.trim(), pass: $('#turnPass').value, link});
+  if (location.protocol !== 'file:') try{ history.replaceState(null, '', '#sala=' + room); }catch{}
+
+  joining = true;
+  $('#joinBtn').disabled = true; $('#joinBtn').textContent = 'Conectando…';
+  linkIce = [];
+  if (link){
+    try{ linkIce = await fetchTurnLink(link); }
+    catch(e){ toast('Não consegui buscar as credenciais do TURN (' + e.message + '). Entrando sem TURN.', 'warn', 8000); }
+  }
+  joining = false;
+  me = newPeer(PREFIX + room + '-' + genCode());
+
+  const openTimeout = setTimeout(() => {
+    if (me && !me.open){
+      toast('Não consegui falar com o servidor de sinalização. Tente de novo em instantes.', 'danger');
+      try{ me.destroy(); }catch{}
+      me = null; $('#joinBtn').disabled = false; $('#joinBtn').textContent = 'Entrar';
+    }
+  }, 12000);
+
+  me.on('open', () => { clearTimeout(openTimeout); showRoom(); ensureHub(); });
+  me.on('call', onIncomingCall);
+  me.on('disconnected', () => {
+    setStatus('Reconectando ao servidor…', 'warn');
+    setTimeout(() => { if (me && !me.destroyed && me.disconnected) try{ me.reconnect(); }catch{} }, 1000);
+  });
+  me.on('error', e => {
+    if (e.type === 'peer-unavailable'){
+      if (String(e.message || '').includes(hubId())){ hubMissing = true; scheduleHubRecovery(); }
+      return;
+    }
+    if (['network','server-error','socket-error','socket-closed'].includes(e.type)){
+      setStatus('Instável com o servidor de sinalização', 'warn'); return;
+    }
+    if (e.type === 'browser-incompatible'){ toast('Navegador sem suporte a WebRTC.', 'danger'); return; }
+    console.warn('peer error', e);
+  });
+
+  setInterval(tickClient, 3000);
+  setInterval(updateStats, 2000);
+  setInterval(updateSendStats, 2000);
+}
+
+function showRoom(){
+  if (!$('#room').hidden) { setStatus('Na sala', 'ok'); return; }
+  $('#lobby').hidden = true; $('#room').hidden = false;
+  $('#codeTxt').textContent = room;
+  $('#codePill').onclick = async () => {
+    const text = location.protocol === 'file:' ? room : location.href;
+    try{ await navigator.clipboard.writeText(text); toast(location.protocol === 'file:' ? 'Código copiado.' : 'Link da sala copiado.'); }
+    catch{ toast('Código da sala: ' + room); }
+  };
+  $('#shareBtn').onclick = () => localStream ? stopShare() : startShare();
+  $('#pipStop').onclick = stopShare;
+  $('#pipOverlay').onclick = toggleOverlay;
+  syncOverlayBtn();
+  $('#clipsBtn').onclick = () => { setClips(false); toast('Clipes desligados: o Telão parou de guardar as telas.'); };
+  syncClipBuffers();
+  initPip();
+  initDiag();
+  $('#leaveBtn').onclick = leave;
+  $('#quality').onchange = onQualityChange;
+  $('#codec').onchange = () => {
+    store.set('codec', currentCodec());
+    if (localStream) toast('O novo codec vale a partir da próxima vez que você compartilhar.');
+  };
+  $('#audioSrc').onchange = onAudioSrcChange;
+  $('#netClose').onclick = () => { netDismissed = true; hideNetBanner(); };
+  $('#netFix').onclick = () => { store.set('openTurn', true); leave(); };
+  setStatus('Entrando na sala…', 'warn');
+  renderMembers();
+}
+
+/* ---------- Diretório da sala (hub) ----------
+   Um dos participantes assume o ID "hub" da sala e mantém a lista de quem está online.
+   Se ele sair, outro assume automaticamente. O vídeo nunca passa pelo hub. */
+async function ensureHub(){
+  if (hubBusy) return;
+  hubBusy = true;
+  try{
+    if (!hubPeer || hubPeer.destroyed) await tryClaimHub();
+    connectHub();
+  } finally { hubBusy = false; }
+}
+
+function tryClaimHub(){
+  return new Promise(res => {
+    let done = false;
+    const finish = v => { if (!done){ done = true; res(v); } };
+    const hp = newPeer(hubId());
+    hp.on('open', () => { hubPeer = hp; runHub(hp); finish(true); });
+    hp.on('error', e => {
+      if (!done){ try{ hp.destroy(); }catch{} finish(false); }
+      else if (e.type === 'unavailable-id'){ try{ hp.destroy(); }catch{} }
+    });
+    setTimeout(() => { if (!done){ try{ hp.destroy(); }catch{} finish(false); } }, 6000);
+  });
+}
+
+function runHub(hp){
+  const mem = new Map();
+  const send = () => {
+    const list = [...mem].map(([id, m]) => ({id, name: m.name, sharing: m.sharing}));
+    for (const m of mem.values()) if (m.conn.open) try{ m.conn.send({t:'list', list}); }catch{}
+  };
+  hp.on('connection', conn => {
+    conn.on('data', msg => {
+      if (!msg || typeof msg !== 'object') return;
+      if (msg.t === 'hello'){
+        mem.set(conn.peer, {name: String(msg.name || '?').slice(0, 24), sharing: !!msg.sharing, conn, seen: Date.now()});
+        send(); return;
+      }
+      const m = mem.get(conn.peer);
+      if (!m || m.conn !== conn) return;
+      m.seen = Date.now();
+      if (msg.t === 'state'){ m.sharing = !!msg.sharing; send(); }
+      else if (msg.t === 'relay' && typeof msg.to === 'string'){
+        const dst = mem.get(msg.to);
+        if (dst && dst.conn.open) try{ dst.conn.send({t:'relay', from: conn.peer, data: msg.data}); }catch{}
+      }
+    });
+    const drop = () => { const m = mem.get(conn.peer); if (m && m.conn === conn){ mem.delete(conn.peer); send(); } };
+    conn.on('close', drop); conn.on('error', drop);
+  });
+  const ticker = setInterval(() => {
+    const now = Date.now();
+    for (const [id, m] of mem) if (now - m.seen > 15000){ try{ m.conn.close(); }catch{} mem.delete(id); }
+    send();
+  }, 4000);
+  hp.on('disconnected', () => { setTimeout(() => { if (!hp.destroyed && hp.disconnected) try{ hp.reconnect(); }catch{} }, 1000); });
+  hp.on('close', () => { clearInterval(ticker); if (hubPeer === hp) hubPeer = null; });
+}
+
+function connectHub(){
+  if (hubConn || !me || me.destroyed) return;
+  const c = me.connect(hubId(), {reliable: true, serialization: 'json'});
+  if (!c) return;
+  hubConn = c; lastHubMsg = Date.now();
+  c.on('open', () => {
+    c._opened = true;
+    hubFailStreak = 0;
+    hideNetBanner();
+    c.send({t:'hello', name: myName, sharing: !!localStream});
+    resendPauses();
+    setStatus('Na sala', 'ok');
+  });
+  c.on('data', msg => {
+    if (c !== hubConn) return;
+    lastHubMsg = Date.now();
+    if (msg && msg.t === 'list') onList(msg.list);
+    else if (msg && msg.t === 'relay' && msg.data) onRelay(msg.from, msg.data);
+  });
+  const lost = () => { if (c === hubConn) scheduleHubRecovery(); };
+  c.on('close', lost); c.on('error', lost);
+}
+
+// Falhas seguidas ao abrir a conexão com quem segura a sala = rede bloqueando conexão direta.
+// (Quando a sala simplesmente ficou sem dono, não conta: alguém assume em seguida.)
+let hubFailStreak = 0, hubMissing = false;
+function scheduleHubRecovery(){
+  if (hubRetryTimer || !me || me.destroyed) return;
+  setStatus('Reorganizando a sala…', 'warn');
+  const old = hubConn; hubConn = null;
+  if (old && !old._opened && !hubMissing){
+    hubFailStreak++;
+    if (hubFailStreak >= 2){
+      setStatus('Sem conexão com a sala', 'danger');
+      showNetBanner(hasTurn()
+        ? 'Mesmo com TURN não consegui entrar na sala. Use "Testar TURN" na tela de configuração para conferir as credenciais.'
+        : 'Não consigo me conectar com quem está na sala: a sua rede (ou a de quem criou a sala) bloqueia conexão direta. Configure um servidor TURN para resolver.');
+    }
+  }
+  hubMissing = false;
+  try{ old && old.close(); }catch{}
+  hubRetryTimer = setTimeout(async () => {
+    hubRetryTimer = null; lastHubMsg = Date.now();
+    await ensureHub();
+  }, 400 + Math.random() * 1600);
+}
+
+function tickClient(){
+  if (!me || me.destroyed) return;
+  if (hubConn && hubConn.open) try{ hubConn.send({t:'ping'}); }catch{}
+  if (Date.now() - lastHubMsg > 15000) scheduleHubRecovery();
+  updatePip();
+  syncWaits();
+  renderMembers();
+}
+
+const hubSend = msg => { if (hubConn && hubConn.open) try{ hubConn.send(msg); }catch{} };
+
+function onList(list){
+  members = Array.isArray(list) ? list : [];
+  syncVersions();
+  renderMembers();
+  for (const m of members){
+    const t = tiles.get(m.id);
+    if (t){ if (!m.sharing) removeTile(m.id); else t.nameEl.textContent = m.name; }
+  }
+  renderHiddenBar();
+  syncWaits();
+  if (localStream){
+    for (const m of members){
+      if (m.id === me.id || outCalls.has(m.id)) continue;
+      if ((failCount.get(m.id) || 0) >= MAX_FAILS) continue;
+      callPeer(m.id);
+    }
+  }
+}
+
+/* Cada participante anuncia a própria versão aos outros (pela sala, como a pausa).
+   Quem não anuncia em alguns segundos está numa versão anterior à 1.4. */
+const peerVer = new Map();     // id → {v, d}
+const announced = new Set();   // ids pra quem já mandei a minha versão
+const firstSeen = new Map();   // id → quando apareceu na sala
+const warnedVer = new Set();   // versões mais novas já avisadas
+const VER_GRACE = 8000;
+function announceTo(pid){
+  if (announced.has(pid)) return;
+  announced.add(pid);
+  hubSend({t:'relay', to: pid, data: {k:'hi', v: TELAO_VERSION, d: DESKTOP}});
+}
+function syncVersions(){
+  if (!me) return;
+  const now = Date.now(), ids = new Set(members.map(m => m.id));
+  for (const m of members){
+    if (m.id === me.id) continue;
+    if (!firstSeen.has(m.id)) firstSeen.set(m.id, now);
+    announceTo(m.id);
+  }
+  for (const id of [...firstSeen.keys()]) if (!ids.has(id)){ firstSeen.delete(id); peerVer.delete(id); announced.delete(id); }
+  checkOutdated();
+}
+function newestVersion(){
+  let n = TELAO_VERSION;
+  for (const x of peerVer.values()) if (cmpVer(x.v, n) > 0) n = x.v;
+  return n;
+}
+function checkOutdated(){
+  const newest = newestVersion();
+  if (cmpVer(newest, TELAO_VERSION) <= 0 || warnedVer.has(newest)) return;
+  warnedVer.add(newest);
+  const who = members.filter(m => peerVer.get(m.id) && peerVer.get(m.id).v === newest).map(m => m.name).join(', ');
+  toast('Sua versão do Telão (' + TELAO_VERSION + ') é mais antiga que a de ' + (who || 'alguém da sala') + ' (' + newest + '). Peça o arquivo novo pra atualizar.', 'warn', 12000);
+}
+function versionInfo(m){
+  if (me && m.id === me.id) return {v: TELAO_VERSION, d: DESKTOP};
+  const x = peerVer.get(m.id);
+  if (x) return x;
+  return Date.now() - (firstSeen.get(m.id) || Date.now()) > VER_GRACE ? {v: null} : null;   // null = ainda esperando
+}
+
+function renderMembers(){
+  const box = $('#members'); box.textContent = '';
+  const list = members.length ? members : [{id: me && me.id, name: myName, sharing: !!localStream}];
+  const newest = newestVersion();
+  for (const m of list){
+    const isMe = me && m.id === me.id;
+    const c = document.createElement('div');
+    c.className = 'chip' + (m.sharing ? ' sharing' : '') + (isMe ? ' me' : '');
+    const dot = document.createElement('span'); dot.className = 'live';
+    const n = document.createElement('span'); n.textContent = m.name + (isMe ? ' (você)' : '');
+    c.append(dot, n);
+    const vi = versionInfo(m);
+    let verTxt = 'versão: verificando…';
+    if (vi && vi.v) verTxt = 'Telão ' + vi.v + (vi.d ? ' Desktop' : ' no navegador');
+    else if (vi) verTxt = 'versão anterior à 1.4';
+    const old = vi && (!vi.v || cmpVer(vi.v, newest) < 0);
+    if (old){
+      c.classList.add('old');
+      const v = document.createElement('span'); v.className = 'ver'; v.textContent = vi.v ? 'v' + vi.v : 'desatualizado';
+      c.appendChild(v);
+      verTxt += ' · desatualizado';
+    }
+    c.title = (m.sharing ? 'Transmitindo' : 'Assistindo') + ' · ' + verTxt;
+    box.appendChild(c);
+  }
+}
+
+/* ---------- Fonte de áudio ----------
+   O navegador não captura o áudio de uma janela só: ou vai o sistema inteiro (inclui o Discord),
+   ou pegamos um dispositivo de áudio específico, como um cabo virtual (VB-CABLE) para onde
+   o jogo foi direcionado no Windows. */
+const AUDIO_NONE = 'none', AUDIO_SYSTEM = 'system', AUDIO_UNLOCK = 'unlock', AUDIO_WINDOW = 'window-audio';
+const DESKTOP = !!window.telaoDesktop;
+const VIRTUAL_RE = /cable|virtual|voicemeeter/i;
+let populating = false;
+
+const AUDIO_EXCEPT_DISCORD = 'except-discord', AUDIO_NO_HELPER = 'no-helper';
+let audioOptionsKey = '', audioRebuildPending = false;
+
+async function populateAudio(force){
+  if (populating) return;
+  populating = true;
+  try{
+    const sel = $('#audioSrc');
+    // Não reconstrói a lista com ela aberta; refaz quando o foco sair.
+    if (!force && document.activeElement === sel){ audioRebuildPending = true; return; }
+    const saved = store.get('audioSrc', DESKTOP ? AUDIO_WINDOW : AUDIO_SYSTEM);
+    const opts = [];
+    const add = (v, l, disabled) => opts.push({v, l, disabled: !!disabled});
+    add(AUDIO_NONE, 'Sem áudio');
+    if (DESKTOP) add(AUDIO_WINDOW, 'Áudio da janela compartilhada', !helper.ready);
+
+    // Telão Audio (helper): só o som do app escolhido
+    if (helper.ready){
+      const apps = helper.apps
+        .filter(a => !/^discord(ptb|canary)?\.exe$/i.test(a.name))
+        .sort((a, b) => (b.active - a.active) || (a.title || a.name).localeCompare(b.title || b.name));
+      for (const a of apps) add('app:' + a.name, 'Só o app: ' + (a.title ? a.title + ' (' + a.name + ')' : a.name));
+      if (helper.discord) add(AUDIO_EXCEPT_DISCORD, 'Tudo menos o Discord');
+    } else {
+      add(AUDIO_NO_HELPER, 'Só o app: abra o Telão Audio', true);
+    }
+
+    add(AUDIO_SYSTEM, 'Sistema inteiro (inclui o Discord)');
+    let inputs = [];
+    try{
+      inputs = (await navigator.mediaDevices.enumerateDevices())
+        .filter(d => d.kind === 'audioinput' && d.label && d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications');
+    }catch{}
+    inputs.sort((a, b) => (VIRTUAL_RE.test(b.label) ? 1 : 0) - (VIRTUAL_RE.test(a.label) ? 1 : 0));
+    for (const d of inputs) add('dev:' + d.deviceId, 'Dispositivo: ' + d.label);
+    if (!inputs.length) add(AUDIO_UNLOCK, 'Dispositivo: escolher…');
+
+    // A escolha salva continua aparecendo mesmo se o app/dispositivo não estiver disponível agora.
+    if (saved !== AUDIO_UNLOCK && !opts.some(o => o.v === saved))
+      opts.splice(1, 0, {v: saved, l: store.get('audioSrcLabel', 'Escolha salva') + ' (indisponível agora)', disabled: false});
+
+    const key = JSON.stringify(opts);
+    if (key === audioOptionsKey && sel.options.length){ return; }
+    audioOptionsKey = key;
+    sel.textContent = '';
+    for (const o of opts){
+      const el = document.createElement('option');
+      el.value = o.v; el.textContent = o.l; el.disabled = o.disabled;
+      sel.appendChild(el);
+    }
+    const fallback = DESKTOP && helper.ready ? AUDIO_WINDOW : AUDIO_SYSTEM;
+    // No app, a opção de janela fica desabilitada só enquanto o áudio embutido inicia: mantém a escolha salva.
+    sel.value = opts.some(o => o.v === saved && (!o.disabled || o.v === AUDIO_WINDOW)) ? saved : fallback;
+  } finally { populating = false; }
+}
+
+async function onAudioSrcChange(){
+  const sel = $('#audioSrc');
+  if (sel.value === AUDIO_UNLOCK){
+    toast('O navegador vai pedir acesso a dispositivos de áudio. É só para listar o cabo virtual; nada é gravado.', 'ok', 6000);
+    try{ const s = await navigator.mediaDevices.getUserMedia({audio: true}); s.getTracks().forEach(t => t.stop()); }
+    catch{ toast('Sem essa permissão não dá pra listar os dispositivos de áudio.', 'warn'); }
+    store.set('audioSrc', AUDIO_SYSTEM);
+    await populateAudio(true);
+    const devs = [...sel.options].filter(o => o.value.startsWith('dev:'));
+    const v = devs.find(o => VIRTUAL_RE.test(o.textContent)) || devs[0];
+    if (v) sel.value = v.value;
+  }
+  store.set('audioSrc', sel.value);
+  const o = sel.selectedOptions[0];
+  if (o) store.set('audioSrcLabel', o.textContent.replace(/ \(indisponível agora\)$/, ''));
+  if (localStream) toast('O novo áudio vale a partir da próxima vez que você compartilhar.');
+}
+
+/* ---------- Telão Audio (helper local) ----------
+   Programa pequeno que roda no PC de quem transmite e usa a captura por app do Windows.
+   Fala com esta página por WebSocket em 127.0.0.1 e manda PCM 48 kHz estéreo 16 bits. */
+const HELPER_URL = 'ws://127.0.0.1:47800';
+const helper = {ws: null, ready: false, apps: [], discord: false, boost: -1, retry: null, onAudio: null, pending: null, waiters: []};
+function helperQuery(cmd, type, ms){
+  return new Promise(resolve => {
+    if (!helper.ready) return resolve(null);
+    const w = {type, resolve, timer: setTimeout(() => { helper.waiters = helper.waiters.filter(x => x !== w); resolve(null); }, ms || 2000)};
+    helper.waiters.push(w);
+    helperSend(cmd);
+  });
+}
+let helperAudio = null;
+
+function helperConnect(){
+  if (helper.ws) return;
+  let ws;
+  try{ ws = new WebSocket(HELPER_URL); }catch{ return helperRetry(); }
+  ws.binaryType = 'arraybuffer';
+  helper.ws = ws;
+  ws.onopen = () => { helper.ready = true; helperSend({cmd: 'list'}); };
+  ws.onmessage = ev => {
+    if (typeof ev.data !== 'string'){ if (helper.onAudio) helper.onAudio(ev.data); return; }
+    let m; try{ m = JSON.parse(ev.data); }catch{ return; }
+    if (m.type === 'winrect'){
+      const w = helper.waiters.findIndex(x => x.type === 'winrect');
+      if (w >= 0){ const x = helper.waiters.splice(w, 1)[0]; clearTimeout(x.timer); x.resolve(m); }
+      return;
+    }
+    if (m.type === 'list'){
+      helper.apps = Array.isArray(m.apps) ? m.apps : [];
+      helper.discord = !!m.discord;
+      helper.boost = typeof m.boost === 'number' ? m.boost : -1;
+      populateAudio();
+    } else if ((m.type === 'started' || m.type === 'error') && helper.pending){
+      const p = helper.pending; helper.pending = null;
+      m.type === 'started' ? p.resolve(m) : p.reject(new Error(m.message || 'erro desconhecido'));
+    } else if (m.type === 'error'){
+      toast('Telão Audio: ' + m.message, 'warn', 7000);
+    } else if (m.type === 'ended'){
+      toast('O app que estava sendo capturado fechou. A transmissão segue sem som.', 'warn', 7000);
+    }
+  };
+  ws.onclose = () => {
+    const was = helper.ready;
+    helper.ws = null; helper.ready = false;
+    if (helper.pending){ helper.pending.reject(new Error('o Telão Audio fechou.')); helper.pending = null; }
+    if (was){
+      helper.apps = []; populateAudio();
+      if (helperAudio) toast('O Telão Audio foi fechado. A transmissão segue sem som.', 'warn', 7000);
+    }
+    helperRetry();
+  };
+}
+function helperRetry(){ clearTimeout(helper.retry); helper.retry = setTimeout(helperConnect, 4000); }
+function helperSend(msg){ if (helper.ws && helper.ready) try{ helper.ws.send(JSON.stringify(msg)); }catch{} }
+
+// Processador de áudio: recebe PCM 16 bits intercalado e toca com um buffer pequeno (50–200 ms).
+const PCM_WORKLET = `
+class TelaoPcm extends AudioWorkletProcessor {
+  constructor(){
+    super();
+    this.buf = new Float32Array(48000 * 2);   // 1 s de estéreo intercalado
+    this.r = 0; this.w = 0; this.n = 0; this.primed = false;
+    this.port.onmessage = e => {
+      const d = new Int16Array(e.data), cap = this.buf.length;
+      for (let i = 0; i < d.length; i++){ this.buf[this.w] = d[i] / 32768; this.w = (this.w + 1) % cap; }
+      this.n = Math.min(this.n + d.length, cap);
+      if (this.n > 19200){ const drop = this.n - 7680; this.r = (this.r + drop) % cap; this.n -= drop; }  // > 200 ms: volta a 80 ms
+      if (!this.primed && this.n >= 4800) this.primed = true;                                      // começa com 50 ms
+    };
+  }
+  process(_inputs, outputs){
+    const out = outputs[0], L = out[0], R = out[1] || out[0], cap = this.buf.length;
+    for (let i = 0; i < L.length; i++){
+      if (this.primed && this.n >= 2){
+        L[i] = this.buf[this.r]; R[i] = this.buf[(this.r + 1) % cap];
+        this.r = (this.r + 2) % cap; this.n -= 2;
+      } else { L[i] = 0; R[i] = 0; this.primed = false; }
+    }
+    return true;
+  }
+}
+registerProcessor('telao-pcm', TelaoPcm);
+`;
+
+async function loadWorklet(ctx){
+  const blobUrl = URL.createObjectURL(new Blob([PCM_WORKLET], {type: 'application/javascript'}));
+  try{ await ctx.audioWorklet.addModule(blobUrl); }
+  catch{ await ctx.audioWorklet.addModule('data:application/javascript;charset=utf-8,' + encodeURIComponent(PCM_WORKLET)); }
+  finally{ URL.revokeObjectURL(blobUrl); }
+}
+
+async function startHelperAudio(cmd){
+  if (!helper.ready) throw new Error('o Telão Audio não está aberto neste PC.');
+  stopHelperAudio();
+  const ctx = new AudioContext({sampleRate: 48000, latencyHint: 'interactive'});
+  try{
+    await loadWorklet(ctx);
+    const node = new AudioWorkletNode(ctx, 'telao-pcm', {numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2]});
+    const dest = ctx.createMediaStreamDestination();
+    node.connect(dest);
+    await ctx.resume();
+    const started = new Promise((resolve, reject) => {
+      helper.pending = {resolve, reject};
+      setTimeout(() => { if (helper.pending){ helper.pending = null; reject(new Error('o Telão Audio não respondeu.')); } }, 7000);
+    });
+    helper.onAudio = buf => node.port.postMessage(buf, [buf]);
+    helperSend(cmd);
+    const info = await started;
+    const track = dest.stream.getAudioTracks()[0];
+    try{ track.contentHint = 'music'; }catch{}
+    helperAudio = {ctx, node, track};
+    return {track, label: info.label};
+  }catch(e){
+    helper.onAudio = null;
+    try{ ctx.close(); }catch{}
+    throw e;
+  }
+}
+
+function stopHelperAudio(){
+  if (!helperAudio) return;
+  helperSend({cmd: 'stop'});
+  helper.onAudio = null;
+  try{ helperAudio.track.stop(); }catch{}
+  try{ helperAudio.ctx.close(); }catch{}
+  helperAudio = null;
+}
+
+/* Opus em estéreo e com mais bitrate: o padrão do WebRTC é mono, pensado para voz. */
+const stereoSdp = sdp => sdp.replace(/a=fmtp:(\d+) ([^\r\n]*useinbandfec=1[^\r\n]*)/g,
+  (m, pt, rest) => rest.includes('stereo=1') ? m : 'a=fmtp:' + pt + ' ' + rest + ';stereo=1;sprop-stereo=1;maxaveragebitrate=128000');
+
+/* Perfil de H.264: o Chromium só usa a placa de vídeo nos perfis Main/Baseline (o Constrained Baseline
+   precisa de uma flag que o Chrome deixa desligada). Main primeiro: com placa sai pela placa; sem placa,
+   o OpenH264 assume do mesmo jeito. High fica por último porque nem todo PC consegue receber. */
+function h264Score(fmtp){
+  fmtp = fmtp || '';
+  const id = ((fmtp.match(/profile-level-id=([0-9a-f]{6})/i) || [])[1] || '').toLowerCase();
+  const rank = id.startsWith('4d') ? 3 : id.startsWith('4200') ? 2 : id.startsWith('42e0') ? 1 : 0;
+  return (/packetization-mode=1/.test(fmtp) ? 10 : 0) + rank;
+}
+
+/* Coloca o codec escolhido na frente da lista de vídeo da negociação.
+   Aplicado na oferta (quem transmite) e na resposta (quem assiste, lendo o codec pelo metadata),
+   porque é a ordem da resposta que decide o que o encoder usa. */
+function preferCodec(sdp, codec){
+  if (!codec) return sdp;
+  const lines = sdp.split('\r\n');
+  const m = lines.findIndex(l => l.startsWith('m=video'));
+  if (m < 0) return sdp;
+  let end = lines.findIndex((l, i) => i > m && l.startsWith('m='));
+  if (end < 0) end = lines.length;
+  const sec = lines.slice(m, end);
+  const name = {}, apt = {}, fmtp = {};
+  for (const l of sec){
+    let x;
+    if ((x = l.match(/^a=rtpmap:(\d+) ([^/]+)\//))) name[x[1]] = x[2].toUpperCase();
+    if ((x = l.match(/^a=fmtp:(\d+) (.*)$/))){ fmtp[x[1]] = x[2]; const a = x[2].match(/apt=(\d+)/); if (a) apt[x[1]] = a[1]; }
+  }
+  const parts = lines[m].split(' ');
+  const head = parts.slice(0, 3), list = parts.slice(3);
+  let pref = list.filter(pt => name[pt] === codec);
+  if (!pref.length) return sdp;
+  if (codec === 'H264') pref = pref.sort((a, b) => h264Score(fmtp[b]) - h264Score(fmtp[a]));
+  const prefRtx = list.filter(pt => apt[pt] && pref.includes(apt[pt]));
+  const rest = list.filter(pt => !pref.includes(pt) && !prefRtx.includes(pt));
+  lines[m] = [...head, ...pref, ...prefRtx, ...rest].join(' ');
+  return lines.join('\r\n');
+}
+/* Bitrate inicial: sem isso a conexão começa bem baixa e os primeiros segundos saem borrados. */
+const START_KBPS = 2500;
+function startBitrateSdp(sdp){
+  const lines = sdp.split('\r\n');
+  const m = lines.findIndex(l => l.startsWith('m=video'));
+  if (m < 0) return sdp;
+  let end = lines.findIndex((l, i) => i > m && l.startsWith('m='));
+  if (end < 0) end = lines.length;
+  const media = new Set(), hasFmtp = new Set();
+  for (let i = m; i < end; i++){
+    let x;
+    if ((x = lines[i].match(/^a=rtpmap:(\d+) (VP8|VP9|H264|AV1)\//i))) media.add(x[1]);
+    if ((x = lines[i].match(/^a=fmtp:(\d+) /))) hasFmtp.add(x[1]);
+  }
+  const out = [];
+  lines.forEach((l, i) => {
+    let x;
+    if (i > m && i < end && (x = l.match(/^a=fmtp:(\d+) (.*)$/)) && media.has(x[1]) && !/x-google-start-bitrate/.test(l)){
+      out.push(l + ';x-google-start-bitrate=' + START_KBPS);
+      return;
+    }
+    out.push(l);
+    if (i > m && i < end && (x = l.match(/^a=rtpmap:(\d+) /)) && media.has(x[1]) && !hasFmtp.has(x[1]))
+      out.push('a=fmtp:' + x[1] + ' x-google-start-bitrate=' + START_KBPS);
+  });
+  return out.join('\r\n');
+}
+const makeSdpTransform = codec => sdp => startBitrateSdp(preferCodec(stereoSdp(sdp), codec));
+
+/* ---------- Seletor de janela/tela (só no app desktop) ---------- */
+let pickerTab = 'window';
+function openPicker(){
+  return new Promise(resolve => {
+    const box = $('#picker'), grid = $('#pkGrid'), go = $('#pkGo');
+    let sources = [], selected = null, closed = false;
+    const audioSel = $('#audioSrc');
+    $('#pkAudio').textContent = 'Áudio: ' + (audioSel.selectedOptions[0] ? audioSel.selectedOptions[0].textContent : 'sem áudio') + ' (troque na barra do topo)';
+
+    const finish = val => {
+      if (closed) return;
+      closed = true;
+      box.hidden = true;
+      document.removeEventListener('keydown', onKey);
+      resolve(val);
+    };
+    const onKey = e => {
+      if (e.key === 'Escape') finish(null);
+      if (e.key === 'Enter' && selected) finish(selected);
+    };
+    const render = () => {
+      grid.textContent = '';
+      const list = sources.filter(x => x.type === pickerTab);
+      for (const b of box.querySelectorAll('.pk-tabs button')) b.classList.toggle('on', b.dataset.t === pickerTab);
+      if (!list.length){
+        const e = document.createElement('div'); e.className = 'pk-empty';
+        e.textContent = pickerTab === 'window' ? 'Nenhuma janela encontrada. Abra o jogo e clique em Atualizar.' : 'Nenhuma tela encontrada.';
+        grid.appendChild(e);
+      }
+      for (const x of list){
+        const it = document.createElement('button'); it.type = 'button'; it.className = 'pk-item' + (selected && selected.id === x.id ? ' sel' : '');
+        const th = document.createElement('div'); th.className = 'th';
+        if (x.thumb){ const img = document.createElement('img'); img.src = x.thumb; img.alt = ''; th.appendChild(img); }
+        const nm = document.createElement('div'); nm.className = 'nm';
+        if (x.icon){ const ic = document.createElement('img'); ic.src = x.icon; ic.alt = ''; nm.appendChild(ic); }
+        const t = document.createElement('span'); t.textContent = x.name; t.title = x.name; nm.appendChild(t);
+        it.append(th, nm);
+        it.onclick = () => { selected = x; go.disabled = false; render(); };
+        it.ondblclick = () => finish(x);
+        grid.appendChild(it);
+      }
+    };
+    const load = async () => {
+      grid.innerHTML = '<div class="pk-empty">Carregando…</div>';
+      try{ sources = await window.telaoDesktop.getSources(); }
+      catch{ sources = []; }
+      if (selected && !sources.some(x => x.id === selected.id)){ selected = null; go.disabled = true; }
+      render();
+    };
+
+    for (const b of box.querySelectorAll('.pk-tabs button')) b.onclick = () => { pickerTab = b.dataset.t; render(); };
+    $('#pkRefresh').onclick = load;
+    $('#pkCancel').onclick = () => finish(null);
+    go.onclick = () => finish(selected);
+    go.disabled = true;
+    box.onclick = e => { if (e.target === box) finish(null); };
+    document.addEventListener('keydown', onKey);
+    box.hidden = false;
+    load();
+  });
+}
+
+/* ---------- Transmitir ---------- */
+async function startShare(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){
+    toast('Este navegador não consegue capturar a tela. Use Chrome ou Edge no PC.', 'danger'); return;
+  }
+  const q = QUALITY[currentQ()];
+  const src = $('#audioSrc').value;
+  const sysAudio = src === AUDIO_SYSTEM;
+  const devId = src.startsWith('dev:') ? src.slice(4) : null;
+  let chosen = null;
+  if (DESKTOP){
+    chosen = await openPicker();
+    if (!chosen) return;
+    await window.telaoDesktop.select(chosen.id, sysAudio);
+  }
+  let s;
+  try{
+    s = await navigator.mediaDevices.getDisplayMedia({
+      video: {width:{ideal:q.w, max:q.w}, height:{ideal:q.h, max:q.h}, frameRate:{ideal:q.fps, max:q.fps}},
+      audio: sysAudio ? {echoCancellation:false, noiseSuppression:false, autoGainControl:false, restrictOwnAudio:true} : false,
+      systemAudio: sysAudio ? 'include' : 'exclude',
+      selfBrowserSurface: 'exclude',
+      surfaceSwitching: 'include',
+    });
+  }catch(e){
+    if (e.name !== 'NotAllowedError') toast('Não foi possível capturar a tela: ' + e.message, 'danger');
+    return;
+  }
+  if (src === AUDIO_WINDOW){
+    const hwnd = chosen && chosen.type === 'window' ? (chosen.id.split(':')[1] || '') : '';
+    if (!hwnd){
+      toast('Para tela inteira, escolha de qual app vem o som no seletor de áudio (ex.: "Só o app: seu jogo"). Transmitindo sem som.', 'warn', 9000);
+    } else {
+      try{
+        const r = await startHelperAudio({cmd: 'start', target: 'hwnd', hwnd});
+        s.addTrack(r.track);
+      }catch(e){
+        toast('Sem áudio da janela: ' + e.message + ' A transmissão segue sem som.', 'warn', 9000);
+      }
+    }
+  }
+  const appName = src.startsWith('app:') ? src.slice(4) : null;
+  if (appName || src === AUDIO_EXCEPT_DISCORD){
+    try{
+      const r = await startHelperAudio(appName ? {cmd: 'start', target: 'app', name: appName} : {cmd: 'start', target: 'except-discord'});
+      s.addTrack(r.track);
+    }catch(e){
+      toast('Sem áudio do app: ' + e.message + ' A transmissão segue sem som.', 'warn', 8000);
+    }
+  }
+  if (devId){
+    try{
+      const a = await navigator.mediaDevices.getUserMedia({audio: {
+        deviceId: {exact: devId},
+        echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+        channelCount: {ideal: 2}, sampleRate: {ideal: 48000},
+      }});
+      for (const t of a.getAudioTracks()){ try{ t.contentHint = 'music'; }catch{} s.addTrack(t); }
+    }catch(e){
+      toast('Não consegui abrir o dispositivo de áudio escolhido (' + e.name + '). Transmitindo sem som; escolha o dispositivo de novo no seletor de áudio.', 'warn', 8000);
+    }
+  }
+  localStream = s;
+  lastChosen = chosen;
+  showOverlay();
+  const vt = s.getVideoTracks()[0];
+  if (vt){ try{ vt.contentHint = 'motion'; }catch{} vt.addEventListener('ended', stopShare); }
+  if (sysAudio && !s.getAudioTracks().length){
+    toast('Transmitindo sem som. Para enviar o áudio do sistema, marque "Compartilhar áudio" na janela de compartilhamento.', 'warn', 8000);
+  }
+  failCount.clear();
+  $('#pipVideo').srcObject = s; $('#pip').hidden = false;
+  $('#pip').classList.toggle('mini', store.get('pipMini', false));
+  restorePip();
+  $('#shareBtn').textContent = 'Parar transmissão'; $('#shareBtn').classList.add('stop');
+  hubSend({t:'state', sharing:true});
+  for (const m of members) if (m.id !== me.id) callPeer(m.id);
+  updatePip();
+}
+
+function stopShare(){
+  if (!localStream) return;
+  localStream.getTracks().forEach(t => t.stop());
+  localStream = null;
+  stopHelperAudio();
+  hideOverlay();
+  for (const c of outCalls.values()) try{ c.close(); }catch{}
+  outCalls.clear(); failCount.clear();
+  $('#pipVideo').srcObject = null; $('#pip').hidden = true;
+  $('#shareBtn').textContent = 'Compartilhar tela'; $('#shareBtn').classList.remove('stop');
+  hubSend({t:'state', sharing:false});
+}
+
+function callPeer(pid){
+  if (!localStream || !me || me.destroyed) return;
+  const codec = currentCodec();
+  const call = me.call(pid, localStream, {metadata: {name: myName, codec}, sdpTransform: makeSdpTransform(codec)});
+  if (!call) return;
+  outCalls.set(pid, call);
+  const pc = call.peerConnection;
+  applyQuality(pc, pid);
+  let everConnected = false;
+  // Se não conectar em 20 s, desiste desta tentativa (a próxima lista da sala tenta de novo).
+  setTimeout(() => {
+    if (!everConnected && outCalls.get(pid) === call){
+      outCalls.delete(pid); try{ call.close(); }catch{}
+      failCount.set(pid, (failCount.get(pid) || 0) + 1);
+    }
+  }, 20000);
+  watchPc(pc, state => {
+    if (state === 'connected'){ everConnected = true; applyQuality(pc, pid); failCount.delete(pid); }
+    if (state === 'failed' || state === 'closed'){
+      if (outCalls.get(pid) === call){ outCalls.delete(pid); try{ call.close(); }catch{} }
+      if (state === 'failed'){
+        const n = (failCount.get(pid) || 0) + 1; failCount.set(pid, n);
+        if (n === MAX_FAILS){
+          const who = (members.find(m => m.id === pid) || {}).name || 'um participante';
+          showNetBanner('Não consegui enviar sua tela para ' + who + ': a rede de vocês bloqueia conexão direta. Um de vocês dois precisa configurar um servidor TURN.');
+        }
+      }
+    }
+  });
+  const forget = () => { if (outCalls.get(pid) === call) outCalls.delete(pid); };
+  call.on('close', forget); call.on('error', forget);
+}
+
+/* Resolução sob demanda: cada espectador diz a altura em que a minha tela aparece pra ele.
+   Mando reduzido só pra ele (menos encode aqui, menos banda e decodificação lá). */
+const wantH = new Map();   // id do espectador → altura desejada em pixels
+function videoPlan(pid){
+  const q = QUALITY[currentQ()];
+  const vt = localStream && localStream.getVideoTracks()[0];
+  const srcH = (vt && vt.getSettings && vt.getSettings().height) || q.h;
+  const want = wantH.get(pid);
+  const scale = want && srcH > want ? srcH / want : 1;
+  // bitrate acompanha a área da imagem, com um piso para não ficar borrado
+  const kbps = Math.round(Math.min(q.kbps, Math.max(800, q.kbps / Math.pow(scale, 1.5))));
+  return {scale, kbps, fps: q.fps};
+}
+
+async function applyQuality(pc, pid){
+  if (!pc) return;
+  const plan = videoPlan(pid);
+  const active = !pausedBy.get(pid);   // false = esse espectador ocultou minha tela
+  for (const s of pc.getSenders()){
+    if (!s.track) continue;
+    const kind = s.track.kind;
+    try{
+      const p = s.getParameters();
+      if (!p.encodings || !p.encodings.length) continue; // ainda negociando; reaplica quando conectar
+      p.encodings.forEach(e => { e.active = active; });
+      if (kind === 'video'){
+        p.encodings[0].maxBitrate = plan.kbps * 1000;
+        p.encodings[0].maxFramerate = plan.fps;
+        p.encodings[0].scaleResolutionDownBy = plan.scale;
+        p.degradationPreference = 'maintain-framerate';
+      } else {
+        p.encodings[0].maxBitrate = 128000;
+      }
+      await s.setParameters(p);
+    }catch{
+      try{
+        const p = s.getParameters();
+        if (p.encodings && p.encodings.length && kind === 'video'){
+          p.encodings.forEach(e => { e.active = active; });
+          p.encodings[0].maxBitrate = plan.kbps * 1000;
+          p.encodings[0].maxFramerate = plan.fps;
+          p.encodings[0].scaleResolutionDownBy = plan.scale;
+          await s.setParameters(p);
+        }
+      }catch{}
+    }
+  }
+}
+
+async function onQualityChange(){
+  store.set('quality', currentQ());
+  if (!localStream) return;
+  const q = QUALITY[currentQ()];
+  const vt = localStream.getVideoTracks()[0];
+  if (vt) try{ await vt.applyConstraints({width:{ideal:q.w, max:q.w}, height:{ideal:q.h, max:q.h}, frameRate:{ideal:q.fps, max:q.fps}}); }catch{}
+  for (const [pid, c] of outCalls) applyQuality(c.peerConnection, pid);
+  toast('Qualidade alterada para ' + q.label + '.');
+}
+
+/* Miniatura arrastável: a posição fica salva como fração da tela, então sobrevive a redimensionar. */
+function initPip(){
+  const pip = $('#pip');
+  let drag = null;
+  pip.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    const r = pip.getBoundingClientRect();
+    drag = {dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId};
+    try{ pip.setPointerCapture(e.pointerId); }catch{}
+    pip.classList.add('dragging');
+    e.preventDefault();
+  });
+  pip.addEventListener('pointermove', e => {
+    if (drag && e.pointerId === drag.id) placePip(e.clientX - drag.dx, e.clientY - drag.dy);
+  });
+  const end = () => { if (!drag) return; drag = null; pip.classList.remove('dragging'); savePip(); };
+  pip.addEventListener('pointerup', end);
+  pip.addEventListener('pointercancel', end);
+  window.addEventListener('resize', () => { if (!pip.hidden) restorePip(); });
+  $('#pipMin').onclick = () => {
+    pip.classList.toggle('mini');
+    store.set('pipMini', pip.classList.contains('mini'));
+    restorePip();
+  };
+}
+function placePip(x, y){
+  const pip = $('#pip');
+  const w = pip.offsetWidth, h = pip.offsetHeight;
+  x = Math.max(8, Math.min(innerWidth - w - 8, x));
+  y = Math.max(8, Math.min(innerHeight - h - 8, y));
+  pip.style.left = x + 'px'; pip.style.top = y + 'px';
+  pip.style.right = 'auto'; pip.style.bottom = 'auto';
+}
+function savePip(){
+  const r = $('#pip').getBoundingClientRect();
+  store.set('pipPos', {fx: r.left / Math.max(1, innerWidth - r.width), fy: r.top / Math.max(1, innerHeight - r.height)});
+}
+function restorePip(){
+  const pip = $('#pip');
+  const p = store.get('pipPos', null);
+  if (!p) placePip(innerWidth, innerHeight);
+  else placePip(p.fx * (innerWidth - pip.offsetWidth), p.fy * (innerHeight - pip.offsetHeight));
+}
+
+/* Diagnóstico na miniatura: onde o FPS está caindo (captura, encoder ou rede). */
+const SW_ENC = /libvpx|openh264|libaom|svt|software/i;
+async function updateSendStats(){
+  const el = $('#pipDiag');
+  if (!localStream){ el.textContent = ''; return; }
+  let worst = null, capFps = null;
+  for (const c of outCalls.values()){
+    const pc = c.peerConnection;
+    if (!pc || pc.connectionState !== 'connected') continue;
+    try{
+      const rep = await pc.getStats();
+      const codecs = {}; let out = null;
+      rep.forEach(r => {
+        if (r.type === 'codec') codecs[r.id] = r;
+        if (r.type === 'outbound-rtp' && r.kind === 'video') out = r;
+        if (r.type === 'media-source' && r.kind === 'video' && r.framesPerSecond != null) capFps = r.framesPerSecond;
+      });
+      if (!out) continue;
+      const fps = out.framesPerSecond || 0;
+      if (!worst || fps < worst.fps){
+        worst = {fps, h: out.frameHeight, reason: out.qualityLimitationReason, impl: out.encoderImplementation || '',
+                 hw: out.powerEfficientEncoder, codec: ((codecs[out.codecId] || {}).mimeType || '').replace(/^video\//i, '')};
+      }
+    }catch{}
+  }
+  const target = QUALITY[currentQ()].fps;
+  const parts = [];
+  if (capFps != null) parts.push((capFps < target * 0.8 ? '!' : '') + 'captura ' + Math.round(capFps) + 'fps');
+  if (worst){
+    parts.push((worst.fps < target * 0.8 ? '!' : '') + 'envio ' + Math.round(worst.fps) + 'fps' + (worst.h ? ' ' + worst.h + 'p' : ''));
+    const hw = worst.hw != null ? worst.hw : (worst.impl ? !SW_ENC.test(worst.impl) : null);
+    if (worst.codec) parts.push(worst.codec + (hw === true ? ' placa de vídeo' : hw === false ? ' processador' : ''));
+    const R = {cpu: '!gargalo: processador', bandwidth: '!gargalo: rede', other: '!gargalo: outro'};
+    if (R[worst.reason]) parts.push(R[worst.reason]);
+  }
+  el.textContent = '';
+  parts.forEach((p, i) => {
+    if (i) el.append(' · ');
+    const span = document.createElement('span');
+    if (p.startsWith('!')){ span.className = 'bad'; p = p.slice(1); }
+    span.textContent = p; el.appendChild(span);
+  });
+  el.title = worst ? 'Encoder: ' + (worst.impl || 'desconhecido') + ' · limitação: ' + (worst.reason || 'nenhuma') : '';
+}
+
+function updatePip(){
+  if (!localStream) return;
+  let n = 0, paused = 0;
+  for (const [pid, c] of outCalls){
+    if (!c.peerConnection || c.peerConnection.connectionState !== 'connected') continue;
+    if (pausedBy.get(pid)) paused++; else n++;
+  }
+  let txt = n ? ('Transmitindo para ' + n + (n === 1 ? ' pessoa' : ' pessoas')) : (paused ? 'Ninguém assistindo agora' : 'Transmitindo (aguardando quem assista)');
+  if (paused) txt += ' · ' + paused + (paused === 1 ? ' ocultou' : ' ocultaram');
+  $('#pipTxt').textContent = txt;
+}
+
+/* ---------- Ocultar telas ----------
+   Quem assiste oculta uma tela → avisa quem transmite (via sala) → o envio para essa pessoa é pausado.
+   Economiza download e decodificação de quem assiste e um encode inteiro de quem transmite. */
+const pausedBy = new Map();     // (quem transmite) id do espectador → ocultou minha tela?
+const hiddenIds = new Set();    // (quem assiste) ids que eu ocultei
+const hiddenNames = new Set();  // mesmos, por nome: vale de novo se a pessoa reconectar
+
+function sendPause(pid, on){ hubSend({t:'relay', to: pid, data: {k:'pause', on: !!on}}); }
+function resendPauses(){
+  for (const pid of hiddenIds) if (tiles.has(pid)) sendPause(pid, true);
+  sendResAll(true);
+}
+
+// Altura em que cada tela aparece aqui (já com a escala do monitor), arredondada em degraus.
+const RES_STEPS = [360, 540, 720, 1080, 1440];
+let resTimer = null;
+const resObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => scheduleRes()) : null;
+function scheduleRes(){ clearTimeout(resTimer); resTimer = setTimeout(() => sendResAll(false), 400); }
+function wantedHeight(t){
+  const doc = t.el.ownerDocument, view = doc.defaultView || window;
+  if (doc.fullscreenElement === t.el) return 9999;   // tela cheia: qualidade total
+  if (t.pipH) return RES_STEPS.find(step => step >= t.pipH * (window.devicePixelRatio || 1) * 0.9) || 9999;   // PiP de vídeo
+  const r = t.el.getBoundingClientRect();
+  if (!r.width || !r.height) return 0;
+  const ar = t.video.videoWidth && t.video.videoHeight ? t.video.videoWidth / t.video.videoHeight : 16 / 9;
+  const px = Math.min(r.height, r.width / ar) * (view.devicePixelRatio || 1);
+  return RES_STEPS.find(step => step >= px * 0.9) || 9999;
+}
+function sendResAll(force){
+  for (const [pid, t] of tiles){
+    if (t.el.hidden) continue;
+    const h = wantedHeight(t);
+    if (!h || (!force && t.sentH === h)) continue;
+    t.sentH = h;
+    hubSend({t:'relay', to: pid, data: {k:'res', h}});
+  }
+}
+document.addEventListener('fullscreenchange', scheduleRes);
+
+function onRelay(from, data){
+  if (!from || !data) return;
+  if (data.k === 'react'){ onReact(from, data); return; }
+  if (data.k === 'hi'){
+    peerVer.set(from, {v: String(data.v || '').slice(0, 20), d: !!data.d});
+    if (!firstSeen.has(from)) firstSeen.set(from, Date.now());
+    announceTo(from);   // se a pessoa me viu antes de eu vê-la, responde
+    checkOutdated();
+    renderMembers();
+    return;
+  }
+  if (data.k === 'recall'){
+    failCount.delete(from);
+    const c = outCalls.get(from);
+    if (c){ outCalls.delete(from); try{ c.close(); }catch{} }
+    if (localStream) setTimeout(() => { if (localStream && !outCalls.has(from)) callPeer(from); }, 500);
+    return;
+  }
+  if (data.k === 'res'){
+    const h = Math.round(+data.h);
+    if (h > 0){
+      wantH.set(from, h);
+      const c = outCalls.get(from);
+      if (c) applyQuality(c.peerConnection, from);
+    }
+    return;
+  }
+  if (data.k !== 'pause') return;
+  const on = !!data.on;
+  if (on) pausedBy.set(from, true); else pausedBy.delete(from);
+  const c = outCalls.get(from);
+  if (c) applyQuality(c.peerConnection, from);
+  updatePip();
+}
+
+function setHidden(pid, on){
+  if (on && floatState && floatState.pid === pid) closeFloat();
+  const t = tiles.get(pid);
+  const name = t ? t.nameEl.textContent : nameOf(pid);
+  if (on){ hiddenIds.add(pid); hiddenNames.add(name); }
+  else { hiddenIds.delete(pid); hiddenNames.delete(name); }
+  if (t){
+    t.el.hidden = on;
+    if (on){ t.video.pause(); if (document.fullscreenElement === t.el) document.exitFullscreen().catch(() => {}); }
+    else { t.video.play().catch(() => t.el.classList.add('needs-click')); t.sentH = 0; scheduleRes(); }
+  }
+  if (on && focusId === pid) focusId = null;
+  sendPause(pid, on);
+  renderHiddenBar();
+  layout();
+  syncClipBuffers();
+}
+
+function renderHiddenBar(){
+  const bar = $('#hiddenBar');
+  const ids = [...hiddenIds].filter(pid => tiles.has(pid));
+  bar.textContent = '';
+  bar.hidden = !ids.length;
+  if (!ids.length) return;
+  const lbl = document.createElement('span'); lbl.textContent = 'Telas ocultas:'; bar.appendChild(lbl);
+  for (const pid of ids){
+    const chip = document.createElement('span'); chip.className = 'hchip';
+    const n = document.createElement('span'); n.textContent = tiles.get(pid).nameEl.textContent;
+    const b = document.createElement('button'); b.textContent = 'Mostrar'; b.onclick = () => setHidden(pid, false);
+    chip.append(n, b); bar.appendChild(chip);
+  }
+}
+
+/* ---------- Assistir ---------- */
+/* Formatos de vídeo que chegaram aqui mas não viraram imagem: ficam guardados e o app
+   responde às próximas chamadas pedindo outro formato (quem decide o codec é a resposta). */
+const badDecode = new Set(store.get('badDecode', []));
+function answerCodec(senderCodec){
+  if (!badDecode.size) return senderCodec;
+  return [senderCodec, 'VP9', 'VP8', 'H264'].filter(Boolean).find(c => !badDecode.has(c)) || senderCodec;
+}
+
+/* Caminho invertido: quem assiste liga pra quem transmite ("pull") e o vídeo volta na resposta.
+   Usado quando a conexão que quem transmite abre até quem assiste não fecha, mas a contrária fecha. */
+function onPullCall(call){
+  const pid = call.peer;
+  if (!localStream){ try{ call.close(); }catch{} return; }
+  const avoid = Array.isArray(call.metadata && call.metadata.avoid) ? call.metadata.avoid : [];
+  const pref = currentCodec();
+  const codec = !avoid.includes(pref) ? pref : (['VP9', 'VP8', 'H264'].find(c => !avoid.includes(c)) || pref);
+  const old = outCalls.get(pid);
+  if (old && old !== call){ outCalls.delete(pid); try{ old.close(); }catch{} }
+  call.answer(localStream, {sdpTransform: makeSdpTransform(codec)});
+  outCalls.set(pid, call);
+  failCount.delete(pid);
+  const pc = call.peerConnection;
+  watchPc(pc, state => {
+    if (state === 'connected') applyQuality(pc, pid);
+    if ((state === 'failed' || state === 'closed') && outCalls.get(pid) === call) outCalls.delete(pid);
+  });
+  const forget = () => { if (outCalls.get(pid) === call) outCalls.delete(pid); };
+  call.on('close', forget); call.on('error', forget);
+}
+
+/* Quem assiste: pede o vídeo pelo caminho invertido. */
+const pullTried = new Map();   // pid → última tentativa
+function pullFrom(pid, force){
+  if (!me || me.destroyed) return false;
+  const last = pullTried.get(pid) || 0;
+  if (!force && Date.now() - last < 15000) return false;
+  pullTried.set(pid, Date.now());
+  let call;
+  try{
+    call = me.call(pid, new MediaStream(), {
+      metadata: {name: myName, pull: true, avoid: [...badDecode]},
+      constraints: {offerToReceiveAudio: true, offerToReceiveVideo: true},
+      sdpTransform: sdp => startBitrateSdp(stereoSdp(sdp)),   // quem responde (e transmite) escolhe o codec
+    });
+  }catch{ return false; }
+  if (!call) return false;
+  attachIncoming(call, pid);
+  return true;
+}
+
+function onIncomingCall(call){
+  if (call.metadata && call.metadata.pull) return onPullCall(call);
+  const sender = call.metadata && CODECS[call.metadata.codec] ? call.metadata.codec : null;
+  call.answer(undefined, {sdpTransform: makeSdpTransform(answerCodec(sender))});
+  attachIncoming(call, call.peer);
+}
+
+function attachIncoming(call, pid){
+  call.on('stream', stream => addTile(pid, call, stream));
+  const gone = () => { const t = tiles.get(pid); if (t && t.call === call) removeTile(pid); };
+  call.on('close', gone); call.on('error', gone);
+  watchPc(call.peerConnection, state => {
+    const t = tiles.get(pid);
+    if (!t || t.call !== call) return;
+    if (state === 'disconnected') t.el.classList.add('weak');
+    else if (state === 'connected') t.el.classList.remove('weak');
+    else if (state === 'failed' || state === 'closed') removeTile(pid);
+  });
+}
+
+function nameOf(pid, call){
+  const m = members.find(x => x.id === pid);
+  return (m && m.name) || (call && call.metadata && call.metadata.name) || 'Alguém';
+}
+
+function buildTile(pid){
+  const el = document.createElement('div'); el.className = 'tile'; el.tabIndex = 0;
+  el.innerHTML =
+    '<video autoplay playsinline></video>' +
+    '<div class="tag"></div>' +
+    '<div class="tmsg">Conectando…</div>' +
+    '<div class="clickplay">Clique para assistir</div>' +
+    '<div class="fx"></div>' +
+    '<div class="reacts">' + REACTS.map((e, i) => '<button type="button" data-e="' + i + '" title="Reagir (tecla ' + (i + 1) + ')">' + e + '</button>').join('') + '</div>' +
+    '<div class="tbar"><span class="stats"></span><span class="grow"></span>' +
+    '<button class="clip" title="Clipar os últimos 30 segundos">' + ICON.clip + '</button>' +
+    '<button class="mute" title="Mudo">' + ICON.vol + '</button>' +
+    '<input type="range" min="0" max="100" class="vol" title="Volume">' +
+    '<button class="hide" title="Ocultar (para de receber esta tela e alivia o PC)">' + ICON.hide + '</button>' +
+    '<button class="float" title="Janela flutuante (sempre por cima)">' + ICON.float + '</button>' +
+    '<button class="focus" title="Destacar">' + ICON.focus + '</button>' +
+    '<button class="fs" title="Tela cheia">' + ICON.fs + '</button></div>';
+  const t = {
+    el, call: null,
+    video: el.querySelector('video'),
+    nameEl: el.querySelector('.tag'),
+    statsEl: el.querySelector('.stats'),
+    msgEl: el.querySelector('.tmsg'),
+    fxEl: el.querySelector('.fx'),
+    clipBtn: el.querySelector('.clip'),
+    muteBtn: el.querySelector('.mute'),
+    vol: el.querySelector('.vol'),
+  };
+  const v = store.get('vol', 80);
+  t.vol.value = v; t.video.volume = v / 100;
+  const syncMute = () => { t.muteBtn.innerHTML = t.video.muted || t.video.volume === 0 ? ICON.mute : ICON.vol; };
+  t.vol.oninput = () => { t.video.volume = t.vol.value / 100; t.video.muted = false; store.set('vol', +t.vol.value); syncMute(); };
+  t.muteBtn.onclick = () => { t.video.muted = !t.video.muted; syncMute(); };
+  el.querySelector('.hide').onclick = () => setHidden(pid, true);
+  for (const b of el.querySelectorAll('.reacts button')) b.onclick = () => sendReact(pid, +b.dataset.e);
+  el.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    const i = +e.key - 1;
+    if (i >= 0 && i < REACTS.length){ sendReact(pid, i); e.preventDefault(); }
+  });
+  t.clipBtn.onclick = () => clipTile(pid);
+  el.querySelector('.focus').onclick = () => { focusId = focusId === pid ? null : pid; layout(); };
+  el.querySelector('.float').onclick = () => toggleFloat(pid);
+  const goFs = () => { const d = el.ownerDocument; if (d.fullscreenElement) d.exitFullscreen(); else el.requestFullscreen().catch(() => {}); };
+  el.querySelector('.fs').onclick = goFs;
+  t.video.ondblclick = goFs;
+  el.querySelector('.clickplay').onclick = () => { t.video.play().then(() => el.classList.remove('needs-click')).catch(() => {}); };
+  // Primeira imagem decodificada: some a mensagem de "Conectando…".
+  t.video.addEventListener('resize', () => { if (t.video.videoWidth > 0){ t.firstFrame = true; t.msgEl.textContent = ''; scheduleRes(); } });
+  if (resObserver) resObserver.observe(el);
+  t.syncAudio = () => {
+    const has = t.video.srcObject && t.video.srcObject.getAudioTracks().length > 0;
+    t.muteBtn.hidden = !has; t.vol.hidden = !has; syncMute();
+  };
+  return t;
+}
+
+function addTile(pid, call, stream){
+  let t = tiles.get(pid);
+  if (t && t.call && t.call !== call){ const old = t.call; t.call = call; try{ old.close(); }catch{} }
+  if (!t){ t = buildTile(pid); tiles.set(pid, t); $('#stage').appendChild(t.el); }
+  t.call = call;
+  if (t.video.srcObject !== stream){
+    t.video.srcObject = stream;
+    stream.addEventListener('addtrack', t.syncAudio);
+    stream.addEventListener('addtrack', () => syncClipBuffers(true, pid));
+    stopClipBuffer(t);
+    statPrev.delete(pid);
+    t.firstFrame = false; t.dataSince = 0; t.created = Date.now(); t.codecSwitched = false;
+    t.sentH = 0; scheduleRes();   // conexão nova: avisa de novo o tamanho
+    t.msgEl.textContent = 'Conectando…';
+  }
+  t.nameEl.textContent = nameOf(pid, call);
+  t.syncAudio();
+  if (hiddenIds.has(pid) || hiddenNames.has(t.nameEl.textContent)){
+    // continua oculta (inclusive se a pessoa reconectou) e avisa de novo quem transmite
+    hiddenIds.add(pid);
+    t.el.hidden = true; t.video.pause();
+    sendPause(pid, true);
+    renderHiddenBar();
+  } else {
+    t.video.play().then(() => t.el.classList.remove('needs-click')).catch(() => t.el.classList.add('needs-click'));
+  }
+  syncWaits();   // tira o "Aguardando…" dessa pessoa na hora (e já chama layout)
+  syncClipBuffers();
+}
+
+/* ---------- Reações ----------
+   Quem assiste toca num emoji: aparece flutuando na tela de quem transmite (na miniatura dele)
+   e na mesma tela pra todo mundo que está assistindo. */
+const REACTS = ['👏', '🔥', '😂', '😮', '💀', 'GG'];
+let lastReactAt = 0;
+const reactSeen = new Map();   // limite por pessoa (anti-spam)
+function sendReact(streamerId, i){
+  if (!REACTS[i] || !me) return;
+  const now = Date.now();
+  if (now - lastReactAt < 350) return;
+  lastReactAt = now;
+  const data = {k: 'react', e: i, s: streamerId, n: myName};
+  for (const m of members) if (m.id !== me.id) hubSend({t: 'relay', to: m.id, data});
+  showReact(streamerId, i, myName);   // retorno imediato pra quem clicou
+}
+function onReact(from, data){
+  const i = +data.e;
+  if (!REACTS[i] || typeof data.s !== 'string') return;
+  const now = Date.now();
+  if (now - (reactSeen.get(from) || 0) < 250) return;
+  reactSeen.set(from, now);
+  const who = (members.find(m => m.id === from) || {}).name || String(data.n || '').slice(0, 24) || 'alguém';
+  showReact(data.s, i, who);
+}
+/* Camada de reações por cima do jogo (app desktop 1.6+): janela transparente do próprio app. */
+let lastChosen = null;
+const overlayAvailable = () => DESKTOP && !!window.telaoDesktop.overlayShow;
+const overlayOn = () => !!store.get('overlay', true);
+async function showOverlay(){
+  syncOverlayBtn();
+  if (!overlayAvailable() || !overlayOn() || !localStream) return;
+  const c = lastChosen;
+  let rect = null;
+  if (c && c.type === 'window'){
+    const r = await helperQuery({cmd: 'winrect', hwnd: c.id.split(':')[1] || ''}, 'winrect', 2000);
+    if (r && r.ok) rect = r;
+  }
+  try{ await window.telaoDesktop.overlayShow(c ? c.id : '', rect); }catch{}
+}
+function hideOverlay(){ if (overlayAvailable()) window.telaoDesktop.overlayHide().catch(() => {}); }
+function syncOverlayBtn(){
+  const b = $('#pipOverlay');
+  b.hidden = !overlayAvailable();
+  b.classList.toggle('off', !overlayOn());
+  b.title = 'Reações por cima do jogo: ' + (overlayOn() ? 'ligado' : 'desligado') + '. Clique para ' + (overlayOn() ? 'desligar' : 'ligar') + '. (Precisa do jogo em janela ou janela sem bordas.)';
+}
+function toggleOverlay(){
+  store.set('overlay', !overlayOn());
+  if (overlayOn()) showOverlay(); else { hideOverlay(); syncOverlayBtn(); }
+}
+
+function showReact(streamerId, i, who){
+  if (me && streamerId === me.id && localStream && overlayAvailable() && overlayOn()) window.telaoDesktop.overlayReact(REACTS[i], who);
+  let box = null;
+  if (me && streamerId === me.id){ if (localStream) box = $('#pipFx'); }
+  else { const t = tiles.get(streamerId); if (t && !t.el.hidden) box = t.fxEl; }
+  if (!box || box.childElementCount > 24) return;
+  const el = document.createElement('div'); el.className = 'rx';
+  el.style.left = (8 + Math.random() * 78) + '%';
+  const b = document.createElement('b'); b.textContent = REACTS[i];
+  const n = document.createElement('i'); n.textContent = who;
+  el.append(b, n);
+  el.addEventListener('animationend', () => el.remove());
+  box.appendChild(el);
+}
+
+/* ---------- Clipes dos últimos 30 s ----------
+   Cada tela visível é gravada continuamente (WebM). O Chromium abre um bloco ("cluster") novo a cada
+   quadro-chave (pedimos um a cada 2 s); o clipe é o cabeçalho + os blocos dos últimos ~30 s,
+   com o relógio de cada bloco zerado no início. Nada é recodificado na hora de salvar. */
+const CLIP_SECONDS = 30, CLIP_KEEP_MS = 36000;
+const EB = {EBML: 0x1A45DFA3, SEGMENT: 0x18538067, CLUSTER: 0x1F43B675, TRACKS: 0x1654AE6B, TRACK: 0xAE, TNUM: 0xD7, TTYPE: 0x83,
+            TIMECODE: 0xE7, SIMPLE: 0xA3, GROUP: 0xA0, BLOCK: 0xA1, REF: 0xFB};
+const EB_TOP = new Set([EB.CLUSTER, 0x1C53BB6B /*Cues*/, 0x1254C367 /*Tags*/, 0x114D9B74 /*SeekHead*/, 0x1549A966 /*Info*/, EB.TRACKS, EB.SEGMENT, EB.EBML]);
+
+function ebVint(buf, p, keepMarker){
+  if (p >= buf.length) return null;
+  const b = buf[p];
+  let len = 1, m = 0x80;
+  while (len <= 8 && !(b & m)){ m >>= 1; len++; }
+  if (len > 8) return {bad: true};
+  if (p + len > buf.length) return null;
+  let v = keepMarker ? b : (b & (m - 1)), allOnes = (b & (m - 1)) === m - 1;
+  for (let k = 1; k < len; k++){ v = v * 256 + buf[p + k]; if (buf[p + k] !== 0xff) allOnes = false; }
+  return {v, len, unknown: !keepMarker && allOnes};
+}
+// Cabeçalho de elemento (id + tamanho) na posição p, ou null se ainda faltam bytes.
+function ebElem(buf, p){
+  const id = ebVint(buf, p, true); if (!id || id.bad) return id;
+  const sz = ebVint(buf, p + id.len, false); if (!sz || sz.bad) return sz;
+  return {id: id.v, size: sz.v, unknown: sz.unknown, head: id.len + sz.len, body: p + id.len + sz.len};
+}
+
+class WebmRing {
+  constructor(){ this.buf = new Uint8Array(0); this.header = null; this.videoTrack = 1; this.clusters = []; this.bad = false; }
+  push(bytes){
+    const n = new Uint8Array(this.buf.length + bytes.length);
+    n.set(this.buf); n.set(bytes, this.buf.length);
+    this.buf = n;
+    try{ this.parse(); }catch(e){ this.bad = true; }
+  }
+  consume(n){ this.buf = this.buf.slice(n); }
+  parse(){
+    // 1) cabeçalho: tudo antes do primeiro Cluster
+    while (!this.header){
+      let p = 0;
+      for (;;){
+        const e = ebElem(this.buf, p);
+        if (!e) return;                                   // espera mais dados
+        if (e.bad){ this.bad = true; return; }
+        if (e.id === EB.SEGMENT){ p = e.body; continue; } // entra no Segment (tamanho desconhecido)
+        if (e.id === EB.CLUSTER){ this.header = this.buf.slice(0, p); this.consume(p); break; }
+        if (e.unknown || e.body + e.size > this.buf.length) return;
+        if (e.id === EB.TRACKS) this.readTracks(e.body, e.body + e.size);
+        p = e.body + e.size;
+      }
+    }
+    // 2) clusters completos
+    for (;;){
+      const c = ebElem(this.buf, 0);
+      if (!c) return;
+      if (c.bad){ this.bad = true; return; }
+      if (c.id !== EB.CLUSTER){                          // Cues/Tags no fim de uma gravação: descarta
+        if (c.unknown || c.body + c.size > this.buf.length) return;
+        this.consume(c.body + c.size); continue;
+      }
+      const limit = c.unknown ? Infinity : c.body + c.size;
+      if (!c.unknown && limit > this.buf.length) return;
+      let q = c.body, tc = null, tcOff = -1, tcLen = 0, key = null, end = -1;
+      for (;;){
+        if (q >= limit){ end = q; break; }
+        const x = ebElem(this.buf, q);
+        if (!x) return;                                    // cluster ainda incompleto
+        if (x.bad){ this.bad = true; return; }
+        if (c.unknown && EB_TOP.has(x.id)){ end = q; break; }
+        if (x.body + x.size > this.buf.length) return;
+        if (x.id === EB.TIMECODE){ tcOff = x.body; tcLen = x.size; tc = 0; for (let k = 0; k < x.size; k++) tc = tc * 256 + this.buf[x.body + k]; }
+        else if (key === null && x.id === EB.SIMPLE){
+          const tn = ebVint(this.buf, x.body, false);
+          if (tn && tn.v === this.videoTrack) key = !!(this.buf[x.body + tn.len + 2] & 0x80);
+        } else if (key === null && x.id === EB.GROUP){
+          let r = x.body, tn = null, ref = false;
+          while (r < x.body + x.size){
+            const y = ebElem(this.buf, r); if (!y || y.bad) break;
+            if (y.id === EB.BLOCK){ const t = ebVint(this.buf, y.body, false); if (t) tn = t.v; }
+            if (y.id === EB.REF) ref = true;
+            r = y.body + y.size;
+          }
+          if (tn === this.videoTrack) key = !ref;
+        }
+        q = x.body + x.size;
+      }
+      if (tc === null){ this.consume(end); continue; }
+      this.clusters.push({tc, key: !!key, tcOff, tcLen, bytes: this.buf.slice(0, end)});
+      this.consume(end);
+      this.prune();
+    }
+  }
+  readTracks(a, b){
+    let p = a;
+    while (p < b){
+      const e = ebElem(this.buf, p); if (!e || e.bad) return;
+      if (e.id === EB.TRACK){
+        let r = e.body, num = null, type = null;
+        while (r < e.body + e.size){
+          const y = ebElem(this.buf, r); if (!y || y.bad) break;
+          let v = 0; for (let k = 0; k < y.size && k < 8; k++) v = v * 256 + this.buf[y.body + k];
+          if (y.id === EB.TNUM) num = v; if (y.id === EB.TTYPE) type = v;
+          r = y.body + y.size;
+        }
+        if (type === 1 && num) this.videoTrack = num;
+      }
+      p = e.body + e.size;
+    }
+  }
+  prune(){
+    const last = this.clusters[this.clusters.length - 1].tc;
+    // mantém o último cluster com quadro-chave anterior ao corte, para o clipe sempre começar num quadro inteiro
+    let cut = 0;
+    for (let i = 0; i < this.clusters.length; i++) if (this.clusters[i].key && this.clusters[i].tc <= last - CLIP_KEEP_MS) cut = i;
+    if (cut > 0) this.clusters.splice(0, cut);
+  }
+  seconds(){ return this.clusters.length ? (this.clusters[this.clusters.length - 1].tc - this.clusters[0].tc) / 1000 : 0; }
+  clip(seconds){
+    if (!this.header || !this.clusters.length) return null;
+    const last = this.clusters[this.clusters.length - 1].tc;
+    let start = -1;
+    for (let i = 0; i < this.clusters.length; i++) if (this.clusters[i].key && this.clusters[i].tc <= last - seconds * 1000) start = i;
+    if (start < 0) start = this.clusters.findIndex(c => c.key);
+    if (start < 0) return null;
+    const base = this.clusters[start].tc, parts = [webmWithDuration(this.header, last - base + 40)];
+    for (const c of this.clusters.slice(start)){
+      const b = c.bytes.slice();
+      let v = c.tc - base;
+      for (let k = c.tcLen - 1; k >= 0; k--){ b[c.tcOff + k] = v % 256; v = Math.floor(v / 256); }
+      parts.push(b);
+    }
+    return {blob: new Blob(parts, {type: 'video/webm'}), seconds: (last - base) / 1000};
+  }
+}
+
+/* Grava a duração no cabeçalho (elemento Info), para os players mostrarem barra de tempo. */
+function webmWithDuration(header, ms){
+  try{
+    let p = 0;
+    for (;;){
+      const e = ebElem(header, p);
+      if (!e || e.bad) return header;
+      if (e.id === EB.SEGMENT){ p = e.body; continue; }
+      if (e.id === 0x1549A966){                               // Info
+        const end = e.body + e.size;
+        for (let q = e.body; q < end;){ const x = ebElem(header, q); if (!x || x.bad) break; if (x.id === 0x4489) return header; q = x.body + x.size; }
+        const dur = new Uint8Array(11);                       // Duration: id 44 89, tamanho 8, float64
+        dur.set([0x44, 0x89, 0x88]);
+        new DataView(dur.buffer).setFloat64(3, ms, false);
+        const size = e.size + dur.length, sz = new Uint8Array(8);
+        sz[0] = 0x01; let v = size; for (let k = 7; k >= 1; k--){ sz[k] = v % 256; v = Math.floor(v / 256); }
+        const out = new Uint8Array(header.length - (e.body - p) + 4 + 8 + dur.length);
+        let o = 0;
+        out.set(header.subarray(0, p), o); o += p;                         // até o Info
+        out.set([0x15, 0x49, 0xA9, 0x66], o); o += 4;                      // id do Info
+        out.set(sz, o); o += 8;                                            // tamanho novo (8 bytes)
+        out.set(header.subarray(e.body, end), o); o += e.size;             // conteúdo original
+        out.set(dur, o); o += dur.length;                                  // + Duration
+        out.set(header.subarray(end), o);                                  // resto (Tracks)
+        return out;
+      }
+      if (e.unknown) return header;
+      p = e.body + e.size;
+    }
+  }catch{ return header; }
+}
+
+function clipMime(withAudio){
+  const opts = withAudio ? ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm'] : ['video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm'];
+  return opts.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || null;
+}
+function startClipBuffer(t){
+  stopClipBuffer(t);
+  const stream = t.video.srcObject;
+  if (!stream || !window.MediaRecorder) return;
+  const vt = stream.getVideoTracks().filter(x => x.readyState === 'live');
+  if (!vt.length) return;
+  const tracks = [...vt, ...stream.getAudioTracks().filter(x => x.readyState === 'live')];
+  const mime = clipMime(tracks.length > vt.length);
+  if (!mime) return;
+  const ring = new WebmRing();
+  let rec;
+  try{
+    rec = new MediaRecorder(new MediaStream(tracks), {mimeType: mime, videoBitsPerSecond: 6000000, audioBitsPerSecond: 128000, videoKeyFrameIntervalDuration: 2000});
+  }catch{ return; }
+  const cb = {rec, ring, stream, started: Date.now(), chain: Promise.resolve()};
+  rec.ondataavailable = e => {
+    if (!e.data || !e.data.size || t.clipBuf !== cb) return;
+    const data = e.data;
+    // em fila: os pedaços precisam entrar no buffer na ordem em que foram gravados
+    cb.chain = cb.chain.then(() => data.arrayBuffer()).then(ab => {
+      if (t.clipBuf !== cb) return;
+      ring.push(new Uint8Array(ab));
+      if (ring.bad) setTimeout(() => { if (t.clipBuf === cb) startClipBuffer(t); }, 1000);
+    }).catch(() => {});
+  };
+  rec.onerror = () => setTimeout(() => { if (t.clipBuf === cb) startClipBuffer(t); }, 1000);
+  try{ rec.start(500); }catch{ return; }
+  t.clipBuf = cb;
+  t.clipBtn.classList.add('on');
+}
+function stopClipBuffer(t){
+  const cb = t.clipBuf;
+  t.clipBuf = null;
+  if (t.clipBtn) t.clipBtn.classList.remove('on');
+  if (cb){ try{ cb.rec.ondataavailable = null; if (cb.rec.state !== 'inactive') cb.rec.stop(); }catch{} }
+}
+// Liga/desliga os buffers conforme a opção "Clipes" e as telas visíveis. restartPid: reinicia uma tela (trilha nova).
+function syncClipBuffers(restart, restartPid){
+  const on = !!store.get('clips', false);
+  $('#clipsBtn').hidden = !on;
+  for (const [pid, t] of tiles){
+    const want = on && !t.el.hidden && t.video.srcObject;
+    if (!want){ if (t.clipBuf) stopClipBuffer(t); continue; }
+    if (!t.clipBuf || (restart && pid === restartPid)) startClipBuffer(t);
+  }
+}
+function setClips(on){
+  store.set('clips', !!on);
+  syncClipBuffers();
+}
+// No navegador o Chromium descarta nomes de download com acento; lá o nome sai sem acentos.
+function clipFileName(name, ascii){
+  const d = new Date(), z = n => String(n).padStart(2, '0');
+  let safe = String(name).replace(/[\\/:*?"<>|]+/g, '').trim() || 'tela';
+  let app = 'Telão';
+  if (ascii){ safe = safe.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '') || 'tela'; app = 'Telao'; }
+  return app + ' - ' + safe + ' - ' + d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + '-' + z(d.getMinutes()) + '-' + z(d.getSeconds()) + '.webm';
+}
+function clipTile(pid){
+  const t = tiles.get(pid);
+  if (!t) return;
+  if (!store.get('clips', false)){
+    setClips(true);
+    toast('Clipes ligados: a partir de agora o Telão guarda os últimos 30 s de cada tela. Clique no ✂ quando quiser salvar. Desliga no botão "Clipes ligados" lá em cima.', 'ok', 9000);
+    return;
+  }
+  const cb = t.clipBuf;
+  if (!cb){ startClipBuffer(t); toast('Começando a guardar esta tela agora. Tente clipar daqui a alguns segundos.', 'warn'); return; }
+  t.clipBtn.classList.add('busy');
+  // pede o pedaço em andamento pra incluir até o último instante
+  try{ cb.rec.requestData(); }catch{}
+  setTimeout(() => cb.chain.then(() => {
+    t.clipBtn.classList.remove('busy');
+    const c = cb.ring.clip(CLIP_SECONDS);
+    if (!c || c.seconds < 1){ toast('Ainda não tem vídeo suficiente guardado desta tela. Tente de novo em alguns segundos.', 'warn'); return; }
+    if (DESKTOP && window.telaoDesktop.saveClip){
+      // No app: o processo principal grava direto em Vídeos\Telão, com o nome completo.
+      const name = clipFileName(t.nameEl.textContent, false);
+      return c.blob.arrayBuffer().then(ab => window.telaoDesktop.saveClip(name, ab)).then(info => clipSaved(info, c.seconds))
+        .catch(() => toast('Não consegui salvar o clipe.', 'warn'));
+    }
+    const name = clipFileName(t.nameEl.textContent, true);
+    const url = URL.createObjectURL(c.blob);
+    const a = document.createElement('a'); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    toast('Clipe de ' + Math.round(c.seconds) + ' s salvo nos Downloads: ' + name);
+  }), 700);
+}
+function clipSaved(info, seconds){
+  if (!info || !info.ok){ toast('Não consegui salvar o clipe' + (info && info.error ? ' (' + info.error + ')' : '') + '.', 'warn'); return; }
+  const d = document.createElement('div'); d.className = 'toast';
+  d.textContent = 'Clipe de ' + Math.round(seconds) + ' s salvo em Vídeos\\Telão: ' + info.name + ' ';
+  const b = document.createElement('button'); b.className = 'linkish'; b.textContent = 'Abrir pasta';
+  b.onclick = () => window.telaoDesktop.openClips();
+  d.appendChild(b); $('#toasts').appendChild(d); setTimeout(() => d.remove(), 9000);
+}
+
+/* ---------- Janela flutuante ----------
+   App 1.6+: janela própria sempre por cima. Chrome: Document Picture-in-Picture.
+   Nos dois, a tela inteira do amigo (nome, reações, ✂, volume) vai para a janela.
+   App antigo / outros navegadores: Picture-in-Picture só do vídeo. */
+let floatState = null;   // {pid, kind: 'doc' | 'video', win, holder, poll}
+async function toggleFloat(pid){
+  if (floatState && floatState.pid === pid){ closeFloat(); return; }
+  if (floatState) closeFloat();
+  const t = tiles.get(pid);
+  if (!t || t.el.hidden) return;
+  let w = null;
+  if (DESKTOP && window.telaoDesktop.floatWindows){
+    w = window.open('', 'telao-float-' + Date.now(), 'popup,width=520,height=300');
+  } else if (window.documentPictureInPicture && !/Electron\//.test(navigator.userAgent)){
+    // No Electron a API existe mas o pedido nunca responde; em qualquer caso, 4 s sem abrir → janela simples
+    try{
+      w = await Promise.race([documentPictureInPicture.requestWindow({width: 520, height: 300}), new Promise(r => setTimeout(() => r(null), 4000))]);
+    }catch{ w = null; }
+  }
+  if (w){
+    const d = w.document;
+    d.title = t.nameEl.textContent + ' — Telão';
+    for (const st of document.querySelectorAll('style')) d.head.appendChild(st.cloneNode(true));
+    d.body.className = 'float-body';
+    const holder = document.createElement('div'); holder.className = 'tile wait float-holder';
+    const tag = document.createElement('div'); tag.className = 'tag'; tag.textContent = t.nameEl.textContent;
+    const box = document.createElement('div'); box.className = 'wbox';
+    const msg = document.createElement('div'); msg.textContent = 'Na janela flutuante';
+    const back = document.createElement('button'); back.className = 'ghost'; back.textContent = 'Trazer de volta'; back.onclick = closeFloat;
+    box.append(msg, back); holder.append(tag, box);
+    t.el.parentNode.insertBefore(holder, t.el);
+    t.el.classList.add('floating');
+    d.body.appendChild(t.el);
+    t.video.play().catch(() => {});
+    const f = {pid, kind: 'doc', win: w, holder};
+    floatState = f;
+    const gone = () => { if (floatState === f) returnFloat(); };
+    w.addEventListener('pagehide', gone);
+    w.addEventListener('resize', scheduleRes);
+    f.poll = setInterval(() => { if (w.closed) gone(); }, 800);
+    try{ w.focus(); }catch{}
+    t.sentH = 0; scheduleRes(); layout();
+    return;
+  }
+  try{
+    const pw = await t.video.requestPictureInPicture();
+    floatState = {pid, kind: 'video'};
+    t.pipH = pw.height;
+    pw.addEventListener('resize', () => { t.pipH = pw.height; scheduleRes(); });
+    t.video.addEventListener('leavepictureinpicture', () => {
+      if (floatState && floatState.pid === pid && floatState.kind === 'video') floatState = null;
+      t.pipH = 0; t.sentH = 0; scheduleRes();
+    }, {once: true});
+    t.sentH = 0; scheduleRes();
+  }catch(e){ toast('Não consegui abrir a janela flutuante: ' + e.message, 'warn'); }
+}
+function returnFloat(){
+  const f = floatState;
+  if (!f || f.kind !== 'doc') return;
+  floatState = null;
+  clearInterval(f.poll);
+  const t = tiles.get(f.pid);
+  if (t){
+    t.el.classList.remove('floating');
+    if (f.holder.parentNode) f.holder.replaceWith(t.el); else $('#stage').appendChild(t.el);
+    t.video.play().catch(() => {});
+    t.sentH = 0;
+  }
+  f.holder.remove();
+  try{ if (!f.win.closed) f.win.close(); }catch{}
+  layout(); scheduleRes();
+}
+function closeFloat(){
+  if (!floatState) return;
+  if (floatState.kind === 'video'){ floatState = null; if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {}); }
+  else returnFloat();
+}
+
+function removeTile(pid){
+  const t = tiles.get(pid);
+  if (!t) return;
+  if (floatState && floatState.pid === pid) closeFloat();
+  try{ t.call && t.call.close(); }catch{}
+  t.video.srcObject = null;
+  if (resObserver) resObserver.unobserve(t.el);
+  stopClipBuffer(t);
+  t.el.remove(); tiles.delete(pid); statPrev.delete(pid);
+  hiddenIds.delete(pid);
+  if (focusId === pid) focusId = null;
+  renderHiddenBar();
+  syncWaits();
+  layout();
+}
+
+// Vídeo chegando (bytes) mas nenhuma imagem decodificada por 5 s → formato incompatível com este PC.
+function checkDecoding(pid, t, v, codec){
+  if (t.firstFrame || t.codecSwitched) return;
+  if ((v.framesDecoded || 0) > 0){ t.firstFrame = true; t.msgEl.textContent = ''; return; }
+  if (!t.dataSince && (v.bytesReceived || 0) > 30000) t.dataSince = Date.now();
+  if (!t.dataSince || Date.now() - t.dataSince < 5000) return;
+  t.codecSwitched = true;
+  if (codec && CODECS[codec] && !badDecode.has(codec) && badDecode.size < Object.keys(CODECS).length - 1){
+    badDecode.add(codec);
+    store.set('badDecode', [...badDecode]);
+    toast('O vídeo de ' + t.nameEl.textContent + ' chegou em ' + codec + ', que este PC não conseguiu exibir. Pedindo outro formato…', 'warn', 7000);
+    t.msgEl.textContent = 'Trocando o formato do vídeo…';
+    requestRecall(pid);
+  } else {
+    t.msgEl.textContent = 'O vídeo está chegando, mas este PC não conseguiu exibir.';
+  }
+}
+
+const waits = new Map();   // quem está transmitindo mas ainda não apareceu aqui
+function buildWait(pid){
+  const el = document.createElement('div'); el.className = 'tile wait';
+  const tag = document.createElement('div'); tag.className = 'tag';
+  const box = document.createElement('div'); box.className = 'wbox';
+  const msg = document.createElement('div');
+  const btn = document.createElement('button'); btn.className = 'ghost'; btn.textContent = 'Tentar de novo';
+  btn.onclick = () => requestRecall(pid);
+  box.append(msg, btn); el.append(tag, box);
+  return {el, tag, msg, btn, since: Date.now()};
+}
+function syncWaits(){
+  if (!me){ layout(); return; }
+  const now = Date.now();
+  const sharing = new Set(members.filter(m => m.sharing && m.id !== me.id).map(m => m.id));
+  for (const [pid, w] of waits) if (!sharing.has(pid) || tiles.has(pid)){ w.el.remove(); waits.delete(pid); }
+  for (const pid of sharing){
+    const name = nameOf(pid);
+    if (tiles.has(pid) || hiddenIds.has(pid) || hiddenNames.has(name)) continue;
+    let w = waits.get(pid);
+    if (!w){ w = buildWait(pid); waits.set(pid, w); $('#stage').appendChild(w.el); }
+    // 8 s sem nada → tenta o caminho invertido automaticamente
+    if (now - w.since > 8000 && !w.pulled){ w.pulled = pullFrom(pid); }
+    const late = now - w.since > (w.pulled ? 30000 : 15000);
+    w.tag.textContent = name;
+    w.msg.textContent = late ? 'O vídeo de ' + name + ' não chegou até aqui.'
+      : (w.pulled ? 'Tentando pelo outro caminho…' : 'Aguardando o vídeo de ' + name + '…');
+    w.btn.hidden = !late;
+  }
+  // Telas ainda sem imagem: explica o que está acontecendo
+  for (const [pid, t] of tiles){
+    if (t.firstFrame || t.codecSwitched) continue;
+    const pc = t.call && t.call.peerConnection;
+    const st = pc ? pc.connectionState : '';
+    const isPull = !!(t.call && t.call.metadata && t.call.metadata.pull);
+    if (st === 'connected') t.msgEl.textContent = 'Conectado, aguardando a primeira imagem…';
+    else if (now - (t.created || now) > 10000){
+      // a conexão aberta por quem transmite não fecha: tenta o caminho invertido
+      if (!isPull && pullFrom(pid)) t.msgEl.textContent = 'Tentando pelo outro caminho…';
+      else if (!isPull && pullTried.has(pid)) t.msgEl.textContent = 'Tentando pelo outro caminho…';
+      else t.msgEl.textContent = 'Conectando… (está demorando; a rede pode estar bloqueando)';
+    }
+  }
+  layout();
+}
+// Pede para quem transmite refazer a conexão comigo (e, se precisar, num formato que eu decodifico).
+function requestRecall(pid){
+  const w = waits.get(pid); if (w){ w.since = Date.now(); w.pulled = false; }
+  pullTried.delete(pid);
+  hubSend({t:'relay', to: pid, data: {k:'recall'}});
+  const t = tiles.get(pid);
+  if (t){ try{ t.call && t.call.close(); }catch{} }   // quem transmite em versão antiga refaz sozinho ao ver a conexão fechar
+  syncWaits();
+}
+
+function layout(){
+  const visible = [...tiles.keys()].filter(id => !hiddenIds.has(id)).length + waits.size;
+  $('#empty').hidden = visible > 0;
+  $('#emptyTitle').textContent = tiles.size ? 'Todas as telas estão ocultas' : 'Ninguém compartilhando ainda';
+  const floating = floatState && floatState.kind === 'doc' ? floatState.pid : null;
+  const focused = !!focusId && tiles.has(focusId) && !hiddenIds.has(focusId) && focusId !== floating && visible > 1;
+  $('#stage').classList.toggle('focused', focused);
+  for (const [id, t] of tiles) t.el.classList.toggle('is-focus', focused && id === focusId);
+}
+
+async function updateStats(){
+  for (const [pid, t] of tiles){
+    if (hiddenIds.has(pid)) continue;
+    const pc = t.call && t.call.peerConnection;
+    if (!pc) continue;
+    try{
+      const rep = await pc.getStats();
+      let v = null, pair = null; const remote = {}, codecs = {};
+      rep.forEach(r => {
+        if (r.type === 'codec') codecs[r.id] = r;
+        if (r.type === 'inbound-rtp' && r.kind === 'video') v = r;
+        if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded') pair = r;
+        if (r.type === 'remote-candidate') remote[r.id] = r;
+      });
+      if (!v) continue;
+      checkDecoding(pid, t, v, ((codecs[v.codecId] || {}).mimeType || '').replace(/^video\//i, '').toUpperCase());
+      const prev = statPrev.get(pid);
+      let mbps = 0;
+      if (prev && v.timestamp > prev.ts) mbps = (v.bytesReceived - prev.bytes) * 8 / ((v.timestamp - prev.ts) / 1000) / 1e6;
+      statPrev.set(pid, {bytes: v.bytesReceived, ts: v.timestamp});
+      const relay = pair && remote[pair.remoteCandidateId] && remote[pair.remoteCandidateId].candidateType === 'relay';
+      const parts = [];
+      if (v.frameHeight) parts.push(v.frameHeight + 'p');
+      if (v.framesPerSecond) parts.push(Math.round(v.framesPerSecond) + 'fps');
+      if (mbps > 0) parts.push(mbps.toFixed(1) + ' Mbps');
+      if (relay) parts.push('via TURN');
+      t.statsEl.textContent = parts.join(' · ');
+    }catch{}
+  }
+}
+
+/* ---------- Diagnóstico de vídeo ----------
+   Descobre se o encode sai pela placa de vídeo ou pelo processador, por formato.
+   No app, também mostra o estado da aceleração do Chromium e permite forçar o uso da placa. */
+const HW_RE = /mediafoundation|nvenc|nvidia|amf|quicksync|qsv|videotoolbox|vaapi|v4l2|d3d1[12]|externalencoder|hardware/i;
+const SW_RE = /libvpx|openh264|libaom|svt|software|x264/i;
+const VENDORS = {0x10de: 'NVIDIA', 0x1002: 'AMD', 0x1022: 'AMD', 0x8086: 'Intel', 0x5143: 'Qualcomm'};
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let diagGpu = null, diagResults = [], diagRunning = false, diagLiveTimer = null;
+
+function featureLabel(v){
+  if (!v) return ['desconhecido', 'dg-off'];
+  if (/^enabled/.test(v)) return ['ligada', 'dg-ok'];
+  if (/software/.test(v)) return ['desligada (usando software)', 'dg-bad'];
+  if (/disabled|unavailable|off/.test(v)) return ['desligada', 'dg-bad'];
+  return [v, 'dg-off'];
+}
+
+async function openDiag(){
+  $('#diag').hidden = false;
+  $('#dgGpuSec').hidden = !DESKTOP;
+  if (DESKTOP){
+    try{ diagGpu = await window.telaoDesktop.gpu(); }catch{ diagGpu = null; }
+    renderGpu();
+  }
+  $('#dgVer').textContent = DESKTOP && diagGpu ? 'Telão Desktop ' + diagGpu.versions.app + ' · Chromium ' + diagGpu.versions.chrome : 'Telão no navegador';
+  renderDiagTable();
+  renderLive();
+  clearInterval(diagLiveTimer);
+  diagLiveTimer = setInterval(renderLive, 2000);
+}
+function closeDiag(){ $('#diag').hidden = true; clearInterval(diagLiveTimer); }
+
+function renderGpu(){
+  const box = $('#dgGpu');
+  if (!diagGpu){ box.textContent = 'Não consegui ler as informações da placa.'; return; }
+  box.textContent = '';
+  const kv = document.createElement('div'); kv.className = 'dg-kv';
+  const add = (k, v, cls) => { const a = document.createElement('span'); a.textContent = k; const b = document.createElement('span'); b.textContent = v; if (cls) b.className = cls; kv.append(a, b); };
+  const devs = diagGpu.devices.length ? diagGpu.devices : [];
+  const active = devs.find(d => d.active) || devs[0];
+  for (const d of devs){
+    const name = d.name || ((VENDORS[d.vendorId] || 'Placa') + ' (0x' + (d.deviceId || 0).toString(16) + ')');
+    add(d === active ? 'Placa em uso' : 'Outra placa', name + (d.driver ? ' · driver ' + d.driver : ''));
+  }
+  const f = diagGpu.feature || {};
+  const enc = featureLabel(f.video_encode), dec = featureLabel(f.video_decode), cmp = featureLabel(f.gpu_compositing);
+  add('Codificar vídeo na placa', enc[0], enc[1]);
+  add('Decodificar vídeo na placa', dec[0], dec[1]);
+  add('Aceleração geral', cmp[0], cmp[1]);
+  // Windows 11 corta o ritmo de apps minimizados; o Telão Audio embutido desliga essa economia.
+  const b = helper.ready ? helper.boost : -2;
+  add('Desempenho minimizado', b > 0 ? 'protegido (' + b + ' processos)' : b === 0 ? 'não aplicado' : b === -1 ? 'indisponível nesta versão do áudio' : 'Telão Audio não conectado',
+      b > 0 ? 'dg-ok' : 'dg-bad');
+  box.appendChild(kv);
+  const cb = $('#dgBlock');
+  cb.checked = !!(diagGpu.config && diagGpu.config.ignoreGpuBlocklist);
+  cb.dataset.initial = cb.checked ? '1' : '0';
+  const ft = $('#dgFeat');
+  ft.checked = !(diagGpu.config && diagGpu.config.disableGpuWebrtcFeatures);
+  ft.dataset.initial = ft.checked ? '1' : '0';
+}
+
+/* Fonte do teste: a própria transmissão (se houver), a tela (no app) ou um vídeo sintético. */
+async function probeSource(){
+  const live = localStream && localStream.getVideoTracks()[0];
+  if (live && live.readyState === 'live'){
+    const t = live.clone(); try{ t.contentHint = 'motion'; }catch{}
+    return {track: t, label: 'sua transmissão', stop(){ t.stop(); }};
+  }
+  if (DESKTOP){
+    try{
+      const scr = (await window.telaoDesktop.getSources()).find(x => x.type === 'screen');
+      if (scr){
+        await window.telaoDesktop.select(scr.id, false);
+        const st = await navigator.mediaDevices.getDisplayMedia({video: {width: {ideal: 1280, max: 1280}, height: {ideal: 720, max: 720}, frameRate: {ideal: 60, max: 60}}, audio: false});
+        const t = st.getVideoTracks()[0]; try{ t.contentHint = 'motion'; }catch{}
+        return {track: t, label: 'captura da tela', stop(){ st.getTracks().forEach(x => x.stop()); }};
+      }
+    }catch{}
+  }
+  const c = document.createElement('canvas'); c.width = 1280; c.height = 720;
+  const g = c.getContext('2d'); let i = 0;
+  const timer = setInterval(() => {
+    i++;
+    const grd = g.createLinearGradient(0, 0, 1280, 720);
+    grd.addColorStop(0, 'hsl(' + (i * 3 % 360) + ',70%,40%)'); grd.addColorStop(1, 'hsl(' + ((i * 3 + 180) % 360) + ',70%,30%)');
+    g.fillStyle = grd; g.fillRect(0, 0, 1280, 720);
+    for (let k = 0; k < 40; k++){ g.fillStyle = 'hsl(' + (k * 37 + i) % 360 + ',80%,60%)'; g.fillRect((k * 97 + i * 9) % 1280, (k * 53 + i * 5) % 720, 60, 60); }
+  }, 16);
+  const st = c.captureStream(60); const t = st.getVideoTracks()[0]; try{ t.contentHint = 'motion'; }catch{}
+  return {track: t, label: 'vídeo de teste', stop(){ clearInterval(timer); t.stop(); }};
+}
+
+async function probeCodec(codec, track){
+  const caps = window.RTCRtpSender && RTCRtpSender.getCapabilities ? RTCRtpSender.getCapabilities('video') : null;
+  const mine = caps ? caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/' + codec.toLowerCase()) : [];
+  if (!mine.length) return {codec, status: 'unsupported'};
+  if (codec === 'H264') mine.sort((a, b) => h264Score(b.sdpFmtpLine) - h264Score(a.sdpFmtpLine));
+  const a = new RTCPeerConnection(), b = new RTCPeerConnection();
+  try{
+    a.onicecandidate = e => { if (e.candidate) b.addIceCandidate(e.candidate).catch(() => {}); };
+    b.onicecandidate = e => { if (e.candidate) a.addIceCandidate(e.candidate).catch(() => {}); };
+    const tr = a.addTransceiver(track, {direction: 'sendonly', sendEncodings: [{maxBitrate: 4500000, maxFramerate: 60}]});
+    try{ tr.setCodecPreferences([...mine, ...caps.codecs.filter(c => /rtx|red|ulpfec|flexfec/i.test(c.mimeType))]); }catch{}
+    // Conexão de teste já começa com banda alta: mede o encoder em resolução real, não a subida de banda.
+    const boost = sdp => startBitrateSdp(sdp).replace(/x-google-start-bitrate=\d+/g, 'x-google-start-bitrate=4000;x-google-min-bitrate=3000');
+    await a.setLocalDescription(await a.createOffer());
+    await b.setRemoteDescription({type: 'offer', sdp: boost(a.localDescription.sdp)});
+    await b.setLocalDescription(await b.createAnswer());
+    await a.setRemoteDescription({type: 'answer', sdp: boost(b.localDescription.sdp)});
+    for (let k = 0; k < 25 && a.connectionState !== 'connected'; k++) await sleep(200);
+    if (a.connectionState !== 'connected') return {codec, status: 'error', note: 'conexão de teste não abriu'};
+    try{ const p = tr.sender.getParameters(); p.degradationPreference = 'maintain-framerate'; await tr.sender.setParameters(p); }catch{}
+    await sleep(1500);
+    const read = async () => {
+      const rep = await a.getStats(); let o = null; const cs = {};
+      rep.forEach(r => { if (r.type === 'codec') cs[r.id] = r; if (r.type === 'outbound-rtp' && r.kind === 'video') o = r; });
+      return o ? {...o, mime: ((cs[o.codecId] || {}).mimeType || '').replace(/^video\//i, '')} : null;
+    };
+    const s1 = await read(); await sleep(3000); const s2 = await read();
+    if (!s2) return {codec, status: 'error', note: 'sem estatísticas'};
+    const df = (s2.framesEncoded || 0) - ((s1 && s1.framesEncoded) || 0);
+    const dt = (s2.totalEncodeTime || 0) - ((s1 && s1.totalEncodeTime) || 0);
+    const impl = s2.encoderImplementation || '';
+    const hw = s2.powerEfficientEncoder != null ? !!s2.powerEfficientEncoder : (HW_RE.test(impl) ? true : SW_RE.test(impl) ? false : null);
+    const prof = codec === 'H264' ? ({'4d': 'Main', '42': 'Baseline', '64': 'High'}[((mine[0].sdpFmtpLine || '').match(/profile-level-id=([0-9a-f]{2})/i) || [])[1]] || '') : '';
+    return {codec, status: hw === true ? 'hw' : hw === false ? 'sw' : 'unknown', impl, used: s2.mime + (prof ? ' ' + prof : ''),
+            fps: Math.round(s2.framesPerSecond || df / 3), h: s2.frameHeight || 0, encMs: df > 0 ? dt / df * 1000 : null,
+            limit: s2.qualityLimitationReason || ''};
+  } finally { a.close(); b.close(); }
+}
+
+async function runDiag(){
+  if (diagRunning) return;
+  diagRunning = true;
+  const btn = $('#dgRun'); btn.disabled = true;
+  diagResults = []; renderDiagTable();
+  let src = null;
+  try{
+    $('#dgRunMsg').textContent = 'Preparando…';
+    src = await probeSource();
+    for (const codec of ['H264', 'VP9', 'AV1', 'VP8']){
+      $('#dgRunMsg').textContent = 'Testando ' + codec + ' (com ' + src.label + ')…';
+      let r;
+      try{ r = await probeCodec(codec, src.track); }catch(e){ r = {codec, status: 'error', note: e.message}; }
+      diagResults.push(r); renderDiagTable();
+    }
+    $('#dgRunMsg').textContent = 'Teste feito com ' + src.label + '.';
+  }catch(e){
+    $('#dgRunMsg').textContent = 'Não consegui testar: ' + e.message;
+  }finally{
+    if (src) src.stop();
+    btn.disabled = false; btn.textContent = 'Testar de novo';
+    diagRunning = false;
+    renderAdvice();
+  }
+}
+
+const STATUS_TXT = {hw: ['Placa de vídeo ✓', 'dg-ok'], sw: ['Processador', 'dg-bad'], unknown: ['Não revelado pelo navegador', 'dg-off'],
+                    unsupported: ['Não disponível', 'dg-off'], error: ['Falhou', 'dg-bad']};
+function renderDiagTable(){
+  const tb = $('#dgTable tbody'); tb.textContent = '';
+  $('#dgTable').hidden = !diagResults.length;
+  for (const r of diagResults){
+    const tr = document.createElement('tr');
+    const st = STATUS_TXT[r.status] || [r.status, ''];
+    const cells = [
+      [r.codec + (r.used && r.used.toUpperCase() !== r.codec ? ' (' + r.used.replace(/^H264 /, '') + ')' : ''), ''],
+      [st[0] + (r.note ? ' · ' + r.note : ''), st[1]],
+      [r.fps ? r.fps + (r.h ? ' · ' + r.h + 'p' : '') : '–', ''],
+      [r.encMs != null ? r.encMs.toFixed(1) + ' ms' : '–', ''],
+      [r.impl || '–', ''],
+    ];
+    for (const [txt, cls] of cells){ const td = document.createElement('td'); td.textContent = txt; if (cls) td.className = cls; tr.appendChild(td); }
+    tb.appendChild(tr);
+  }
+  renderAdvice();
+}
+
+function renderAdvice(){
+  const box = $('#dgAdvice');
+  const done = diagResults.length === 4 && !diagRunning;
+  box.hidden = !done; box.textContent = ''; box.className = 'dg-advice';
+  if (!done) return;
+  const hwList = diagResults.filter(r => r.status === 'hw').map(r => r.codec);
+  const cur = currentCodec();
+  const say = t => { const d = document.createElement('div'); d.textContent = t; box.appendChild(d); };
+  if (hwList.includes(cur)){
+    say('Tudo certo: o formato que você usa (' + cur + ') já é codificado pela placa de vídeo.');
+  } else if (hwList.length){
+    const pick = ['H264', 'VP9', 'AV1', 'VP8'].find(c => hwList.includes(c));
+    say(pick + ' sai pela placa de vídeo neste PC, e o ' + cur + ' que você usa sai pelo processador.');
+    if (CODECS[pick]){
+      const b = document.createElement('button'); b.className = 'primary'; b.textContent = 'Usar ' + pick + ' nas minhas transmissões';
+      b.onclick = () => { $('#codec').value = pick; store.set('codec', pick); renderAdvice(); toast('Formato trocado para ' + pick + '. Vale a partir da próxima transmissão.'); };
+      box.appendChild(b);
+    }
+  } else if (diagResults.every(r => r.status === 'unknown' || r.status === 'unsupported' || r.status === 'error')){
+    box.classList.add('warn');
+    say('O navegador não revelou quem codifica. Comece a compartilhar a tela e rode o teste de novo: durante a transmissão ele mostra.');
+  } else {
+    box.classList.add('warn');
+    if (!DESKTOP) say('Nenhum formato saiu pela placa de vídeo. No Chrome, confira se "Usar aceleração de hardware" está ligado (Configurações → Sistema) e se o driver da placa está atualizado.');
+    else if (diagGpu && !/^enabled/.test((diagGpu.feature || {}).video_encode || '') && !$('#dgBlock').checked)
+      say('A codificação pela placa está desligada no Chromium. Marque "Forçar uso da placa de vídeo" acima, reinicie o app e teste de novo.');
+    else say('Nenhum formato saiu pela placa de vídeo, mesmo com a aceleração disponível. Copie o relatório e me mande: isso indica qual correção aplicar.');
+  }
+}
+
+async function renderLive(){
+  const sec = $('#dgLiveSec'), box = $('#dgLive');
+  if (!localStream){ sec.hidden = true; return; }
+  sec.hidden = false;
+  const rows = [];
+  for (const [pid, c] of outCalls){
+    const pc = c.peerConnection;
+    if (!pc || pc.connectionState !== 'connected') continue;
+    try{
+      const rep = await pc.getStats(); let o = null; const cs = {};
+      rep.forEach(r => { if (r.type === 'codec') cs[r.id] = r; if (r.type === 'outbound-rtp' && r.kind === 'video') o = r; });
+      if (!o) continue;
+      const who = (members.find(m => m.id === pid) || {}).name || 'alguém';
+      const impl = o.encoderImplementation || '?';
+      const hw = o.powerEfficientEncoder != null ? o.powerEfficientEncoder : (HW_RE.test(impl) ? true : SW_RE.test(impl) ? false : null);
+      rows.push(who + ': ' + ((cs[o.codecId] || {}).mimeType || '').replace(/^video\//i, '') + ' ' + (o.frameHeight || '?') + 'p ' +
+        Math.round(o.framesPerSecond || 0) + 'fps · ' + (hw === true ? 'placa de vídeo' : hw === false ? 'processador' : 'não revelado') +
+        (pausedBy.get(pid) ? ' · pausado (ocultou)' : '') + (o.qualityLimitationReason && o.qualityLimitationReason !== 'none' ? ' · gargalo: ' + o.qualityLimitationReason : '') +
+        ' · ' + impl);
+    }catch{}
+  }
+  box.textContent = '';
+  if (!rows.length){ box.className = 'muted'; box.textContent = 'Ninguém recebendo sua tela no momento.'; return; }
+  box.className = 'dg-kv'; box.style.gridTemplateColumns = '1fr';
+  for (const r of rows){ const d = document.createElement('span'); d.textContent = r; d.style.color = 'var(--text)'; box.appendChild(d); }
+}
+
+function diagReport(){
+  const L = [];
+  L.push('TELÃO — relatório de vídeo (' + new Date().toLocaleString('pt-BR') + ')');
+  L.push('Versão do Telão: ' + TELAO_VERSION + (DESKTOP && diagGpu ? ' · página ' + diagGpu.versions.page + ' · app nível ' + diagGpu.versions.shell : '') + ' · na sala: ' + (members.filter(m => !me || m.id !== me.id).map(m => { const x = versionInfo(m); return m.name + '=' + (x ? (x.v || '<1.4') : '?'); }).join(', ') || 'ninguém'));
+  L.push(DESKTOP && diagGpu ? 'Telão Desktop ' + diagGpu.versions.app + ' · Electron ' + diagGpu.versions.electron + ' · Chromium ' + diagGpu.versions.chrome + ' · ' + diagGpu.platform
+                            : 'Navegador: ' + navigator.userAgent);
+  if (DESKTOP && diagGpu){
+    for (const d of diagGpu.devices) L.push('Placa' + (d.active ? ' (em uso)' : '') + ': ' + (d.name || VENDORS[d.vendorId] || '?') + ' vendor=0x' + (d.vendorId || 0).toString(16) + ' device=0x' + (d.deviceId || 0).toString(16) + (d.driver ? ' driver=' + d.driver : ''));
+    const f = diagGpu.feature || {};
+    L.push('video_encode=' + f.video_encode + ' video_decode=' + f.video_decode + ' gpu_compositing=' + f.gpu_compositing + ' ignoreGpuBlocklist=' + !!(diagGpu.config || {}).ignoreGpuBlocklist);
+    if (diagGpu.features) L.push('flags do app: ' + diagGpu.features);
+    L.push('desempenho minimizado: ' + (helper.ready ? helper.boost : 'helper desconectado'));
+  }
+  L.push('Formato escolhido: ' + currentCodec() + ' · qualidade: ' + currentQ());
+  for (const r of diagResults)
+    L.push(r.codec + ': ' + r.status + (r.used ? ' (saiu ' + r.used + ')' : '') + (r.fps ? ' ' + r.fps + 'fps' : '') + (r.h ? ' ' + r.h + 'p' : '') +
+           (r.encMs != null ? ' ' + r.encMs.toFixed(1) + 'ms/quadro' : '') + (r.limit ? ' limite=' + r.limit : '') + ' encoder=' + (r.impl || '-') + (r.note ? ' (' + r.note + ')' : ''));
+  if (!diagResults.length) L.push('(teste de encoder não executado)');
+  for (const el of $('#dgLive').children) L.push('Ao vivo — ' + el.textContent);
+  return L.join('\n');
+}
+
+function initDiag(){
+  $('#diagBtn').onclick = openDiag;
+  $('#dgClose').onclick = closeDiag;
+  $('#diag').onclick = e => { if (e.target === $('#diag')) closeDiag(); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#diag').hidden) closeDiag(); });
+  $('#dgRun').onclick = runDiag;
+  $('#dgCopy').onclick = async () => {
+    const txt = diagReport();
+    try{ await navigator.clipboard.writeText(txt); toast('Relatório copiado. É só colar na conversa.'); }
+    catch{ toast('Não consegui copiar automaticamente.', 'warn'); }
+  };
+  if (DESKTOP){
+    const changed = () => ['#dgBlock', '#dgFeat'].some(id => ($(id).checked ? '1' : '0') !== $(id).dataset.initial);
+    $('#dgBlock').onchange = async () => {
+      const ok = await window.telaoDesktop.setConfig('ignoreGpuBlocklist', $('#dgBlock').checked);
+      if (!ok){ toast('Não consegui salvar a opção.', 'warn'); return; }
+      $('#dgRestart').hidden = !changed();
+      renderAdvice();
+    };
+    $('#dgFeat').onchange = async () => {
+      const ok = await window.telaoDesktop.setConfig('disableGpuWebrtcFeatures', !$('#dgFeat').checked);
+      if (!ok){ toast('Não consegui salvar a opção.', 'warn'); return; }
+      $('#dgRestart').hidden = !changed();
+    };
+    $('#dgRestart').onclick = () => {
+      if (localStream && !confirmRestart()) return;
+      window.telaoDesktop.restart();
+    };
+    $('#dgGpuPage').onclick = () => window.telaoDesktop.openGpuPage();
+  }
+}
+// Reiniciar no meio de uma transmissão derruba quem está assistindo: avisa uma vez antes.
+let restartWarned = false;
+function confirmRestart(){
+  if (restartWarned) return true;
+  restartWarned = true;
+  toast('Você está transmitindo: reiniciar vai encerrar a transmissão. Clique em "Reiniciar" de novo para confirmar.', 'warn', 7000);
+  return false;
+}
+
+/* ---------- Saída ---------- */
+function teardown(){
+  try{ localStream && localStream.getTracks().forEach(t => t.stop()); }catch{}
+  try{ hubPeer && hubPeer.destroy(); }catch{}
+  try{ me && me.destroy(); }catch{}
+}
+function leave(){ teardown(); location.reload(); }
+window.addEventListener('pagehide', teardown);
+
+initLobby();
+</script>
+</body>
+</html>
