@@ -196,6 +196,8 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 .pk-empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:30px}
 .pk-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line);font-size:13px}
 .pk-foot .grow{flex:1}
+.pk-fast{display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--muted)}
+.pk-fast input{margin:0}
 .pk-foot{flex-wrap:wrap}
 .pk-audio{display:flex;align-items:center;gap:8px;color:var(--text)}
 .pk-audio select{max-width:300px}
@@ -337,6 +339,7 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
     <div class="pk-foot">
       <label class="pk-audio">Som: <select id="pkAudioSel"></select></label>
       <span id="pkAudioHint" class="muted"></span>
+      <label id="pkFastWrap" class="pk-fast" hidden title="Jogo em tela cheia ou janela sem bordas: o Telão captura o monitor inteiro em vez da janela. É o caminho mais rápido do Windows (a captura de janela trava em ~20 fps em alguns PCs). O som continua sendo só o da janela. Atenção: se você der Alt+Tab, aparece o que estiver na tela."><input type="checkbox" id="pkFast"> Modo rápido</label>
       <span class="grow"></span>
       <button type="button" class="ghost" id="pkCancel">Cancelar</button>
       <button type="button" class="primary" id="pkGo" disabled>Compartilhar</button>
@@ -392,16 +395,19 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.7.1';
+const TELAO_VERSION = '1.8.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 4;       // nível do app desktop mais novo (4: o app se atualiza sozinho)
+const LATEST_SHELL = 5;       // nível do app desktop mais novo (5: modo rápido de captura)
+const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.7.1', 'hoje', ['Entrar na sala funciona mesmo em redes que bloqueiam as conexões que você abre (quem segura a sala liga de volta)']],
+  ['1.8.0', 'hoje', ['Modo rápido: jogo em tela cheia ou sem bordas é capturado pelo caminho da tela inteira, bem mais rápido no Windows 10 (o som continua só do jogo)',
+                     'Diagnóstico mostra o passo a passo da conexão com a sala']],
+  ['1.7.1', '21/10', ['Entrar na sala funciona mesmo em redes que bloqueiam as conexões que você abre (quem segura a sala liga de volta)']],
   ['1.7.0', '21/10', ['O app também se atualiza sozinho: baixa só o necessário (~1 MB) e reinicia', 'Se a versão nova do app não abrir, volta sozinho para a anterior', 'Som escolhido junto com a tela: janela manda o som dela sozinha; tela inteira mostra os apps com som ali mesmo']],
   ['1.6.1', '21/10', ['Mostra a versão do app junto da versão do Telão', 'Botão 🎮 avisa quando o app precisa ser atualizado para as reações por cima do jogo']],
   ['1.6.0', '21/10', ['Reações aparecem por cima do jogo de quem transmite (app desktop)', 'Janela flutuante: assista um amigo numa janela sempre por cima']],
@@ -465,9 +471,10 @@ function initUpdates(){
       window.open(updInfo.download || updInfo.url, '_blank');
     } else $('#upd').hidden = true;
   };
-  if (DESKTOP && (window.telaoDesktop.shell || 0) < LATEST_SHELL && RELEASES_URL
-      && store.get('updLater', '') !== 'app' + LATEST_SHELL + '|' + new Date().toDateString()){
-    updInfo = {kind: 'app', version: 'app' + LATEST_SHELL, download: RELEASES_URL};
+  // Só apps que ainda não se atualizam sozinhos (nível < 4) precisam baixar o zip; do 4 em diante o próprio app se atualiza.
+  if (DESKTOP && (window.telaoDesktop.shell || 0) < SELF_UPDATE_SHELL && RELEASES_URL
+      && store.get('updLater', '') !== 'app' + SELF_UPDATE_SHELL + '|' + new Date().toDateString()){
+    updInfo = {kind: 'app', version: 'app' + SELF_UPDATE_SHELL, download: RELEASES_URL};
     $('#updText').textContent = 'Tem app novo do Telão: reações por cima do jogo, janela flutuante completa e o app passa a se atualizar sozinho. Precisa baixar o arquivo uma última vez.';
     $('#updGo').textContent = 'Baixar'; $('#updGo').hidden = false;
     $('#upd').hidden = false;
@@ -511,6 +518,42 @@ function initVersion(){
     news.append(h, ul);
   }
   $('#newsBtn').onclick = () => { news.hidden = !news.hidden; $('#newsBtn').setAttribute('aria-expanded', String(!news.hidden)); };
+}
+
+/* Registro da conexão com a sala (vai no relatório do Diagnóstico). */
+const netEvents = [];
+let netT0 = Date.now();
+function netLog(m){
+  netEvents.push(((Date.now() - netT0) / 1000).toFixed(1) + 's ' + m);
+  if (netEvents.length > 80) netEvents.shift();
+}
+// Tipos de caminho de rede que cada lado conseguiu (host = rede local, srflx = endereço público via STUN, relay = TURN).
+async function netLogCandidates(pc, label){
+  if (!pc) return;
+  try{
+    const rep = await pc.getStats(), loc = {}, rem = {};
+    let pair = null;
+    rep.forEach(r => {
+      if (r.type === 'local-candidate') loc[r.candidateType + '/' + (r.protocol || '?')] = (loc[r.candidateType + '/' + (r.protocol || '?')] || 0) + 1;
+      if (r.type === 'remote-candidate') rem[r.candidateType + '/' + (r.protocol || '?')] = (rem[r.candidateType + '/' + (r.protocol || '?')] || 0) + 1;
+      if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated) pair = r;
+    });
+    const fmt = o => Object.entries(o).map(([k, v]) => k + '×' + v).join(' ') || 'nenhum';
+    netLog(label + ' · meus caminhos: ' + fmt(loc) + ' · do outro lado: ' + fmt(rem) + (pair ? ' · par conectado' : ' · nenhum par conectado') +
+           ' · ICE ' + pc.iceConnectionState + '/' + pc.connectionState);
+  }catch{}
+}
+function watchConnPc(c, label){
+  const hook = () => {
+    const pc = c.peerConnection;
+    if (!pc){ if (!c._pcTries || c._pcTries++ < 20) setTimeout(hook, 250); return; }
+    pc.addEventListener('iceconnectionstatechange', () => {
+      netLog(label + ': ICE ' + pc.iceConnectionState);
+      if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') netLogCandidates(pc, label);
+    });
+  };
+  c._pcTries = 1; hook();
+  setTimeout(() => { if (!c.open && c.peerConnection) netLogCandidates(c.peerConnection, label + ' (8 s sem abrir)'); }, 8000);
 }
 
 const PREFIX = 'telao-v1-';
@@ -783,6 +826,8 @@ async function join(){
   if (location.protocol !== 'file:') try{ history.replaceState(null, '', '#sala=' + room); }catch{}
 
   joining = true;
+  netT0 = Date.now(); netEvents.length = 0;
+  netLog('entrando na sala ' + room + ' · Telão ' + TELAO_VERSION + (DESKTOP ? ' app ' + window.telaoDesktop.version : ' navegador') + (hasTurn() ? ' · com TURN' : ' · sem TURN'));
   $('#joinBtn').disabled = true; $('#joinBtn').textContent = 'Conectando…';
   linkIce = [];
   if (link){
@@ -800,7 +845,7 @@ async function join(){
     }
   }, 12000);
 
-  me.on('open', () => { clearTimeout(openTimeout); showRoom(); ensureHub(); });
+  me.on('open', () => { clearTimeout(openTimeout); netLog('servidor de sinalização ok'); showRoom(); ensureHub(); });
   me.on('call', onIncomingCall);
   me.on('connection', onIncomingData);
   me.on('disconnected', () => {
@@ -808,6 +853,7 @@ async function join(){
     setTimeout(() => { if (me && !me.destroyed && me.disconnected) try{ me.reconnect(); }catch{} }, 1000);
   });
   me.on('error', e => {
+    netLog('sinalização: ' + e.type);
     if (e.type === 'peer-unavailable'){
       if (String(e.message || '').includes(hubId())){ hubMissing = true; scheduleHubRecovery(); }
       return;
@@ -872,9 +918,9 @@ function tryClaimHub(){
     let done = false;
     const finish = v => { if (!done){ done = true; res(v); } };
     const hp = newPeer(hubId());
-    hp.on('open', () => { hubPeer = hp; runHub(hp); finish(true); });
+    hp.on('open', () => { hubPeer = hp; runHub(hp); netLog('sou eu que seguro a sala (hub)'); finish(true); });
     hp.on('error', e => {
-      if (!done){ try{ hp.destroy(); }catch{} finish(false); }
+      if (!done){ netLog(e.type === 'unavailable-id' ? 'a sala já tem dono: vou me conectar a ele' : 'hub: ' + e.type); try{ hp.destroy(); }catch{} finish(false); }
       else if (e.type === 'unavailable-id'){ try{ hp.destroy(); }catch{} }
     });
     setTimeout(() => { if (!done){ try{ hp.destroy(); }catch{} finish(false); } }, 6000);
@@ -912,15 +958,20 @@ function runHub(hp){
   // o hub liga de volta para ela.
   const reversed = new Map();   // id → quando tentou
   hp.on('connection', conn => {
+    netLog('hub: pedido de entrada de ' + conn.peer.slice(-6));
     attach(conn);
+    conn.on('open', () => netLog('hub: ' + conn.peer.slice(-6) + ' conectado'));
+    watchConnPc(conn, 'hub ← ' + conn.peer.slice(-6));
     setTimeout(() => {
       if (hp.destroyed || conn.open) return;
       const m = mem.get(conn.peer);
       if (m && m.conn.open) return;
       if (Date.now() - (reversed.get(conn.peer) || 0) < 15000) return;
       reversed.set(conn.peer, Date.now());
+      netLog('hub: ' + conn.peer.slice(-6) + ' não abriu em 6 s, ligando de volta');
+      netLogCandidates(conn.peerConnection, 'hub ← ' + conn.peer.slice(-6) + ' (não abriu)');
       const rc = hp.connect(conn.peer, {reliable: true, serialization: 'json', metadata: {telaoReverse: true}});
-      if (rc) attach(rc);
+      if (rc){ attach(rc); rc.on('open', () => netLog('hub: ligação de volta para ' + conn.peer.slice(-6) + ' abriu')); watchConnPc(rc, 'hub → ' + conn.peer.slice(-6)); }
     }, 6000);
   });
   const ticker = setInterval(() => {
@@ -944,11 +995,17 @@ function onIncomingData(c){
   if (hubConn && hubConn.open){ try{ c.close(); }catch{} return; }
   const old = hubConn;
   wireHubConn(c);
-  try{ old && old.close(); }catch{}
+  // antes de fechar a tentativa que falhou, anota que caminhos de rede ela tinha (vai pro Diagnóstico)
+  if (old && !old.open && old.peerConnection) netLogCandidates(old.peerConnection, 'eu → hub (não abriu)').finally(() => { try{ old.close(); }catch{} });
+  else { try{ old && old.close(); }catch{} }
 }
 function wireHubConn(c){
   hubConn = c; lastHubMsg = Date.now();
+  const rev = !!(c.metadata && c.metadata.telaoReverse);
+  netLog(rev ? 'o hub ligou de volta (caminho invertido)' : 'abrindo conexão com o hub');
+  watchConnPc(c, rev ? 'hub → eu' : 'eu → hub');
   const onOpen = () => {
+    netLog('conexão com o hub aberta' + (rev ? ' (caminho invertido)' : ''));
     c._opened = true;
     hubFailStreak = 0;
     hideNetBanner();
@@ -974,6 +1031,7 @@ function scheduleHubRecovery(){
   if (hubRetryTimer || !me || me.destroyed) return;
   setStatus('Reorganizando a sala…', 'warn');
   const old = hubConn; hubConn = null;
+  netLog(hubMissing ? 'a sala ficou sem dono: tentando assumir' : 'conexão com o hub ' + (old && old._opened ? 'caiu' : 'não abriu'));
   if (old && !old._opened && !hubMissing){
     hubFailStreak++;
     if (hubFailStreak >= 2){
@@ -1451,7 +1509,7 @@ function openPicker(){
         if (x.icon){ const ic = document.createElement('img'); ic.src = x.icon; ic.alt = ''; nm.appendChild(ic); }
         const t = document.createElement('span'); t.textContent = x.name; t.title = x.name; nm.appendChild(t);
         it.append(th, nm);
-        it.onclick = () => { selected = x; go.disabled = false; render(); renderAudio(); };
+        it.onclick = () => { selected = x; go.disabled = false; render(); renderAudio(); syncFast(); };
         it.ondblclick = () => finish(x);
         grid.appendChild(it);
       }
@@ -1465,6 +1523,10 @@ function openPicker(){
     };
 
     for (const b of box.querySelectorAll('.pk-tabs button')) b.onclick = () => { pickerTab = b.dataset.t; render(); };
+    const fast = $('#pkFast');
+    const syncFast = () => { $('#pkFastWrap').hidden = !fastCaptureAvailable() || !selected || selected.type !== 'window'; fast.checked = fastCaptureOn(); };
+    fast.onchange = () => store.set('fastWindow', fast.checked);
+    syncFast();
     renderAudio();
     $('#pkRefresh').onclick = load;
     $('#pkCancel').onclick = () => finish(null);
@@ -1492,7 +1554,14 @@ async function startShare(){
   const src = DESKTOP ? (chosen.audio || AUDIO_SYSTEM) : $('#audioSrc').value;
   const sysAudio = src === AUDIO_SYSTEM;
   const devId = src.startsWith('dev:') ? src.slice(4) : null;
-  if (DESKTOP) await window.telaoDesktop.select(chosen.id, sysAudio);
+  let capId = DESKTOP ? chosen.id : null, fastHwnd = '';
+  fastCapture = false;
+  if (DESKTOP && chosen.type === 'window' && fastCaptureAvailable() && fastCaptureOn()){
+    const hwnd = chosen.id.split(':')[1] || '';
+    const sid = await fastScreenFor(hwnd);
+    if (sid){ capId = sid; fastCapture = true; fastHwnd = hwnd; }
+  }
+  if (DESKTOP) await window.telaoDesktop.select(capId, sysAudio);
   let s;
   try{
     s = await navigator.mediaDevices.getDisplayMedia({
@@ -1542,6 +1611,7 @@ async function startShare(){
   }
   localStream = s;
   lastChosen = chosen;
+  if (fastCapture) watchFastWindow(fastHwnd, s);
   showOverlay();
   const vt = s.getVideoTracks()[0];
   if (vt){ try{ vt.contentHint = 'motion'; }catch{} vt.addEventListener('ended', stopShare); }
@@ -1734,7 +1804,7 @@ async function updateSendStats(){
   }
   const target = QUALITY[currentQ()].fps;
   const parts = [];
-  if (capFps != null) parts.push((capFps < target * 0.8 ? '!' : '') + 'captura ' + Math.round(capFps) + 'fps');
+  if (capFps != null) parts.push((capFps < target * 0.8 ? '!' : '') + 'captura ' + Math.round(capFps) + 'fps' + (fastCapture ? ' (modo rápido)' : ''));
   if (worst){
     parts.push((worst.fps < target * 0.8 ? '!' : '') + 'envio ' + Math.round(worst.fps) + 'fps' + (worst.h ? ' ' + worst.h + 'p' : ''));
     const hw = worst.hw != null ? worst.hw : (worst.impl ? !SW_ENC.test(worst.impl) : null);
@@ -2058,6 +2128,34 @@ function onReact(from, data){
   const who = (members.find(m => m.id === from) || {}).name || String(data.n || '').slice(0, 24) || 'alguém';
   showReact(data.s, i, who);
 }
+/* Modo rápido (app 1.7.2+): janela de jogo que ocupa o monitor inteiro é capturada pelo caminho da tela inteira
+   (Desktop Duplication), que no Windows 10 é bem mais rápido que a captura de janela. O som continua vindo só da janela. */
+let fastCapture = false, fastWatch = null;
+const fastCaptureAvailable = () => DESKTOP && !!window.telaoDesktop.screenForWindow;
+const fastCaptureOn = () => !!store.get('fastWindow', true);
+const coversMonitor = r => r && r.ok && r.w > 0 && r.mw > 0 &&
+  r.x <= r.mx + 2 && r.y <= r.my + 2 && r.x + r.w >= r.mx + r.mw - 2 && r.y + r.h >= r.my + r.mh - 2;
+async function fastScreenFor(hwnd){
+  if (!hwnd) return null;
+  const r = await helperQuery({cmd: 'winrect', hwnd}, 'winrect', 2000);
+  if (!coversMonitor(r)) return null;
+  try{ return await window.telaoDesktop.screenForWindow({x: r.mx, y: r.my, w: r.mw, h: r.mh}); }catch{ return null; }
+}
+// Na captura de janela a transmissão acaba sozinha quando o jogo fecha; no modo rápido, o Telão confere.
+function watchFastWindow(hwnd, stream){
+  clearInterval(fastWatch);
+  fastWatch = setInterval(async () => {
+    if (localStream !== stream){ clearInterval(fastWatch); return; }
+    if (!helper.ready) return;
+    const r = await helperQuery({cmd: 'winrect', hwnd}, 'winrect', 2000);
+    if (r && r.ok === false && localStream === stream){
+      clearInterval(fastWatch);
+      toast('A janela do jogo fechou: transmissão encerrada.', 'warn', 6000);
+      stopShare();
+    }
+  }, 3000);
+}
+
 /* Camada de reações por cima do jogo (app desktop 1.6+): janela transparente do próprio app. */
 let lastChosen = null;
 const overlayAvailable = () => DESKTOP && !!window.telaoDesktop.overlayShow;
@@ -2844,6 +2942,9 @@ function diagReport(){
            (r.encMs != null ? ' ' + r.encMs.toFixed(1) + 'ms/quadro' : '') + (r.limit ? ' limite=' + r.limit : '') + ' encoder=' + (r.impl || '-') + (r.note ? ' (' + r.note + ')' : ''));
   if (!diagResults.length) L.push('(teste de encoder não executado)');
   for (const el of $('#dgLive').children) L.push('Ao vivo — ' + el.textContent);
+  L.push('--- conexão com a sala ---');
+  for (const e of netEvents.slice(-40)) L.push(e);
+  if (!netEvents.length) L.push('(ainda não entrou em nenhuma sala nesta sessão)');
   return L.join('\n');
 }
 

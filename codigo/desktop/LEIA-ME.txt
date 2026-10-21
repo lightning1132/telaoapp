@@ -15,6 +15,12 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.8
+- Modo rápido: se o jogo está em tela cheia ou "janela sem bordas", o Telão captura o monitor em vez da
+  janela. No Windows 10 a captura de janela costuma travar em ~20 fps; assim vai liso. O som continua sendo
+  só o do jogo. Liga/desliga no seletor ("Modo rápido"). Atenção: com ele ligado, se você der Alt+Tab,
+  quem assiste vê o que estiver na tela.
+
 NOVIDADES DO APP 1.7
 - O app se atualiza sozinho por completo: quando sai versão nova, ele baixa só o necessário (~1 MB),
   mostra "Reiniciar e atualizar" e reabre já atualizado. Se a versão nova não abrir, ele volta sozinho

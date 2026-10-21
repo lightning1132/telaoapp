@@ -1,24 +1,25 @@
 {
-  "version": "1.7.1",
+  "version": "1.8.0",
   "minShell": 2,
-  "page": "versoes/telao-1.7.1.html",
-  "sha256": "6fe2f1515a1e2aa308d58937b4b070102289e912be1beb65856359119ef5b0d5",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.7.1",
+  "page": "versoes/telao-1.8.0.html",
+  "sha256": "b954ed4fa0dc05758a871b6cefc2271e83cbb80e2572cbfc6629dbcde9fe4d99",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.8.0",
   "notes": [
-    "Entrar na sala funciona mesmo em redes que bloqueiam as conexões que você abre (quem segura a sala liga de volta)"
+    "Modo rápido: jogo em tela cheia ou sem bordas é capturado pelo caminho da tela inteira, bem mais rápido no Windows 10 (o som continua só do jogo)",
+    "Diagnóstico mostra o passo a passo da conexão com a sala"
   ],
   "app": {
-    "version": "1.7.1",
-    "shell": 4,
+    "version": "1.8.0",
+    "shell": 5,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.7.1/app.asar",
-        "sha256": "3db8081102d78e67abbcda5a9807528a148efa3feff53ec558fc9d9d9a99d5a9",
-        "size": 183174
+        "path": "versoes/app-1.8.0/app.asar",
+        "sha256": "7b096c1611976eaf1f200b619f4c6374d233f1d012ffed331d7596271d8c663d",
+        "size": 191310
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.7.1/telao-audio.exe",
+        "path": "versoes/app-1.8.0/telao-audio.exe",
         "sha256": "8a12183c7c83bfdc8da81f4ee0b81ad2fc7988769da6ce3c2b636b4c85ab0205",
         "size": 505856
       }

@@ -121,8 +121,9 @@ app.whenReady().then(() => {
     pendingSource = null;
     try{
       if (!chosen) return callback(null);
-      const sources = await desktopCapturer.getSources({types: ['window', 'screen']});
-      const src = sources.find(s => s.id === chosen.id);
+      const find = async () => (await desktopCapturer.getSources({types: ['window', 'screen']})).find(s => s.id === chosen.id);
+      let src = await find();
+      for (let i = 0; !src && i < 3; i++){ await new Promise(r => setTimeout(r, 400)); src = await find(); }   // a lista às vezes vem vazia logo depois de outra consulta
       if (!src) return callback(null);
       const res = {video: src};
       if (request.audioRequested && chosen.systemAudio) res.audio = 'loopback';
@@ -145,6 +146,17 @@ app.whenReady().then(() => {
         thumb: s.thumbnail && !s.thumbnail.isEmpty() ? s.thumbnail.toDataURL() : '',
         icon: s.appIcon && !s.appIcon.isEmpty() ? s.appIcon.toDataURL() : '',
       }));
+  });
+  // Modo rápido: acha a "tela inteira" do monitor onde está o jogo (retângulo em pixels físicos, vindo do Telão Audio).
+  ipcMain.handle('telao:screenFor', async (_e, m) => {
+    if (!m) return null;
+    const near = (a, b) => Math.abs(a - b) <= 2;
+    const phys = d => process.platform === 'win32' && screen.dipToScreenRect ? screen.dipToScreenRect(null, d.bounds) : d.bounds;
+    const disp = screen.getAllDisplays().find(d => { const b = phys(d); return near(b.x, m.x) && near(b.y, m.y) && near(b.width, m.w) && near(b.height, m.h); });
+    let srcs = await desktopCapturer.getSources({types: ['screen'], thumbnailSize: {width: 0, height: 0}});
+    if (!srcs.length){ await new Promise(r => setTimeout(r, 400)); srcs = await desktopCapturer.getSources({types: ['screen'], thumbnailSize: {width: 0, height: 0}}); }
+    const s = (disp && srcs.find(x => String(x.display_id) === String(disp.id))) || (srcs.length === 1 ? srcs[0] : null);
+    return s ? s.id : null;
   });
   ipcMain.handle('telao:select', (_e, id, systemAudio) => {
     pendingSource = {id: String(id), systemAudio: !!systemAudio};
