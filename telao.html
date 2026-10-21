@@ -387,7 +387,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.6.0';
+const TELAO_VERSION = '1.6.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -396,7 +396,8 @@ const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenc
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
 const LATEST_SHELL = 3;       // nível do app desktop mais novo (reações por cima do jogo, janela flutuante completa)
 const CHANGELOG = [
-  ['1.6.0', 'hoje', ['Reações aparecem por cima do jogo de quem transmite (app desktop)', 'Janela flutuante: assista um amigo numa janela sempre por cima']],
+  ['1.6.1', 'hoje', ['Mostra a versão do app junto da versão do Telão', 'Botão 🎮 avisa quando o app precisa ser atualizado para as reações por cima do jogo']],
+  ['1.6.0', '21/10', ['Reações aparecem por cima do jogo de quem transmite (app desktop)', 'Janela flutuante: assista um amigo numa janela sempre por cima']],
   ['1.5.0', '21/10', ['Atualização automática', 'Sala de sempre: salas recentes e entrada automática', 'Reações (emojis) sobre a tela de quem transmite', 'Clipe dos últimos 30 segundos de qualquer tela']],
   ['1.4.0', '21/10', ['Versão de cada pessoa na sala (passe o mouse no nome)', 'Aviso quando alguém da sala está numa versão mais nova ou mais antiga', 'Esta lista de novidades']],
   ['1.3.0', '21/10', ['FPS não cai mais pela metade com o app minimizado (Windows 11)', 'Telão Audio fecha junto com o app']],
@@ -477,7 +478,8 @@ function initUpdates(){
 
 function initVersion(){
   const kind = window.telaoDesktop ? 'Desktop' : 'Navegador';
-  $('#verTxt').textContent = 'v' + TELAO_VERSION + ' · ' + kind;
+  const appV = window.telaoDesktop && window.telaoDesktop.version && window.telaoDesktop.version !== '?' ? window.telaoDesktop.version : '';
+  $('#verTxt').textContent = 'v' + TELAO_VERSION + ' · ' + kind + (appV ? ' · app ' + appV : '');
   $('#barVer').textContent = 'v' + TELAO_VERSION;
   $('#barVer').title = 'Telão ' + TELAO_VERSION + ' (' + kind + ')';
   const news = $('#news');
@@ -1980,11 +1982,23 @@ async function showOverlay(){
 function hideOverlay(){ if (overlayAvailable()) window.telaoDesktop.overlayHide().catch(() => {}); }
 function syncOverlayBtn(){
   const b = $('#pipOverlay');
-  b.hidden = !overlayAvailable();
+  b.hidden = !DESKTOP;
+  if (!overlayAvailable()){
+    b.classList.add('off');
+    b.title = 'Reações por cima do jogo: precisa do app 1.6 ou mais novo. Clique para saber como atualizar.';
+    return;
+  }
   b.classList.toggle('off', !overlayOn());
   b.title = 'Reações por cima do jogo: ' + (overlayOn() ? 'ligado' : 'desligado') + '. Clique para ' + (overlayOn() ? 'desligar' : 'ligar') + '. (Precisa do jogo em janela ou janela sem bordas.)';
 }
 function toggleOverlay(){
+  if (!overlayAvailable()){
+    const d = document.createElement('div'); d.className = 'toast warn';
+    d.textContent = 'As reações por cima do jogo precisam do app 1.6 (você está no app ' + (window.telaoDesktop.version || 'antigo') + '). A interface se atualiza sozinha, mas essa parte só vem baixando o app novo uma vez. ';
+    if (RELEASES_URL){ const a = document.createElement('button'); a.className = 'linkish'; a.textContent = 'Baixar o app novo'; a.onclick = () => window.open(RELEASES_URL, '_blank'); d.appendChild(a); }
+    $('#toasts').appendChild(d); setTimeout(() => d.remove(), 12000);
+    return;
+  }
   store.set('overlay', !overlayOn());
   if (overlayOn()) showOverlay(); else { hideOverlay(); syncOverlayBtn(); }
 }

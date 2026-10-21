@@ -1,11 +1,11 @@
 {
-  "version": "1.6.0",
+  "version": "1.6.1",
   "minShell": 2,
-  "page": "versoes/telao-1.6.0.html",
-  "sha256": "158fa977acb25a496ee498f9841868ea0b0279f1d1c4b9a6404fba8f1c6f4303",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.6.0",
+  "page": "versoes/telao-1.6.1.html",
+  "sha256": "44084c621b55d94f390e53c70a806a566c7bdaaf2ad1c666499aa57519f11b56",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.6.1",
   "notes": [
-    "Reações aparecem por cima do jogo de quem transmite (app desktop)",
-    "Janela flutuante: assista um amigo numa janela sempre por cima"
+    "Mostra a versão do app junto da versão do Telão",
+    "Botão 🎮 avisa quando o app precisa ser atualizado para as reações por cima do jogo"
   ]
 }
