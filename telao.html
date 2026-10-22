@@ -782,7 +782,7 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
       <section>
         <h3>Teste de encoder</h3>
         <p class="muted dg-p">Codifica alguns segundos de vídeo em cada formato e mostra quem fez o trabalho: a placa de vídeo ou o processador. Leva uns 20 segundos.</p>
-        <div class="dg-row"><button type="button" class="primary" id="dgRun">Testar</button><span id="dgRunMsg" class="muted"></span></div>
+        <div class="dg-row"><button type="button" class="primary" id="dgRun">Testar</button><span id="dgRunMsg" class="muted"></span><span class="grow"></span><button type="button" class="ghost" id="dgForget" hidden title="Este aparelho marcou formatos de vídeo que não conseguiu exibir e está pedindo outros a quem transmite. Esquecer faz tentar de novo.">Esquecer formatos marcados</button></div>
         <table class="dg-table" id="dgTable" hidden>
           <thead><tr><th>Formato</th><th>Quem codifica</th><th>FPS</th><th>Tempo/quadro</th><th>Encoder</th></tr></thead>
           <tbody></tbody>
@@ -847,7 +847,9 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
       </section>
       <section id="optPerfSec" hidden>
         <h3>Desempenho</h3>
-        <label class="chk"><input type="checkbox" id="optGpuPrio"> Prioridade do Telão na placa de vídeo <span class="muted">(experimental)</span></label>
+        <div id="optNativeOvBox"><label class="chk"><input type="checkbox" id="optNativeOv"> Reações e chat por cima do jogo desenhados pelo Telão Audio</label>
+        <p class="muted dg-p" style="margin-top:6px">Mais leve: não disputa a placa de vídeo com a captura turbo (com a camada antiga, spam de reações travava a transmissão). Desligue só se as reações não aparecerem direito por cima do jogo.</p></div>
+        <label class="chk" style="margin-top:10px"><input type="checkbox" id="optGpuPrio"> Prioridade do Telão na placa de vídeo <span class="muted">(experimental)</span></label>
         <p class="muted dg-p" style="margin-top:6px">Com o jogo usando a placa quase toda, a captura e a codificação ficam na fila atrás dele e a transmissão engasga. Ligado, o Telão pede ao Windows prioridade na placa enquanto você transmite (o jogo pode perder poucos FPS). Se o Windows recusar, nada muda; o resultado aparece na medição de uso real.</p>
       </section>
       <section>
@@ -902,17 +904,20 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.16.0';
+const TELAO_VERSION = '1.16.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 12;      // nível do app desktop mais novo (12: ausência pelo PC, memória e prioridade na placa)
+const LATEST_SHELL = 13;      // nível do app desktop mais novo (13: camada por cima do jogo desenhada pelo Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.16.0', 'hoje', ['Ausente: quem não responde ao "Ainda está aí?" (45 min sem mexer no PC), bloqueia a tela ou é marcado por alguém para de receber vídeo, e ninguém gasta internet ou placa com ele. Volta ao mexer',
+  ['1.16.1', 'hoje', ['App: reações e chat por cima do jogo agora são desenhados pelo Telão Audio. Com a captura turbo, reação ou chat (principalmente em spam) travava a transmissão; não trava mais',
+                      'Corrige quem transmitia em VP8 pelo processador sem precisar: quando a 1ª imagem de alguém demorava (PC sobrecarregado), o Telão de quem assistia marcava o formato como "não consigo exibir" para sempre. Agora só marca se a imagem chega e não aparece, a marca vale 12 h, e as marcas antigas foram esquecidas',
+                      'Relatório mostra os formatos marcados, e o Diagnóstico tem "Esquecer formatos marcados"']],
+  ['1.16.0', '22/10', ['Ausente: quem não responde ao "Ainda está aí?" (45 min sem mexer no PC), bloqueia a tela ou é marcado por alguém para de receber vídeo, e ninguém gasta internet ou placa com ele. Volta ao mexer',
                       'Tirar da sala: em "quem está na sala", qualquer um pode marcar alguém como ausente ou tirar da sala (a pessoa pode entrar de novo)',
                       'Custo da transmissão e medição de uso real mostram a memória (do PC e do Telão) e a memória da placa de vídeo, com aviso quando estão quase cheias',
                       'App: prioridade do Telão na placa de vídeo enquanto transmite (experimental, em Opções), para a transmissão não engasgar com jogo pesado',
@@ -2221,12 +2226,12 @@ function helperConnect(){
   try{ ws = new WebSocket(HELPER_URL); }catch{ return helperRetry(); }
   ws.binaryType = 'arraybuffer';
   helper.ws = ws;
-  ws.onopen = () => { helper.ready = true; helperSend({cmd: 'list'}); if (localStream) syncGpuPrio(); };
+  ws.onopen = () => { helper.ready = true; helperSend({cmd: 'list'}); if (localStream){ syncGpuPrio(); if (nativeOv){ nativeOv = false; showOverlay(); } } };
   ws.onmessage = ev => {
     if (typeof ev.data !== 'string'){ if (helper.onAudio) helper.onAudio(ev.data); return; }
     let m; try{ m = JSON.parse(ev.data); }catch{ return; }
-    if (m.type === 'winrect'){
-      const w = helper.waiters.findIndex(x => x.type === 'winrect');
+    if (m.type === 'winrect' || m.type === 'ovshow'){
+      const w = helper.waiters.findIndex(x => x.type === m.type);
       if (w >= 0){ const x = helper.waiters.splice(w, 1)[0]; clearTimeout(x.timer); x.resolve(m); }
       return;
     }
@@ -3462,7 +3467,20 @@ function renderHiddenBar(){
 /* ---------- Assistir ---------- */
 /* Formatos de vídeo que chegaram aqui mas não viraram imagem: ficam guardados e o app
    responde às próximas chamadas pedindo outro formato (quem decide o codec é a resposta). */
-const badDecode = new Set(store.get('badDecode', []));
+/* Formatos que este aparelho não conseguiu exibir. Cada marca vale 12 h (depois o formato é tentado de novo).
+   Até a 1.16.0 a marca era para sempre e saía também quando quem transmite estava lento (a 1ª imagem demorava),
+   e aí PCs passavam a pedir VP8 (codificado pelo processador de quem transmite): as marcas antigas são esquecidas uma vez. */
+const BAD_DECODE_MS = 12 * 3600000;
+const badDecodeAt = (() => {
+  if (!store.get('badDecodeReset1', false)){ store.set('badDecodeReset1', true); store.set('badDecode', []); store.set('badDecodeAt', {}); }
+  const m = store.get('badDecodeAt', {}) || {}, now = Date.now(), out = {};
+  for (const [k, t] of Object.entries(m)) if (typeof t === 'number' && now - t < BAD_DECODE_MS) out[k] = t;
+  return out;
+})();
+const badDecode = new Set(Object.keys(badDecodeAt));
+function markBadDecode(codec){ badDecode.add(codec); badDecodeAt[codec] = Date.now(); store.set('badDecodeAt', badDecodeAt); store.set('badDecode', [...badDecode]); }
+function forgetBadDecode(){ badDecode.clear(); for (const k of Object.keys(badDecodeAt)) delete badDecodeAt[k]; store.set('badDecodeAt', {}); store.set('badDecode', []); av1PrefCache = null; h265PrefCache = null; }
+setInterval(() => { const now = Date.now(); for (const [k, t] of Object.entries(badDecodeAt)) if (now - t >= BAD_DECODE_MS){ delete badDecodeAt[k]; badDecode.delete(k); av1PrefCache = null; h265PrefCache = null; } }, 600000);
 function viewerCodec(sender, meta){
   if (sender === 'H264' && meta && meta.av1 === true && av1Instead()) return 'AV1';
   if (sender === 'H264' && meta && meta.h265 === true && h265Instead()) return 'H265';
@@ -4436,6 +4454,12 @@ const chatOverlayOn = () => !!store.get('overlayChat', true);
 function overlaySend(item){
   if (!me || !localStream || !overlayAvailable()) return;
   if (item.kind === 'chat' ? !chatOverlayOn() : !overlayOn()) return;
+  if (nativeOv && helper.ready){
+    const ok = v => typeof v === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,/.test(v) && v.length < 1100000 ? v : '';
+    const img = ok(item.img), av = img.length + ok(item.av).length < 1800000 ? ok(item.av) : '';
+    helperSend({cmd: 'ovitem', kind: item.kind === 'chat' ? 'chat' : 'react', text: String(item.text || '').slice(0, 220), who: String(item.who || '').slice(0, 24), img, av});
+    return;
+  }
   if (overlayItemAvailable()){ try{ window.telaoDesktop.overlayItem(item); }catch{} return; }
   // app antigo: só emojis curtos
   if (item.kind === 'react' && item.text && item.text.length <= 4) window.telaoDesktop.overlayReact(item.text, item.who);
@@ -4712,6 +4736,8 @@ function syncOpts(){
   $('#optH265').checked = h265Auto();
   $('#optPerfSec').hidden = !(DESKTOP && (window.telaoDesktop.shell || 0) >= PRIO_SHELL);
   $('#optGpuPrio').checked = !!store.get('gpuPrio', true);
+  $('#optNativeOvBox').hidden = !(DESKTOP && (window.telaoDesktop.shell || 0) >= NATIVE_OV_SHELL);
+  $('#optNativeOv').checked = !!store.get('nativeOverlay', true);
   $('#optPrivMsg').value = privateMsg();
   renderThemeOpts();
   renderLobbyAvatar();
@@ -4726,6 +4752,7 @@ function initOpts(){
     sendBulletin();
   };
   $('#optH265').onchange = () => { store.set('h265auto', $('#optH265').checked); h265PrefCache = null; toast('Vale a partir da próxima conexão (comece a transmitir de novo, ou recarregue quem assiste).'); };
+  $('#optNativeOv').onchange = () => { store.set('nativeOverlay', $('#optNativeOv').checked); if (localStream && (overlayOn() || chatOverlayOn())){ hideOverlay(); showOverlay(); } };
   $('#optGpuPrio').onchange = () => { store.set('gpuPrio', $('#optGpuPrio').checked); if (localStream) syncGpuPrio(); };
   $('#optPrivMsg').oninput = () => { store.set('privateMsg', $('#optPrivMsg').value.slice(0, 80)); if (privateOn) drawPrivate(); };
   $('#optRx').onclick = () => { $('#opts').hidden = true; openRxEdit(); };
@@ -5279,6 +5306,9 @@ function turboReport(){
 /* Camada de reações por cima do jogo (app desktop 1.6+): janela transparente do próprio app. */
 let lastChosen = null;
 const overlayAvailable = () => DESKTOP && !!window.telaoDesktop.overlayShow;
+const NATIVE_OV_SHELL = 13;
+let nativeOv = false;
+const nativeOverlayWanted = () => DESKTOP && (window.telaoDesktop.shell || 0) >= NATIVE_OV_SHELL && helper.ready && store.get('nativeOverlay', true);
 const overlayOn = () => !!store.get('overlay', true);
 async function showOverlay(){
   syncOverlayBtn();
@@ -5289,9 +5319,24 @@ async function showOverlay(){
     const r = await helperQuery({cmd: 'winrect', hwnd: c.id.split(':')[1] || ''}, 'winrect', 2000);
     if (r && r.ok) rect = r;
   }
+  // camada desenhada pelo Telão Audio (app 1.16.1+): não disputa a placa do Telão com a captura turbo
+  if (nativeOverlayWanted()){
+    let area = rect;
+    if (!area && c && c.type === 'screen'){ try{ area = await window.telaoDesktop.monitorRect(c.id); }catch{} }
+    if (!area && window.telaoDesktop.monitorRect){ try{ area = await window.telaoDesktop.monitorRect(''); }catch{} }
+    if (area && area.w > 100 && area.h > 100){
+      const r = await helperQuery({cmd: 'ovshow', x: String(area.x), y: String(area.y), w: String(area.w), h: String(area.h)}, 'ovshow', 4000);
+      if (r && r.ok){ nativeOv = true; try{ await window.telaoDesktop.overlayHide(); }catch{} return; }
+      turboNote('camada do Telão Audio indisponível: usando a do app');
+    }
+  }
+  nativeOv = false;
   try{ await window.telaoDesktop.overlayShow(c ? c.id : '', rect); }catch{}
 }
-function hideOverlay(){ if (overlayAvailable()) window.telaoDesktop.overlayHide().catch(() => {}); }
+function hideOverlay(){
+  if (nativeOv){ helperSend({cmd: 'ovhide'}); nativeOv = false; }
+  if (overlayAvailable()) window.telaoDesktop.overlayHide().catch(() => {});
+}
 function syncOverlayBtn(){
   const c = $('#pipChat');
   c.hidden = !DESKTOP;
@@ -5718,13 +5763,15 @@ function checkDecoding(pid, t, v, codec){
   if ((v.framesDecoded || 0) > 0){ t.firstFrame = true; t.msgEl.textContent = ''; return; }
   if (!t.dataSince && (v.bytesReceived || 0) > 30000) t.dataSince = Date.now();
   if (!t.dataSince || Date.now() - t.dataSince < 5000) return;
+  // Só é "não consigo exibir" se quadros inteiros chegaram e nenhum foi decodificado. Quem transmite com o PC
+  // sobrecarregado pode demorar a mandar o 1º quadro inteiro: isso não é culpa do formato.
+  if (v.framesReceived != null && v.framesReceived < 10){ if (Date.now() - t.dataSince < 20000) return; t.msgEl.textContent = 'O vídeo está chegando devagar (o PC de quem transmite pode estar sobrecarregado)…'; return; }
   t.codecSwitched = true;
   const extra = codec === 'AV1' || codec === 'H265';   // formatos pedidos só por quem não aceita H.264 Main: se falhar, volta para o H.264
   if (codec && (CODECS[codec] || extra) && !badDecode.has(codec) && (extra || [...badDecode].filter(c => CODECS[c]).length < Object.keys(CODECS).length - 1)){
     if (codec === 'AV1') av1PrefCache = false;
     if (codec === 'H265') h265PrefCache = false;
-    badDecode.add(codec);
-    store.set('badDecode', [...badDecode]);
+    markBadDecode(codec);
     toast('O vídeo de ' + t.nameEl.textContent + ' chegou em ' + codec + ', que este PC não conseguiu exibir. Pedindo outro formato…', 'warn', 7000);
     t.msgEl.textContent = 'Trocando o formato do vídeo…';
     requestRecall(pid);
@@ -5922,6 +5969,7 @@ async function openDiag(){
     renderGpu();
   }
   $('#dgVer').textContent = DESKTOP && diagGpu ? 'Telão Desktop ' + diagGpu.versions.app + ' · Chromium ' + diagGpu.versions.chrome : 'Telão no navegador';
+  $('#dgForget').hidden = !badDecode.size;
   renderDiagTable();
   renderTurboTest();
   renderLive();
@@ -6167,6 +6215,7 @@ function diagReport(){
   try{ const rc = (RTCRtpReceiver.getCapabilities('video') || {}).codecs || [];
     L.push('Este aparelho recebe: ' + [...new Set(rc.map(c => c.mimeType.replace(/^video\//i, '') + (/h264/i.test(c.mimeType) ? ' ' + h264Profile(c.sdpFmtpLine).slice(0, 4) : '')))].filter(x => !/rtx|red|ulpfec|flexfec/i.test(x)).join(', ') +
            ' · no lugar do H.264 pede: ' + (av1Instead() ? 'AV1 (se quem transmite codificar pela placa)' : h265Instead() ? 'H.265 (se quem transmite codificar pela placa)' : 'nada')); }catch{}
+  L.push('Formatos que este aparelho marcou como "não consigo exibir": ' + (badDecode.size ? Object.entries(badDecodeAt).map(([k, t]) => k + ' (há ' + Math.round((Date.now() - t) / 60000) + ' min)').join(', ') : 'nenhum'));
   L.push('Formato escolhido: ' + currentCodec() + ' · qualidade: ' + currentQ() + ' · H.264 pela placa neste PC: ' + (h264Hw() ? JSON.stringify(h264Hw()) : 'ainda não testado') + (myHighHw() ? ' (oferece High a quem não aceita Main)' : '') + (h264AutoLast ? ' · teste automático: ' + h264AutoLast : ''));
   for (const r of diagResults)
     L.push(r.codec + (r.prof ? ' ' + r.prof : '') + ': ' + r.status + (r.used ? ' (saiu ' + r.used + ')' : '') + (r.fps ? ' ' + r.fps + 'fps' : '') + (r.h ? ' ' + r.h + 'p' : '') +
@@ -6183,6 +6232,7 @@ function diagReport(){
 
 function initDiag(){
   $('#diagBtn').onclick = openDiag;
+  $('#dgForget').onclick = () => { forgetBadDecode(); $('#dgForget').hidden = true; toast('Pronto: os formatos voltam a ser tentados na próxima conexão (comece a assistir de novo ou peça para quem transmite parar e voltar).'); };
   $('#dgClose').onclick = closeDiag;
   $('#diag').onclick = e => { if (e.target === $('#diag')) closeDiag(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#diag').hidden) closeDiag(); });

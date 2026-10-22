@@ -1,7 +1,7 @@
 {
   "name": "telao",
   "productName": "Telão",
-  "version": "1.16.0",
+  "version": "1.16.1",
   "description": "Compartilhamento de tela entre amigos, direto de PC pra PC.",
   "main": "main.js",
   "private": true,

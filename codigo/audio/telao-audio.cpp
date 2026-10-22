@@ -9,7 +9,7 @@
 //     ser aprovado aqui no console (fica salvo em telao-audio-origens.txt).
 //
 // Build (de qualquer SO, com Zig):
-//   zig c++ -target x86_64-windows-gnu -O2 -o telao-audio.exe telao-audio.cpp -lole32 -lws2_32 -luser32
+//   zig c++ -target x86_64-windows-gnu -O2 -o telao-audio.exe telao-audio.cpp -lole32 -lws2_32 -luser32 -lgdi32
 
 #include <cstdarg>
 #include <cstdlib>
@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cmath>
 
 /* ======================= Partes portáveis (testáveis fora do Windows) ======================= */
 
@@ -245,6 +246,70 @@ static VramUse vramAggregate(const std::vector<std::pair<std::string, double>>& 
   return u;
 }
 
+/* ---------- camada por cima do jogo: partes portáveis ----------
+   Reações sobem e somem (3 s) e mensagens do chat empilham embaixo (somem em ~9 s), como na camada antiga
+   (overlay.html), mas desenhadas aqui: a janela transparente do Electron disputava a placa com a captura turbo. */
+static std::vector<uint8_t> b64decode(const std::string& s){
+  std::vector<uint8_t> out; out.reserve(s.size() * 3 / 4);
+  int val = 0, bits = -8;
+  for (unsigned char c : s){
+    int d;
+    if (c >= 'A' && c <= 'Z') d = c - 'A'; else if (c >= 'a' && c <= 'z') d = c - 'a' + 26;
+    else if (c >= '0' && c <= '9') d = c - '0' + 52; else if (c == '+') d = 62; else if (c == '/') d = 63;
+    else if (c == '=') break; else continue;
+    val = (val << 6) | d; bits += 6;
+    if (bits >= 0){ out.push_back((uint8_t)((val >> bits) & 0xFF)); bits -= 8; }
+  }
+  return out;
+}
+// "data:image/png;base64,...." → bytes (vazio se não for imagem)
+static std::vector<uint8_t> dataUrlBytes(const std::string& u){
+  if (u.compare(0, 11, "data:image/") != 0) return {};
+  size_t k = u.find(";base64,");
+  if (k == std::string::npos || k > 40) return {};
+  return b64decode(u.substr(k + 8));
+}
+// cubic-bezier(0, 0, .58, 1) = "ease-out" do CSS
+static double easeOut(double x){
+  if (x <= 0) return 0; if (x >= 1) return 1;
+  double lo = 0, hi = 1, t = x;
+  for (int i = 0; i < 30; i++){
+    t = (lo + hi) / 2;
+    double bx = 3 * (1 - t) * t * t * 0.58 + t * t * t;   // P1x = 0, P2x = .58
+    if (bx < x) lo = t; else hi = t;
+  }
+  return 3 * (1 - t) * (1 - t) * t * 0 + 3 * (1 - t) * t * t * 1 + t * t * t;   // P1y = 0, P2y = 1
+}
+// Reação: deslocamento vertical (em alturas do próprio elemento, negativo = sobe), escala e opacidade aos t ms.
+struct RxPose { double dy, scale, alpha; };
+static RxPose rxPose(double ms){
+  double p = ms / 3000.0;
+  RxPose r{0, 0.6, 0};
+  if (p <= 0) return r;
+  if (p >= 1) return {-3.2, 1, 0};
+  if (p < 0.1){ double e = easeOut(p / 0.1); return {-0.08 * e, 0.6 + 0.55 * e, e}; }
+  double e = easeOut((p - 0.1) / 0.9);
+  r.dy = -0.08 + (-3.2 + 0.08) * e; r.scale = 1.15 - 0.15 * e;
+  r.alpha = p < 0.7 ? 1 : 1 - easeOut((p - 0.7) / 0.3);
+  return r;
+}
+// Mensagem do chat: entra subindo 10 px (0,25 s), começa a sumir aos 8 s (0,8 s) e sai aos 8,9 s.
+struct ChatPose { double dy, alpha; bool gone; };
+static ChatPose chatPose(double ms){
+  if (ms >= 8900) return {0, 0, true};
+  if (ms < 250){ double e = easeOut(ms / 250); return {10 * (1 - e), e, false}; }
+  if (ms >= 8000) return {0, std::max(0.0, 1 - (ms - 8000) / 800), false};
+  return {0, 1, false};
+}
+// Faixa no lado direito de baixo da área do jogo (pixels físicos): 25% da largura (180 a 360 px na escala 100%).
+struct ORect { int x, y, w, h; };
+static ORect overlayRect(int ax, int ay, int aw, int ah, double scale){
+  int w = (int)std::lround(std::min(360 * scale, std::max(180 * scale, aw * 0.25)));
+  w = std::min(w, std::max(1, aw));
+  int h = std::min(ah, (int)std::lround(640 * scale));
+  return {ax + aw - w, ay + ah - h, w, std::max(1, h)};
+}
+
 /* ---------- ícone do Telao.exe: partes portáveis ----------
    Arquivo .ico → imagens; e o diretório de grupo (RT_GROUP_ICON) que o Windows guarda dentro do exe,
    que aponta para cada imagem pelo número do recurso (RT_ICON). */
@@ -348,6 +413,20 @@ int main(){
     check(gpuAggregate({}, {20}).inst == 0, "placa: sem contadores = zero");
   }
   {
+    check(b64decode("aGVsbG8=") == std::vector<uint8_t>({'h','e','l','l','o'}) && b64decode("YQ").size() == 1, "camada: base64");
+    check(dataUrlBytes("data:image/png;base64,iVBORw0KGgo=").size() == 8 && dataUrlBytes("javascript:alert(1)").empty(), "camada: só aceita imagem em data URL");
+    check(std::fabs(easeOut(0.5) - 0.5) > 0.05 && easeOut(0) == 0 && easeOut(1) == 1 && easeOut(0.25) < easeOut(0.75), "camada: curva ease-out");
+    RxPose a = rxPose(0), b = rxPose(300), c = rxPose(1500), d = rxPose(2990), e = rxPose(3000);
+    check(a.alpha == 0 && std::fabs(a.scale - 0.6) < 1e-9 && std::fabs(b.alpha - 1) < 1e-6 && std::fabs(b.scale - 1.15) < 1e-6, "camada: reação aparece crescendo (0,6 → 1,15)");
+    check(c.dy < b.dy && c.alpha == 1 && d.alpha < 0.05 && e.dy == -3.2 && e.alpha == 0, "camada: reação sobe e some em 3 s");
+    ChatPose m0 = chatPose(0), m1 = chatPose(1000), m2 = chatPose(8400), m3 = chatPose(9000);
+    check(m0.alpha == 0 && m0.dy == 10 && m1.alpha == 1 && m1.dy == 0 && m2.alpha > 0.4 && m2.alpha < 0.6 && m3.gone, "camada: mensagem entra, fica 8 s e some");
+    ORect r = overlayRect(0, 0, 2560, 1440, 1.0);
+    check(r.w == 360 && r.h == 640 && r.x == 2200 && r.y == 800, "camada: faixa de 360x640 no canto de baixo à direita (1440p)");
+    r = overlayRect(100, 50, 640, 480, 1.5);
+    check(r.w == 270 && r.h == 480 && r.x == 470 && r.y == 50, "camada: janela pequena e escala 150%");
+  }
+  {
     std::vector<std::pair<std::string, double>> pr = {
       {"pid_20_luid_0x00000000_0x0000D1B2_phys_0", 300e6}, {"pid_21_luid_0x00000000_0x0000D1B2_phys_0", 100e6},
       {"pid_10_luid_0x00000000_0x0000D1B2_phys_0", 6e9}, {"pid_20_luid_0x00000000_0x0000AAAA_phys_0", 50e6}, {"_Total", 1}};
@@ -392,6 +471,10 @@ int main(){
 #include <tlhelp32.h>
 #include <pdh.h>
 #include <pdhmsg.h>
+#include <d2d1_1.h>
+#include <dwrite.h>
+#include <wincodec.h>
+#include <memory>
 #include <d3d11.h>
 #include <dxgi1_2.h>
 #include <inspectable.h>
@@ -1433,6 +1516,453 @@ static void gprioRequest(Conn* c, const std::string& msg){
   if (on || gGprioOk) logf("Prioridade na placa de vídeo: %s (%d processos ok, %d recusados)", on ? "alta" : "normal", gGprioOk, gGprioFail);
 }
 
+/* ---------- camada por cima do jogo (nativa) ----------
+   Janela transparente, sempre por cima, que não recebe clique nem foco e não aparece em captura de tela
+   (WDA_EXCLUDEFROMCAPTURE). Desenho por software (Direct2D sobre uma imagem na memória + DirectWrite) e
+   entregue ao Windows com UpdateLayeredWindow: não usa a placa do Telão, então não atrapalha a transmissão.
+   Só anima (30 quadros/s) enquanto há algo na tela; sem nada, a janela some e a linha de trabalho fica parada. */
+#define OV_TICK_MS 33
+struct OvImg { std::vector<ID2D1Bitmap*> frames; std::vector<int> delay; int total = 0; float w = 0, h = 0;
+  ID2D1Bitmap* at(double ms) const { if (frames.empty()) return nullptr; if (frames.size() == 1 || total <= 0) return frames[0];
+    int t = (int)fmod(ms, (double)total); for (size_t i = 0; i < frames.size(); i++){ if (t < delay[i]) return frames[i]; t -= delay[i]; } return frames.back(); }
+  ~OvImg(){ for (auto* b : frames) if (b) b->Release(); } };
+struct OvItem { bool chat = false; double born = 0; std::wstring text, who; std::shared_ptr<OvImg> img, av; float xFrac = 0; };
+struct OvCmd { int kind = 0; int x = 0, y = 0, w = 0, h = 0; bool chat = false; std::string text, who, img, av; };
+static CRITICAL_SECTION gOvLock;
+static std::vector<OvCmd*> gOvQueue;
+static HWND gOvHwnd = nullptr;
+static HANDLE gOvThread = nullptr, gOvReady = nullptr;
+static volatile LONG gOvState = 0;   // 0 nada, 1 pronta, -1 não deu (Windows sem Direct2D/DirectWrite)
+static Conn* gOvOwner = nullptr;
+typedef HRESULT (WINAPI *PFN_D2D1CreateFactory)(D2D1_FACTORY_TYPE, REFIID, const D2D1_FACTORY_OPTIONS*, void**);
+typedef HRESULT (WINAPI *PFN_DWriteCreateFactory)(DWRITE_FACTORY_TYPE, REFIID, IUnknown**);
+typedef UINT (WINAPI *PFN_GetDpiForWindow)(HWND);
+template <class T> static void safeRelease(T*& p){ if (p){ p->Release(); p = nullptr; } }
+
+struct Ov {
+  ID2D1Factory1* d2 = nullptr; IDWriteFactory* dw = nullptr; IWICImagingFactory* wic = nullptr;
+  IWICBitmap* surf = nullptr; ID2D1RenderTarget* rt = nullptr; ID2D1DeviceContext* dc = nullptr;
+  ID2D1SolidColorBrush *white = nullptr, *black = nullptr, *green = nullptr, *bubble = nullptr, *label = nullptr;
+  IDWriteTextFormat *fEmoji = nullptr, *fBig = nullptr, *fLabel = nullptr, *fChat = nullptr;
+  HDC memDC = nullptr; HBITMAP dib = nullptr; void* bits = nullptr;
+  int W = 0, H = 0, X = 0, Y = 0; double scale = 1; bool visible = false, timer = false;
+  std::vector<OvItem> items;
+  std::vector<std::pair<size_t, std::shared_ptr<OvImg>>> cache;   // imagens já decodificadas (fotos de perfil se repetem)
+  double t0 = 0;
+  double now(){ return nowMs() - t0; }
+} gOv;
+
+static void ovFreeTarget(){
+  Ov& o = gOv;
+  o.items.clear(); o.cache.clear();
+  safeRelease(o.white); safeRelease(o.black); safeRelease(o.green); safeRelease(o.bubble); safeRelease(o.label);
+  safeRelease(o.fEmoji); safeRelease(o.fBig); safeRelease(o.fLabel); safeRelease(o.fChat);
+  safeRelease(o.dc); safeRelease(o.rt); safeRelease(o.surf);
+  if (o.memDC){ DeleteDC(o.memDC); o.memDC = nullptr; }
+  if (o.dib){ DeleteObject(o.dib); o.dib = nullptr; o.bits = nullptr; }
+}
+static IDWriteTextFormat* ovFont(float px, DWRITE_FONT_WEIGHT wgt){
+  IDWriteTextFormat* f = nullptr;
+  if (gOv.dw) gOv.dw->CreateTextFormat(L"Segoe UI", nullptr, wgt, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, px, L"pt-br", &f);
+  return f;
+}
+// (Re)cria a imagem onde se desenha, no tamanho da faixa.
+static bool ovMakeTarget(int w, int h){
+  Ov& o = gOv;
+  ovFreeTarget();
+  o.W = w; o.H = h;
+  if (FAILED(o.wic->CreateBitmap(w, h, GUID_WICPixelFormat32bppPBGRA, WICBitmapCacheOnLoad, &o.surf))) return false;
+  D2D1_RENDER_TARGET_PROPERTIES rp = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_SOFTWARE, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
+  if (FAILED(o.d2->CreateWicBitmapRenderTarget(o.surf, &rp, &o.rt))) return false;
+  o.rt->QueryInterface(__uuidof(ID2D1DeviceContext), (void**)&o.dc);   // emoji colorido (Windows 8.1+); sem isso, sai monocromático
+  o.rt->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);   // ClearType não combina com transparência
+  o.rt->CreateSolidColorBrush(D2D1::ColorF(1, 1, 1, 1), &o.white);
+  o.rt->CreateSolidColorBrush(D2D1::ColorF(0, 0, 0, 0.45f), &o.black);
+  o.rt->CreateSolidColorBrush(D2D1::ColorF(0x7cf29a, 1), &o.green);
+  o.rt->CreateSolidColorBrush(D2D1::ColorF(10 / 255.f, 12 / 255.f, 16 / 255.f, 0.82f), &o.bubble);
+  o.rt->CreateSolidColorBrush(D2D1::ColorF(0, 0, 0, 0.6f), &o.label);
+  double s = o.scale;
+  o.fEmoji = ovFont((float)(52 * s), DWRITE_FONT_WEIGHT_NORMAL);
+  o.fBig = ovFont((float)(30 * s), DWRITE_FONT_WEIGHT_EXTRA_BOLD);
+  o.fLabel = ovFont((float)(13 * s), DWRITE_FONT_WEIGHT_NORMAL);
+  o.fChat = ovFont((float)(15 * s), DWRITE_FONT_WEIGHT_NORMAL);
+  BITMAPINFO bi{}; bi.bmiHeader.biSize = sizeof bi.bmiHeader; bi.bmiHeader.biWidth = w; bi.bmiHeader.biHeight = -h;
+  bi.bmiHeader.biPlanes = 1; bi.bmiHeader.biBitCount = 32; bi.bmiHeader.biCompression = BI_RGB;
+  HDC sdc = GetDC(nullptr);
+  o.memDC = CreateCompatibleDC(sdc);
+  o.dib = CreateDIBSection(sdc, &bi, DIB_RGB_COLORS, &o.bits, nullptr, 0);
+  ReleaseDC(nullptr, sdc);
+  if (!o.dib || !o.bits) return false;
+  SelectObject(o.memDC, o.dib);
+  return o.fEmoji && o.fBig && o.fLabel && o.fChat && o.white;
+}
+
+// Imagem (foto de perfil ou figurinha; GIF anima) → bitmaps prontos para desenhar, reduzidos a no máximo maxSide.
+static std::shared_ptr<OvImg> ovDecode(const std::string& url, int maxSide){
+  Ov& o = gOv;
+  if (url.empty() || !o.rt) return nullptr;
+  size_t key = std::hash<std::string>()(url) ^ (size_t)maxSide;
+  for (auto& c : o.cache) if (c.first == key) return c.second;
+  std::vector<uint8_t> bytes = dataUrlBytes(url);
+  if (bytes.size() < 16) return nullptr;
+  IWICStream* st = nullptr; IWICBitmapDecoder* dec = nullptr;
+  auto img = std::make_shared<OvImg>();
+  if (SUCCEEDED(o.wic->CreateStream(&st)) && SUCCEEDED(st->InitializeFromMemory(bytes.data(), (DWORD)bytes.size())) &&
+      SUCCEEDED(o.wic->CreateDecoderFromStream(st, nullptr, WICDecodeMetadataCacheOnDemand, &dec))){
+    UINT n = 0; dec->GetFrameCount(&n);
+    GUID fmt{}; dec->GetContainerFormat(&fmt);
+    bool gif = IsEqualGUID(fmt, GUID_ContainerFormatGif) && n > 1;
+    n = std::min<UINT>(n, gif ? 60 : 1);
+    UINT cw = 0, ch = 0;   // tela lógica do GIF (os quadros podem ser menores e deslocados)
+    if (gif){
+      IWICMetadataQueryReader* q = nullptr;
+      if (SUCCEEDED(dec->GetMetadataQueryReader(&q))){
+        PROPVARIANT v; PropVariantInit(&v);
+        if (SUCCEEDED(q->GetMetadataByName(L"/logscrdesc/Width", &v)) && v.vt == VT_UI2) cw = v.uiVal; PropVariantClear(&v);
+        if (SUCCEEDED(q->GetMetadataByName(L"/logscrdesc/Height", &v)) && v.vt == VT_UI2) ch = v.uiVal; PropVariantClear(&v);
+        q->Release();
+      }
+    }
+    std::vector<uint8_t> canvas, prev;
+    for (UINT i = 0; i < n; i++){
+      IWICBitmapFrameDecode* fr = nullptr; IWICFormatConverter* cv = nullptr;
+      if (FAILED(dec->GetFrame(i, &fr))) break;
+      UINT fw = 0, fh = 0; fr->GetSize(&fw, &fh);
+      int left = 0, top = 0, delay = 100, disposal = 0;
+      if (gif){
+        IWICMetadataQueryReader* q = nullptr;
+        if (SUCCEEDED(fr->GetMetadataQueryReader(&q))){
+          PROPVARIANT v; PropVariantInit(&v);
+          if (SUCCEEDED(q->GetMetadataByName(L"/imgdesc/Left", &v)) && v.vt == VT_UI2) left = v.uiVal; PropVariantClear(&v);
+          if (SUCCEEDED(q->GetMetadataByName(L"/imgdesc/Top", &v)) && v.vt == VT_UI2) top = v.uiVal; PropVariantClear(&v);
+          if (SUCCEEDED(q->GetMetadataByName(L"/grctlext/Delay", &v)) && v.vt == VT_UI2) delay = std::max(20, v.uiVal * 10); PropVariantClear(&v);
+          if (SUCCEEDED(q->GetMetadataByName(L"/grctlext/Disposal", &v)) && v.vt == VT_UI1) disposal = v.bVal; PropVariantClear(&v);
+          q->Release();
+        }
+        if (!cw || !ch){ cw = fw; ch = fh; }
+      } else { cw = fw; ch = fh; }
+      if (!cw || !ch || cw > 4096 || ch > 4096){ fr->Release(); break; }
+      std::vector<uint8_t> px((size_t)fw * fh * 4);
+      bool ok = SUCCEEDED(o.wic->CreateFormatConverter(&cv)) &&
+                SUCCEEDED(cv->Initialize(fr, GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, nullptr, 0, WICBitmapPaletteTypeCustom)) &&
+                SUCCEEDED(cv->CopyPixels(nullptr, fw * 4, (UINT)px.size(), px.data()));
+      if (cv) cv->Release(); fr->Release();
+      if (!ok) break;
+      if (canvas.empty()) canvas.assign((size_t)cw * ch * 4, 0);
+      if (disposal == 3) prev = canvas;
+      for (UINT yy = 0; yy < fh; yy++){   // "source over" do quadro sobre a tela do GIF
+        int cy = top + (int)yy; if (cy < 0 || cy >= (int)ch) continue;
+        for (UINT xx = 0; xx < fw; xx++){
+          int cx = left + (int)xx; if (cx < 0 || cx >= (int)cw) continue;
+          const uint8_t* s = &px[((size_t)yy * fw + xx) * 4]; uint8_t* d = &canvas[((size_t)cy * cw + cx) * 4];
+          unsigned a = s[3]; if (!a) continue;
+          for (int k = 0; k < 4; k++) d[k] = (uint8_t)(s[k] + d[k] * (255 - a) / 255);
+        }
+      }
+      // reduz (fotos de perfil e figurinhas aparecem pequenas)
+      double k = std::min(1.0, (double)maxSide / std::max(cw, ch));
+      UINT ow = std::max(1u, (UINT)std::lround(cw * k)), oh = std::max(1u, (UINT)std::lround(ch * k));
+      std::vector<uint8_t> outPx;
+      const uint8_t* src = canvas.data(); UINT pitch = cw * 4;
+      if (ow != cw || oh != ch){
+        IWICBitmap* cb = nullptr; IWICBitmapScaler* sc = nullptr;
+        outPx.resize((size_t)ow * oh * 4);
+        bool sok = SUCCEEDED(o.wic->CreateBitmapFromMemory(cw, ch, GUID_WICPixelFormat32bppPBGRA, cw * 4, (UINT)canvas.size(), canvas.data(), &cb)) &&
+                   SUCCEEDED(o.wic->CreateBitmapScaler(&sc)) && SUCCEEDED(sc->Initialize(cb, ow, oh, WICBitmapInterpolationModeFant)) &&
+                   SUCCEEDED(sc->CopyPixels(nullptr, ow * 4, (UINT)outPx.size(), outPx.data()));
+        if (sc) sc->Release(); if (cb) cb->Release();
+        if (!sok){ ow = cw; oh = ch; outPx.clear(); } else { src = outPx.data(); pitch = ow * 4; }
+      }
+      ID2D1Bitmap* b = nullptr;
+      D2D1_BITMAP_PROPERTIES bp = D2D1::BitmapProperties(D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
+      if (SUCCEEDED(o.rt->CreateBitmap(D2D1::SizeU(ow, oh), src, pitch, &bp, &b))){ img->frames.push_back(b); img->delay.push_back(delay); img->total += delay; img->w = (float)ow; img->h = (float)oh; }
+      if (disposal == 2){   // volta ao fundo (transparente) na área deste quadro
+        for (UINT yy = 0; yy < fh; yy++){ int cy = top + (int)yy; if (cy < 0 || cy >= (int)ch) continue;
+          for (UINT xx = 0; xx < fw; xx++){ int cx = left + (int)xx; if (cx < 0 || cx >= (int)cw) continue; memset(&canvas[((size_t)cy * cw + cx) * 4], 0, 4); } }
+      } else if (disposal == 3 && !prev.empty()) canvas = prev;
+    }
+  }
+  if (dec) dec->Release(); if (st) st->Release();
+  if (img->frames.empty()) return nullptr;
+  o.cache.push_back({key, img});
+  if (o.cache.size() > 40) o.cache.erase(o.cache.begin());
+  return img;
+}
+
+static IDWriteTextLayout* ovLayout(const std::wstring& t, IDWriteTextFormat* f, float maxW){
+  IDWriteTextLayout* l = nullptr;
+  if (gOv.dw && f) gOv.dw->CreateTextLayout(t.c_str(), (UINT32)t.size(), f, maxW, 10000, &l);
+  return l;
+}
+static void ovText(IDWriteTextLayout* l, float x, float y, ID2D1Brush* b){
+  Ov& o = gOv;
+  if (o.dc) o.dc->DrawTextLayout(D2D1::Point2F(x, y), l, b, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+  else o.rt->DrawTextLayout(D2D1::Point2F(x, y), l, b);
+}
+static void ovCircleImg(ID2D1Bitmap* b, float x, float y, float d, float alpha){
+  Ov& o = gOv;
+  if (!b) return;
+  ID2D1EllipseGeometry* g = nullptr; ID2D1Layer* layer = nullptr;
+  if (SUCCEEDED(o.d2->CreateEllipseGeometry(D2D1::Ellipse(D2D1::Point2F(x + d / 2, y + d / 2), d / 2, d / 2), &g)) && SUCCEEDED(o.rt->CreateLayer(&layer))){
+    o.rt->PushLayer(D2D1::LayerParameters(D2D1::InfiniteRect(), g), layer);
+    o.rt->DrawBitmap(b, D2D1::RectF(x, y, x + d, y + d), alpha);
+    o.rt->PopLayer();
+  }
+  safeRelease(layer); safeRelease(g);
+}
+
+// Uma reação: conteúdo (emoji, texto curto ou figurinha) com o nome embaixo, subindo e sumindo.
+static void ovDrawReact(const OvItem& it, double t){
+  Ov& o = gOv; double s = o.scale;
+  RxPose p = rxPose(t);
+  if (p.alpha <= 0.003) return;
+  IDWriteTextLayout* body = nullptr; float bw, bh;
+  bool big = !it.img && it.text.size() > 2;
+  if (it.img){ bw = bh = (float)(96 * s); }
+  else {
+    body = ovLayout(it.text, big ? o.fBig : o.fEmoji, (float)o.W);
+    if (!body) return;
+    body->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+    DWRITE_TEXT_METRICS m{}; body->GetMetrics(&m); bw = m.widthIncludingTrailingWhitespace; bh = m.height;
+  }
+  IDWriteTextLayout* nm = ovLayout(it.who, o.fLabel, (float)o.W);
+  float nw = 0, nh = (float)(13 * s * 1.3);
+  if (nm){ nm->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP); DWRITE_TEXT_METRICS m{}; nm->GetMetrics(&m); nw = m.widthIncludingTrailingWhitespace; nh = m.height; }
+  float av = it.av ? (float)(18 * s) : 0, gap = it.av ? (float)(5 * s) : 0;
+  float lw = (float)(16 * s) + av + gap + nw, lh = std::max(av, nh) + (float)(4 * s);
+  float ew = std::max(bw, lw), eh = bh + (float)(3 * s) + lh;
+  float left = (float)(it.xFrac * o.W), bottom = (float)(o.H - o.H * 0.06);
+  float cx = left + ew / 2, cy = bottom - eh / 2 + (float)(p.dy * eh);
+  o.rt->SetTransform(D2D1::Matrix3x2F::Scale((float)p.scale, (float)p.scale, D2D1::Point2F(cx, cy)));
+  float x0 = cx - ew / 2, y0 = cy - eh / 2;
+  float a = (float)p.alpha;
+  ID2D1Layer* layer = nullptr;
+  bool fade = a < 0.999f && SUCCEEDED(o.rt->CreateLayer(&layer));
+  if (fade) o.rt->PushLayer(D2D1::LayerParameters(D2D1::InfiniteRect(), nullptr, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1::IdentityMatrix(), a), layer);
+  if (it.img){
+    ID2D1Bitmap* b = it.img->at(t);
+    float k = std::min(bw / std::max(1.f, it.img->w), bh / std::max(1.f, it.img->h)), iw = it.img->w * k, ih = it.img->h * k;
+    if (b) o.rt->DrawBitmap(b, D2D1::RectF(cx - iw / 2, y0 + (bh - ih) / 2, cx + iw / 2, y0 + (bh + ih) / 2));
+  } else {
+    float bx = cx - bw / 2;
+    if (big){   // contorno escuro para ler em cima de qualquer jogo
+      float d = (float)(1.2 * s);
+      for (int i = 0; i < 4; i++) ovText(body, bx + (i == 0 ? -d : i == 1 ? d : 0), y0 + (i == 2 ? -d : i == 3 ? d : 0), o.black);
+      ovText(body, bx, y0, o.white);
+    } else {
+      ovText(body, bx, y0 + (float)(3 * s), o.black);   // sombra
+      ovText(body, bx, y0, o.white);
+    }
+  }
+  float lx = cx - lw / 2, ly = y0 + bh + (float)(3 * s);
+  o.rt->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(lx, ly, lx + lw, ly + lh), (float)(6 * s), (float)(6 * s)), o.label);
+  if (it.av) ovCircleImg(it.av->at(t), lx + (float)(8 * s), ly + (lh - av) / 2, av, 1);
+  if (nm) ovText(nm, lx + (float)(8 * s) + av + gap, ly + (lh - nh) / 2, o.white);
+  if (fade) o.rt->PopLayer();
+  safeRelease(layer);
+  o.rt->SetTransform(D2D1::Matrix3x2F::Identity());
+  safeRelease(body); safeRelease(nm);
+}
+
+// Mensagens do chat: empilhadas a partir de baixo, alinhadas à direita; a mais nova embaixo.
+static void ovDrawChat(double now){
+  Ov& o = gOv; double s = o.scale;
+  float maxW = (float)(o.W - 16 * s), y = (float)(o.H - 12 * s);
+  for (int i = (int)o.items.size() - 1; i >= 0; i--){
+    const OvItem& it = o.items[i];
+    if (!it.chat) continue;
+    ChatPose p = chatPose(now - it.born);
+    if (p.gone) continue;
+    float av = it.av ? (float)(26 * s) : 0, gap = it.av ? (float)(7 * s) : 0;
+    float padX = (float)(10 * s), padY = (float)(6 * s);
+    float textMax = std::max(40.f, maxW - 2 * padX - av - gap);
+    std::wstring full = it.who + (it.text.empty() ? L"" : L"  " + it.text);
+    IDWriteTextLayout* l = ovLayout(full, o.fChat, textMax);
+    if (!l) continue;
+    DWRITE_TEXT_RANGE nr{0, (UINT32)it.who.size()};
+    l->SetFontWeight(DWRITE_FONT_WEIGHT_BOLD, nr);
+    l->SetDrawingEffect(o.green, nr);
+    DWRITE_TEXT_METRICS m{}; l->GetMetrics(&m);
+    float tw = m.widthIncludingTrailingWhitespace, th = m.height;
+    float sw = 0, sh = 0;
+    if (it.img){ float k = std::min((float)(120 * s) / std::max(1.f, it.img->w), (float)(120 * s) / std::max(1.f, it.img->h)); k = std::min(k, (float)s); sw = it.img->w * k; sh = it.img->h * k; }
+    float bodyW = std::max(tw, sw), bodyH = th + (it.img ? (float)(4 * s) + sh : 0);
+    float bw = 2 * padX + av + gap + bodyW, bh = 2 * padY + std::max(av, bodyH);
+    float bx = (float)(o.W - 8 * s) - bw, by = y - bh + (float)(p.dy * s);
+    ID2D1Layer* layer = nullptr;
+    bool fade = p.alpha < 0.999 && SUCCEEDED(o.rt->CreateLayer(&layer));
+    if (fade) o.rt->PushLayer(D2D1::LayerParameters(D2D1::InfiniteRect(), nullptr, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1::IdentityMatrix(), (float)p.alpha), layer);
+    o.rt->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(bx, by, bx + bw, by + bh), (float)(10 * s), (float)(10 * s)), o.bubble);
+    if (it.av) ovCircleImg(it.av->at(now - it.born), bx + padX, by + padY + (float)(1 * s), av, 1);
+    float tx = bx + padX + av + gap;
+    ovText(l, tx, by + padY, o.white);
+    if (it.img){
+      ID2D1Bitmap* b = it.img->at(now - it.born);
+      if (b) o.rt->DrawBitmap(b, D2D1::RectF(tx, by + padY + th + (float)(4 * s), tx + sw, by + padY + th + (float)(4 * s) + sh));
+    }
+    if (fade) o.rt->PopLayer();
+    safeRelease(layer); safeRelease(l);
+    y = by - (float)(6 * s);
+    if (y < 0) break;
+  }
+}
+
+static void ovPresent(){
+  Ov& o = gOv;
+  WICRect r{0, 0, o.W, o.H}; IWICBitmapLock* lk = nullptr;
+  if (FAILED(o.surf->Lock(&r, WICBitmapLockRead, &lk))) return;
+  UINT stride = 0, size = 0; BYTE* p = nullptr;
+  lk->GetStride(&stride); lk->GetDataPointer(&size, &p);
+  if (p) for (int y = 0; y < o.H; y++) memcpy((uint8_t*)o.bits + (size_t)y * o.W * 4, p + (size_t)y * stride, (size_t)o.W * 4);
+  lk->Release();
+  POINT pos{o.X, o.Y}, zero{0, 0}; SIZE sz{o.W, o.H};
+  BLENDFUNCTION bf{AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+  UpdateLayeredWindow(gOvHwnd, nullptr, &pos, &sz, o.memDC, &zero, 0, &bf, ULW_ALPHA);
+}
+// Teste: com TELAO_OV_DUMP=<pasta>, cada quadro desenhado também vai para um PNG (só para conferir o desenho).
+static void ovDump(){
+  static wchar_t dir[MAX_PATH] = L"?";
+  if (dir[0] == L'?'){ if (!GetEnvironmentVariableW(L"TELAO_OV_DUMP", dir, MAX_PATH)) dir[0] = 0; }
+  if (!dir[0]) return;
+  static int n = 0; wchar_t path[MAX_PATH + 32]; swprintf(path, MAX_PATH + 32, L"%ls\\ov-%03d.png", dir, n++);
+  IWICStream* st = nullptr; IWICBitmapEncoder* enc = nullptr; IWICBitmapFrameEncode* fe = nullptr;
+  if (SUCCEEDED(gOv.wic->CreateStream(&st)) && SUCCEEDED(st->InitializeFromFilename(path, GENERIC_WRITE)) &&
+      SUCCEEDED(gOv.wic->CreateEncoder(GUID_ContainerFormatPng, nullptr, &enc)) && SUCCEEDED(enc->Initialize(st, WICBitmapEncoderNoCache)) &&
+      SUCCEEDED(enc->CreateNewFrame(&fe, nullptr)) && SUCCEEDED(fe->Initialize(nullptr))){
+    fe->SetSize(gOv.W, gOv.H); WICPixelFormatGUID pf = GUID_WICPixelFormat32bppPBGRA; fe->SetPixelFormat(&pf);
+    fe->WriteSource(gOv.surf, nullptr); fe->Commit(); enc->Commit();
+  }
+  safeRelease(fe); safeRelease(enc); safeRelease(st);
+}
+static void ovFrame(){
+  Ov& o = gOv;
+  if (!o.rt) return;
+  double now = o.now();
+  o.items.erase(std::remove_if(o.items.begin(), o.items.end(), [&](const OvItem& it){ return now - it.born > (it.chat ? 8900 : 3000); }), o.items.end());
+  int chats = 0;
+  for (int i = (int)o.items.size() - 1; i >= 0; i--) if (o.items[i].chat && ++chats > 5) o.items.erase(o.items.begin() + i);
+  o.rt->BeginDraw();
+  o.rt->Clear(D2D1::ColorF(0, 0, 0, 0));
+  for (auto& it : o.items) if (!it.chat) ovDrawReact(it, now - it.born);
+  ovDrawChat(now);
+  HRESULT ehr = o.rt->EndDraw();
+  if (FAILED(ehr)){ static int said = 0; if (said++ < 3) logf("Camada: falha ao desenhar (0x%08lx)", (unsigned long)ehr); return; }
+  ovDump();
+  if (o.visible) ovPresent();
+  if (o.items.empty() && o.visible){   // nada mais animando: some e para
+    ShowWindow(gOvHwnd, SW_HIDE); o.visible = false;
+    if (o.timer){ KillTimer(gOvHwnd, 1); o.timer = false; }
+  }
+}
+static void ovApply(OvCmd* c){
+  Ov& o = gOv;
+  if (c->kind == 1){   // mostrar (área do jogo)
+    o.scale = 1;
+    MONITORINFO mi{}; mi.cbSize = sizeof mi;
+    RECT ar{c->x, c->y, c->x + c->w, c->y + c->h};
+    HMONITOR mon = MonitorFromRect(&ar, MONITOR_DEFAULTTONEAREST);
+    typedef HRESULT (WINAPI *PFN_GetDpiForMonitor)(HMONITOR, int, UINT*, UINT*);
+    static PFN_GetDpiForMonitor gdm = (PFN_GetDpiForMonitor)GetProcAddress(LoadLibraryW(L"shcore.dll"), "GetDpiForMonitor");
+    UINT dx = 96, dy = 96; if (gdm && SUCCEEDED(gdm(mon, 0, &dx, &dy)) && dx >= 96) o.scale = dx / 96.0;
+    ORect r = overlayRect(c->x, c->y, c->w, c->h, o.scale);
+    if (r.w != o.W || r.h != o.H || !o.rt){ if (!ovMakeTarget(r.w, r.h)) ovFreeTarget(); }
+    o.X = r.x; o.Y = r.y;
+    if (o.visible) SetWindowPos(gOvHwnd, HWND_TOPMOST, o.X, o.Y, o.W, o.H, SWP_NOACTIVATE);
+  } else if (c->kind == 2){   // esconder
+    o.items.clear();
+    if (o.visible){ ShowWindow(gOvHwnd, SW_HIDE); o.visible = false; }
+    if (o.timer){ KillTimer(gOvHwnd, 1); o.timer = false; }
+  } else if (c->kind == 3 && o.rt){   // reação ou mensagem
+    OvItem it; it.chat = c->chat; it.born = o.now();
+    it.text = wide(c->text); it.who = wide(c->who);
+    if (!c->img.empty()) it.img = ovDecode(c->img, (int)std::lround((c->chat ? 120 : 96) * o.scale * 1.5));
+    if (!c->av.empty()) it.av = ovDecode(c->av, (int)std::lround(26 * o.scale * 2));
+    if (it.text.empty() && !it.img) return;
+    it.xFrac = (float)(0.08 + (rand() % 1000) / 1000.0 * 0.52);
+    if (!it.chat && std::count_if(o.items.begin(), o.items.end(), [](const OvItem& x){ return !x.chat; }) > 24) return;
+    o.items.push_back(std::move(it));
+    if (!o.visible){
+      ovFrame();
+      ovPresent();
+      SetWindowPos(gOvHwnd, HWND_TOPMOST, o.X, o.Y, o.W, o.H, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+      o.visible = true;
+    }
+    if (!o.timer){ SetTimer(gOvHwnd, 1, OV_TICK_MS, nullptr); o.timer = true; }
+  }
+}
+static LRESULT CALLBACK ovProc(HWND h, UINT m, WPARAM w, LPARAM l){
+  if (m == WM_APP + 1){
+    std::vector<OvCmd*> q;
+    EnterCriticalSection(&gOvLock); q.swap(gOvQueue); LeaveCriticalSection(&gOvLock);
+    for (auto* c : q){ ovApply(c); delete c; }
+    return 0;
+  }
+  if (m == WM_TIMER && w == 1){ ovFrame(); return 0; }
+  if (m == WM_NCHITTEST) return HTTRANSPARENT;
+  if (m == WM_MOUSEACTIVATE) return MA_NOACTIVATE;
+  return DefWindowProcW(h, m, w, l);
+}
+static DWORD WINAPI ovThread(void*){
+  CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+  Ov& o = gOv; o.t0 = nowMs();
+  HMODULE d2m = LoadLibraryW(L"d2d1.dll"), dwm = LoadLibraryW(L"dwrite.dll");
+  auto mkD2 = d2m ? (PFN_D2D1CreateFactory)GetProcAddress(d2m, "D2D1CreateFactory") : nullptr;
+  auto mkDw = dwm ? (PFN_DWriteCreateFactory)GetProcAddress(dwm, "DWriteCreateFactory") : nullptr;
+  bool ok = mkD2 && mkDw &&
+            SUCCEEDED(mkD2(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory1), nullptr, (void**)&o.d2)) &&
+            SUCCEEDED(mkDw(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&o.dw)) &&
+            SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (void**)&o.wic));
+  if (ok){
+    WNDCLASSEXW wc{}; wc.cbSize = sizeof wc; wc.lpfnWndProc = ovProc; wc.hInstance = GetModuleHandleW(nullptr); wc.lpszClassName = L"TelaoCamada";
+    RegisterClassExW(&wc);
+    gOvHwnd = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+                              L"TelaoCamada", L"Telão — por cima do jogo", WS_POPUP, 0, 0, 1, 1, nullptr, nullptr, wc.hInstance, nullptr);
+    ok = gOvHwnd != nullptr;
+    if (ok && !SetWindowDisplayAffinity(gOvHwnd, 0x11 /*WDA_EXCLUDEFROMCAPTURE*/)) SetWindowDisplayAffinity(gOvHwnd, 1 /*WDA_MONITOR*/);
+  }
+  InterlockedExchange(&gOvState, ok ? 1 : -1);
+  logf(ok ? "Camada por cima do jogo: pronta (desenhada pelo Telão Audio)" : "Camada por cima do jogo: este Windows não tem Direct2D/DirectWrite; fica a do app");
+  SetEvent(gOvReady);
+  if (!ok){ CoUninitialize(); return 0; }
+  PostMessageW(gOvHwnd, WM_APP + 1, 0, 0);
+  MSG msg;
+  while (GetMessageW(&msg, nullptr, 0, 0) > 0){ TranslateMessage(&msg); DispatchMessageW(&msg); }
+  return 0;
+}
+static bool ovEnsure(){
+  EnterCriticalSection(&gOvLock);
+  if (!gOvThread){ gOvReady = CreateEventW(nullptr, TRUE, FALSE, nullptr); gOvThread = CreateThread(nullptr, 0, ovThread, nullptr, 0, nullptr); }
+  LeaveCriticalSection(&gOvLock);
+  if (gOvReady) WaitForSingleObject(gOvReady, 3000);
+  return gOvState == 1;
+}
+static void ovPost(OvCmd* c){
+  EnterCriticalSection(&gOvLock); gOvQueue.push_back(c); LeaveCriticalSection(&gOvLock);
+  if (gOvHwnd) PostMessageW(gOvHwnd, WM_APP + 1, 0, 0);
+}
+static void overlayCommand(Conn* c, const std::string& cmd, const std::string& msg){
+  if (!(c->origin == "null" || c->origin.rfind("file://", 0) == 0)) return;
+  if (cmd == "ovshow"){
+    bool ok = ovEnsure();
+    if (ok){
+      OvCmd* o = new OvCmd; o->kind = 1;
+      o->x = atoi(jsonStr(msg, "x").c_str()); o->y = atoi(jsonStr(msg, "y").c_str()); o->w = atoi(jsonStr(msg, "w").c_str()); o->h = atoi(jsonStr(msg, "h").c_str());
+      if (o->w < 100 || o->h < 100){ delete o; ok = false; } else { gOvOwner = c; ovPost(o); }
+    }
+    wsText(c, ok ? "{\"type\":\"ovshow\",\"ok\":true}" : "{\"type\":\"ovshow\",\"ok\":false}");
+  } else if (cmd == "ovhide"){
+    if (gOvState == 1){ OvCmd* o = new OvCmd; o->kind = 2; ovPost(o); }
+  } else if (cmd == "ovitem" && gOvState == 1 && gOvOwner == c){
+    OvCmd* o = new OvCmd; o->kind = 3;
+    o->chat = jsonStr(msg, "kind") == "chat";
+    o->text = jsonStr(msg, "text").substr(0, o->chat ? 660 : 64); o->who = jsonStr(msg, "who").substr(0, 96);
+    o->img = jsonStr(msg, "img"); o->av = jsonStr(msg, "av");
+    if (o->img.size() > 1200000) o->img.clear();
+    if (o->av.size() > 1200000) o->av.clear();
+    ovPost(o);
+  }
+}
+
 static void handleCommand(Conn* c, const std::string& msg){
   std::string cmd = jsonStr(msg, "cmd");
   if (cmd == "list"){ wsText(c, buildAppList()); return; }
@@ -1441,6 +1971,7 @@ static void handleCommand(Conn* c, const std::string& msg){
   if (cmd == "vstop"){ stopVideo(c); return; }
   if (cmd == "gpu"){ gpuRequest(c, msg); return; }
   if (cmd == "gprio"){ gprioRequest(c, msg); return; }
+  if (cmd == "ovshow" || cmd == "ovhide" || cmd == "ovitem"){ overlayCommand(c, cmd, msg); return; }
   if (cmd == "winrect"){
     // Retângulo da janela (pixels físicos) e do monitor onde ela está: usado pela camada de reações do app.
     unsigned long long hv = strtoull(jsonStr(msg, "hwnd").c_str(), nullptr, 10);
@@ -1516,7 +2047,7 @@ static DWORD WINAPI connThread(void* arg){
       int op = h[0] & 0x0F; bool masked = h[1] & 0x80; uint64_t len = h[1] & 0x7F;
       if (len == 126){ unsigned char e[2]; if (!recvExact(c->s, (char*)e, 2)) break; len = (e[0] << 8) | e[1]; }
       else if (len == 127){ unsigned char e[8]; if (!recvExact(c->s, (char*)e, 8)) break; len = 0; for (int i = 0; i < 8; i++) len = (len << 8) | e[i]; }
-      if (len > (1u << 20)) break;
+      if (len > (3u << 20)) break;   // até ~3 MB (figurinha + foto de perfil na camada por cima do jogo)
       unsigned char mask[4] = {0, 0, 0, 0};
       if (masked && !recvExact(c->s, (char*)mask, 4)) break;
       std::string p((size_t)len, '\0');
@@ -1532,6 +2063,7 @@ static DWORD WINAPI connThread(void* arg){
   stopCapture(c);
   stopVideo(c);
   if (gGprioOwner == c){ gGprioOwner = nullptr; InterlockedExchange(&gGprioOn, 0); applyGpuPrio(false); }
+  if (gOvOwner == c && gOvState == 1){ gOvOwner = nullptr; OvCmd* o = new OvCmd; o->kind = 2; ovPost(o); }
   closesocket(c->s);
   DeleteCriticalSection(&c->sendLock);
   delete c;
@@ -1728,6 +2260,7 @@ int main(int argc, char** argv){
 
   InitializeCriticalSection(&gLogLock);
   InitializeCriticalSection(&gGpuLock);
+  InitializeCriticalSection(&gOvLock);
   InitializeCriticalSection(&gOriginLock);
   InitializeCriticalSection(&gCapLock);
   InitializeCriticalSection(&gVidLock);

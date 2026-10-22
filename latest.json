@@ -1,30 +1,28 @@
 {
-  "version": "1.16.0",
+  "version": "1.16.1",
   "minShell": 2,
-  "page": "versoes/telao-1.16.0.html",
-  "sha256": "90c2bee0ce7529d3e0f419f0fb165808f1cfcea8dd97e8571bdad7614099fa81",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.0",
+  "page": "versoes/telao-1.16.1.html",
+  "sha256": "30672b40376ebc3d12e828a2b51fa23da1813a146c4151011ffde47baf473f49",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.1",
   "notes": [
-    "Ausente: quem não responde ao \"Ainda está aí?\" (45 min sem mexer no PC), bloqueia a tela ou é marcado por alguém para de receber vídeo, e ninguém gasta internet ou placa com ele. Volta ao mexer",
-    "Tirar da sala: em \"quem está na sala\", qualquer um pode marcar alguém como ausente ou tirar da sala (a pessoa pode entrar de novo)",
-    "Custo da transmissão e medição de uso real mostram a memória (do PC e do Telão) e a memória da placa de vídeo, com aviso quando estão quase cheias",
-    "App: prioridade do Telão na placa de vídeo enquanto transmite (experimental, em Opções), para a transmissão não engasgar com jogo pesado",
-    "Aviso da captura turbo aponta a causa certa (placa de vídeo, processador ou preparo lento)"
+    "App: reações e chat por cima do jogo agora são desenhados pelo Telão Audio. Com a captura turbo, reação ou chat (principalmente em spam) travava a transmissão; não trava mais",
+    "Corrige quem transmitia em VP8 pelo processador sem precisar: quando a 1ª imagem de alguém demorava (PC sobrecarregado), o Telão de quem assistia marcava o formato como \"não consigo exibir\" para sempre. Agora só marca se a imagem chega e não aparece, a marca vale 12 h, e as marcas antigas foram esquecidas",
+    "Relatório mostra os formatos marcados, e o Diagnóstico tem \"Esquecer formatos marcados\""
   ],
   "app": {
-    "version": "1.16.0",
-    "shell": 12,
+    "version": "1.16.1",
+    "shell": 13,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.16.0/app.asar",
-        "sha256": "8f490b8d47fdf017c97624386428612fe4ce196a4444d44c74ac50966e254f11",
-        "size": 481036
+        "path": "versoes/app-1.16.1/app.asar",
+        "sha256": "a59912afd03f573eab928d7d6e54defe4c64aa92fdcb39006587997516ca410b",
+        "size": 486604
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.16.0/telao-audio.exe",
-        "sha256": "50c7d93140e4c901a2acce5d27abfee5b69ae925df410fc55a8e56c024bc22ea",
-        "size": 657920
+        "path": "versoes/app-1.16.1/telao-audio.exe",
+        "sha256": "5f543cc598b34c81baad48eb6a27e6ab617482d8881ee031eb277632d654038e",
+        "size": 694784
       }
     }
   }

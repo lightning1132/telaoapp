@@ -15,6 +15,12 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.16.1
+- As reações e o chat por cima do jogo passam a ser desenhados pelo Telão Audio, numa janela própria e leve.
+  A camada antiga (do app) disputava a placa de vídeo com a captura turbo: reação ou chat em spam travava a
+  transmissão. Se algo não aparecer direito, dá para voltar à antiga em Opções → Desempenho.
+- Quem transmitia em VP8 pelo processador sem motivo volta para H.264/H.265 pela placa.
+
 NOVIDADES DO APP 1.16
 - Ausente: depois de 45 min sem mexer no PC aparece "Ainda está aí?"; sem resposta em 2 min (ou com a tela
   bloqueada), você para de receber vídeo e ninguém gasta internet ou placa com você. Mexeu, voltou.
