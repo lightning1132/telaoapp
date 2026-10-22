@@ -15,6 +15,13 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.12
+- Captura turbo (experimental, vem desligada): o Telão Audio embutido pega a imagem do jogo direto do Windows
+  e já reduz e converte na placa de vídeo, sem passar pelo motor de captura do Chromium (que em alguns PCs
+  trava abaixo de 60 fps). Liga no seletor de tela, em "Captura turbo". Se der qualquer problema, o Telão
+  volta sozinho para a captura normal. Para comparar antes: Diagnóstico → "Testar captura turbo".
+  No Windows 10 aparece uma borda amarela em volta do jogo enquanto ela estiver ligada (só na sua tela).
+
 NOVIDADES DO APP 1.9
 - Chat da sala (botão "💬 Chat"). Quem está transmitindo vê as mensagens por cima do jogo, na mesma faixa
   das reações; liga/desliga no botão 💬 da miniatura (separado do 🎮 das reações). Não entra na transmissão.

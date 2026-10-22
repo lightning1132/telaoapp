@@ -1,28 +1,27 @@
 {
-  "version": "1.11.0",
+  "version": "1.12.0",
   "minShell": 2,
-  "page": "versoes/telao-1.11.0.html",
-  "sha256": "01179d81a10db45ca01bacbf7e188da279a540332b1ce42776e59b00e7254437",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.11.0",
+  "page": "versoes/telao-1.12.0.html",
+  "sha256": "7e9920e26dae7e13aad5e47da877ea7ab146e7012ad563868f7792844707ed40",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.0",
   "notes": [
-    "Diagnóstico → \"Medir uso real (60 s)\": quanto o Telão gasta do PC e como estão imagem e rede de cada transmissão, com avisos",
-    "Fundo da entrada: o sorteio não fica mais sem imagem quando uma das listas de jogos acaba",
-    "Chat: mensagem mandada logo em seguida da outra não se perde mais"
+    "Captura turbo (experimental): o Telão Audio pega a imagem do jogo direto do Windows e prepara na placa de vídeo, sem passar pelo motor de captura do Chromium. Liga no seletor de tela",
+    "Diagnóstico → \"Testar captura turbo\": compara a captura normal com a turbo na janela do seu jogo (sem transmitir nada)"
   ],
   "app": {
-    "version": "1.11.0",
-    "shell": 8,
+    "version": "1.12.0",
+    "shell": 9,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.11.0/app.asar",
-        "sha256": "9bb70445cbfd6518e06103983e51a8fe2d46b801af265c561821e63ea81dc842",
-        "size": 318803
+        "path": "versoes/app-1.12.0/app.asar",
+        "sha256": "9e7ad3345d023d1e486fa7e9ce31fea24225327d2a4d8a34fb1428fc261e0ec0",
+        "size": 352680
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.11.0/telao-audio.exe",
-        "sha256": "8a12183c7c83bfdc8da81f4ee0b81ad2fc7988769da6ce3c2b636b4c85ab0205",
-        "size": 505856
+        "path": "versoes/app-1.12.0/telao-audio.exe",
+        "sha256": "161f8e2d029fb7a8f0db08eb5de50e8d92d5f52829fd17a71994a723aa9d0bae",
+        "size": 627200
       }
     }
   }

@@ -4,6 +4,7 @@
 //   - Telão Audio embutido, iniciado escondido junto com o app
 //   - sem economia de energia em segundo plano, para a transmissão não engasgar com o app minimizado
 const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, screen, net} = require('electron');
+const sharedTexture = (() => { try{ return require('electron').sharedTexture || null; }catch{ return null; } })();
 const path = require('path');
 const fs = require('fs');
 const {spawn} = require('child_process');
@@ -69,7 +70,7 @@ function createWindow(){
       contextIsolation: true,
       nodeIntegration: false,
       backgroundThrottling: false,
-      additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION],
+      additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION, '--telao-main-pid=' + process.pid],
     },
   });
   Menu.setApplicationMenu(null);
@@ -197,6 +198,49 @@ app.whenReady().then(() => {
   ipcMain.handle('telao:select', (_e, id, systemAudio) => {
     pendingSource = {id: String(id), systemAudio: !!systemAudio};
     return true;
+  });
+
+  // ---- captura turbo: imagens que o Telão Audio deixa na placa de vídeo ----
+  // O Telão Audio cria as texturas e já entrega os handles valendo neste processo; aqui elas viram
+  // "texturas importadas" do Chromium e seguem para a página, que monta os quadros sem copiar nada.
+  const turboTex = new Map();   // geração → [texturas importadas]
+  const turboRelease = gen => { const l = turboTex.get(gen); if (!l) return; turboTex.delete(gen); for (const t of l) try{ t.release(); }catch{} };
+  ipcMain.handle('telao:turboImport', async (e, info) => {
+    if (!sharedTexture) return {ok: false, error: 'esta versão do app não tem textura compartilhada'};
+    if (!win || win.isDestroyed() || e.sender !== win.webContents) return {ok: false, error: 'janela inválida'};
+    const i = info || {}, gen = i.gen, w = i.w, h = i.h;
+    if (!Number.isInteger(gen) || gen < 1 || !Number.isInteger(w) || !Number.isInteger(h) || w < 16 || h < 16 || w > 4096 || h > 4096 ||
+        (i.fmt !== 'nv12' && i.fmt !== 'bgra') || !Array.isArray(i.slots) || !i.slots.length || i.slots.length > 8 || !i.slots.every(x => /^\d{1,20}$/.test(String(x))))
+      return {ok: false, error: 'pedido inválido'};
+    turboRelease(gen);
+    const list = [];
+    const colorSpace = i.fmt === 'nv12' ? {primaries: 'bt709', transfer: 'bt709', matrix: 'bt709', range: 'limited'}
+                                        : {primaries: 'bt709', transfer: 'srgb', matrix: 'rgb', range: 'full'};
+    try{
+      for (let k = 0; k < i.slots.length; k++){
+        const handle = Buffer.alloc(8); handle.writeBigUInt64LE(BigInt(i.slots[k]));
+        const imp = sharedTexture.importSharedTexture({textureInfo: {pixelFormat: i.fmt, codedSize: {width: w, height: h}, colorSpace, handle: {ntHandle: handle}}});
+        list.push(imp);
+        await sharedTexture.sendSharedTexture({frame: win.webContents.mainFrame, importedSharedTexture: imp}, gen, k);
+      }
+    }catch(err){
+      for (const t of list) try{ t.release(); }catch{}
+      return {ok: false, error: String(err && err.message || err).slice(0, 200)};
+    }
+    turboTex.set(gen, list);
+    return {ok: true};
+  });
+  ipcMain.handle('telao:turboRelease', (_e, gen) => { turboRelease(gen); return true; });
+  // Monitor escolhido no seletor ("screen:...") → retângulo em pixels físicos (o Telão Audio acha o monitor por ele).
+  ipcMain.handle('telao:monitorRect', async (_e, sourceId) => {
+    try{
+      const srcs = await desktopCapturer.getSources({types: ['screen'], thumbnailSize: {width: 0, height: 0}});
+      const s = srcs.find(x => x.id === String(sourceId));
+      const d = (s && screen.getAllDisplays().find(x => String(x.id) === String(s.display_id))) || (srcs.length === 1 ? screen.getPrimaryDisplay() : null);
+      if (!d) return null;
+      const b = process.platform === 'win32' && screen.dipToScreenRect ? screen.dipToScreenRect(null, d.bounds) : d.bounds;
+      return {x: b.x, y: b.y, w: b.width, h: b.height};
+    }catch{ return null; }
   });
 
   // ---- clipes: a página manda o vídeo pronto e o app grava em Vídeos\Telão ----

@@ -18,6 +18,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 /* ======================= Partes portáveis (testáveis fora do Windows) ======================= */
 
@@ -151,6 +152,41 @@ static std::vector<uint32_t> processTree(uint32_t root, const std::vector<ProcIn
   return tree;
 }
 
+/* ---------- captura turbo de vídeo: partes portáveis ---------- */
+// Tamanho de saída: cabe na "caixa" da qualidade escolhida (ex.: 1920x1080), mantém a proporção,
+// nunca aumenta a imagem e sempre tem dimensões pares (exigência do NV12).
+static void fitSize(int sw, int sh, int bw, int bh, int* ow, int* oh){
+  if (sw < 2 || sh < 2){ *ow = 16; *oh = 16; return; }
+  double k = std::min(1.0, std::min((double)bw / sw, (double)bh / sh));
+  int w = ((int)(sw * k + 0.5)) & ~1, h = ((int)(sh * k + 0.5)) & ~1;
+  *ow = std::max(16, w); *oh = std::max(16, h);
+}
+// Onde a imagem entra dentro da saída quando a proporção da janela muda no meio (faixas pretas, sem esticar).
+struct IRect { int l, t, r, b; };
+static IRect aspectRect(int sw, int sh, int ow, int oh){
+  if (sw < 1 || sh < 1) return {0, 0, ow, oh};
+  double k = std::min((double)ow / sw, (double)oh / sh);
+  int w = std::min(ow, (int)(sw * k + 0.5)), h = std::min(oh, (int)(sh * k + 0.5));
+  int l = ((ow - w) / 2) & ~1, t = ((oh - h) / 2) & ~1;
+  return {l, t, l + w, t + h};
+}
+// Ritmo de saída: entrega no máximo 'fps' quadros por segundo e espaçados por igual,
+// mesmo quando o Windows entrega mais (ex.: jogo a 120 com transmissão a 60).
+struct Pacer {
+  double period = 1000.0 / 60, next = -1;
+  void setFps(int fps){ period = 1000.0 / std::max(1, fps); next = -1; }
+  bool accept(double now){
+    if (next < 0 || now - next > period){ next = now + period; return true; }   // começo ou atrasou demais: recomeça
+    if (now >= next - period * 0.25){ next += period; return true; }
+    return false;
+  }
+};
+// Cabeçalho do quadro enviado pela memória: "TVF1", largura, altura, número do quadro (little-endian).
+static void frameHeader(uint8_t* p, uint32_t w, uint32_t h, uint32_t seq){
+  p[0] = 'T'; p[1] = 'V'; p[2] = 'F'; p[3] = '1';
+  for (int i = 0; i < 4; i++){ p[4 + i] = (uint8_t)(w >> (8 * i)); p[8 + i] = (uint8_t)(h >> (8 * i)); p[12 + i] = (uint8_t)(seq >> (8 * i)); }
+}
+
 #ifdef TELAO_PORTABLE_TEST
 int main(){
   int fails = 0;
@@ -180,6 +216,24 @@ int main(){
     std::vector<ProcInfo> loop = {{200, 201, "a.exe"}, {201, 200, "a.exe"}};
     check(processTree(200, loop).size() == 2, "árvore: ciclo de PIDs não trava");
   }
+  {
+    int w, h;
+    fitSize(2560, 1440, 1920, 1080, &w, &h); check(w == 1920 && h == 1080, "turbo: 1440p na caixa 1080p");
+    fitSize(3440, 1440, 1920, 1080, &w, &h); check(w == 1920 && h == 804, "turbo: ultrawide mantém proporção");
+    fitSize(1280, 720, 1920, 1080, &w, &h); check(w == 1280 && h == 720, "turbo: não aumenta janela pequena");
+    fitSize(1001, 563, 1920, 1080, &w, &h); check(w == 1000 && h == 562, "turbo: dimensões pares");
+    fitSize(0, 0, 1920, 1080, &w, &h); check(w == 16 && h == 16, "turbo: tamanho inválido não quebra");
+    IRect r = aspectRect(1920, 1080, 1920, 1080); check(r.l == 0 && r.t == 0 && r.r == 1920 && r.b == 1080, "turbo: mesma proporção ocupa tudo");
+    r = aspectRect(1080, 1080, 1920, 1080); check(r.l == 420 && r.r == 1500 && r.t == 0 && r.b == 1080, "turbo: quadrada fica centralizada");
+    auto run = [](double arrivalMs, int fps, double secs){ Pacer p; p.setFps(fps); int n = 0; for (double t = 0; t < secs * 1000; t += arrivalMs) n += p.accept(t); return n / secs; };
+    double a = run(1000.0 / 120, 60, 10), b = run(15, 60, 10), c = run(1000.0 / 59, 60, 10), d = run(1000.0 / 240, 120, 10);
+    check(a > 59 && a < 61, "ritmo: jogo a 120 → 60");
+    check(b > 57 && b < 61.5, "ritmo: Windows a 66 → ~60");
+    check(c > 58.5, "ritmo: Windows a 59 → passa tudo");
+    check(d > 119 && d < 121, "ritmo: 240 → 120");
+    uint8_t hd[16]; frameHeader(hd, 1920, 1080, 258);
+    check(hd[0] == 'T' && hd[3] == '1' && hd[4] == 0x80 && hd[5] == 7 && hd[8] == 0x38 && hd[9] == 4 && hd[12] == 2 && hd[13] == 1, "cabeçalho do quadro");
+  }
   return fails;
 }
 #else
@@ -198,6 +252,10 @@ int main(){
 #include <audioclient.h>
 #include <audiopolicy.h>
 #include <tlhelp32.h>
+#include <d3d11.h>
+#include <dxgi1_2.h>
+#include <inspectable.h>
+#include <winstring.h>
 
 #ifndef AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM
 #define AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM 0x80000000
@@ -578,10 +636,521 @@ static void startCapture(Conn* conn, DWORD pid, bool include, const std::string&
   logf("Capturando: %s", label.c_str());
 }
 
+/* ---------- captura turbo de vídeo ----------
+   O Windows entrega cada quadro da janela/monitor na placa de vídeo (Windows Graphics Capture).
+   Aqui ele é reduzido para o tamanho da transmissão e convertido para NV12 na própria placa.
+   Dois jeitos de entregar para o Telão:
+     - "gpu": a imagem fica numa textura compartilhada; o Telão recebe só "o quadro N está pronto"
+       (zero cópia: o codificador da placa lê direto dali);
+     - "mem": a imagem pronta vem para a memória e vai pelo WebSocket (plano B, funciona em qualquer placa).
+   Só o app do Telão (página local) pode usar: sites aprovados para o áudio não recebem vídeo. */
+
+struct SizeInt32 { INT32 Width, Height; };
+static const GUID IID_IGraphicsCaptureItemInterop = {0x3628e81b, 0x3cac, 0x4c60, {0xb7, 0xf4, 0x23, 0xce, 0x0e, 0x0c, 0x33, 0x56}};
+static const GUID IID_IGraphicsCaptureItem        = {0x79c3f95b, 0x31f7, 0x4ec2, {0xa4, 0x64, 0x63, 0x2e, 0xf5, 0xd3, 0x07, 0x60}};
+static const GUID IID_IFramePoolStatics2          = {0x589b103f, 0x6bbc, 0x5df5, {0xa9, 0x91, 0x02, 0xe2, 0x8b, 0x3b, 0x66, 0xd5}};
+static const GUID IID_ISession2                   = {0x2c39ae40, 0x7d2e, 0x5044, {0x80, 0x4e, 0x8b, 0x67, 0x99, 0xd4, 0xcf, 0x9e}};
+static const GUID IID_ISession3                   = {0xf2cdd966, 0x22ae, 0x5ea1, {0x95, 0x96, 0x3a, 0x28, 0x93, 0x44, 0xc3, 0xbe}};
+static const GUID IID_ISession5                   = {0x67c0ea62, 0x1f85, 0x5061, {0x92, 0x5a, 0x23, 0x9b, 0xe0, 0xac, 0x09, 0xcb}};
+static const GUID IID_IDxgiInterfaceAccess        = {0xa9b3d012, 0x3df2, 0x4ee3, {0xb8, 0xd1, 0x86, 0x95, 0xf4, 0x57, 0xd3, 0xc1}};
+static const GUID IID_IClosable                   = {0x30d5a829, 0x7fa4, 0x4026, {0x83, 0xbb, 0xd7, 0x5b, 0xae, 0x4e, 0xa9, 0x9e}};
+
+struct IGraphicsCaptureItemInterop : IUnknown {
+  virtual HRESULT STDMETHODCALLTYPE CreateForWindow(HWND, REFIID, void**) = 0;
+  virtual HRESULT STDMETHODCALLTYPE CreateForMonitor(HMONITOR, REFIID, void**) = 0;
+};
+struct IGraphicsCaptureItem : IInspectable {
+  virtual HRESULT STDMETHODCALLTYPE get_DisplayName(HSTRING*) = 0;
+  virtual HRESULT STDMETHODCALLTYPE get_Size(SizeInt32*) = 0;
+  virtual HRESULT STDMETHODCALLTYPE add_Closed(void*, INT64*) = 0;
+  virtual HRESULT STDMETHODCALLTYPE remove_Closed(INT64) = 0;
+};
+struct IDirect3D11CaptureFrame : IInspectable {
+  virtual HRESULT STDMETHODCALLTYPE get_Surface(IInspectable**) = 0;
+  virtual HRESULT STDMETHODCALLTYPE get_SystemRelativeTime(INT64*) = 0;
+  virtual HRESULT STDMETHODCALLTYPE get_ContentSize(SizeInt32*) = 0;
+};
+struct IGraphicsCaptureSession : IInspectable { virtual HRESULT STDMETHODCALLTYPE StartCapture() = 0; };
+struct IGraphicsCaptureSession2 : IInspectable {
+  virtual HRESULT STDMETHODCALLTYPE get_IsCursorCaptureEnabled(boolean*) = 0;
+  virtual HRESULT STDMETHODCALLTYPE put_IsCursorCaptureEnabled(boolean) = 0;
+};
+struct IGraphicsCaptureSession3 : IInspectable {
+  virtual HRESULT STDMETHODCALLTYPE get_IsBorderRequired(boolean*) = 0;
+  virtual HRESULT STDMETHODCALLTYPE put_IsBorderRequired(boolean) = 0;
+};
+struct IGraphicsCaptureSession5 : IInspectable {     // Windows 11 24H2+: intervalo mínimo entre quadros (unidades de 100 ns)
+  virtual HRESULT STDMETHODCALLTYPE get_MinUpdateInterval(INT64*) = 0;
+  virtual HRESULT STDMETHODCALLTYPE put_MinUpdateInterval(INT64) = 0;
+};
+struct IDirect3D11CaptureFramePool : IInspectable {
+  virtual HRESULT STDMETHODCALLTYPE Recreate(IInspectable*, INT32, INT32, SizeInt32) = 0;
+  virtual HRESULT STDMETHODCALLTYPE TryGetNextFrame(IDirect3D11CaptureFrame**) = 0;
+  virtual HRESULT STDMETHODCALLTYPE add_FrameArrived(void*, INT64*) = 0;
+  virtual HRESULT STDMETHODCALLTYPE remove_FrameArrived(INT64) = 0;
+  virtual HRESULT STDMETHODCALLTYPE CreateCaptureSession(IGraphicsCaptureItem*, IGraphicsCaptureSession**) = 0;
+  virtual HRESULT STDMETHODCALLTYPE get_DispatcherQueue(void**) = 0;
+};
+struct IDirect3D11CaptureFramePoolStatics2 : IInspectable {
+  virtual HRESULT STDMETHODCALLTYPE CreateFreeThreaded(IInspectable*, INT32, INT32, SizeInt32, IDirect3D11CaptureFramePool**) = 0;
+};
+struct IDirect3DDxgiInterfaceAccess : IUnknown { virtual HRESULT STDMETHODCALLTYPE GetInterface(REFIID, void**) = 0; };
+struct IClosable : IInspectable { virtual HRESULT STDMETHODCALLTYPE Close() = 0; };
+static const INT32 PIXEL_BGRA8 = 87;   // DirectXPixelFormat.B8G8R8A8UIntNormalized
+
+typedef HRESULT (WINAPI *PFN_RoInitialize)(int);
+typedef HRESULT (WINAPI *PFN_RoGetActivationFactory)(HSTRING, REFIID, void**);
+typedef HRESULT (WINAPI *PFN_WindowsCreateString)(LPCWSTR, UINT32, HSTRING*);
+typedef HRESULT (WINAPI *PFN_WindowsDeleteString)(HSTRING);
+typedef HRESULT (WINAPI *PFN_CreateD3DDeviceFromDXGI)(IDXGIDevice*, IInspectable**);
+typedef HRESULT (WINAPI *PFN_D3D11CreateDevice)(IDXGIAdapter*, D3D_DRIVER_TYPE, HMODULE, UINT, const D3D_FEATURE_LEVEL*, UINT, UINT, ID3D11Device**, D3D_FEATURE_LEVEL*, ID3D11DeviceContext**);
+typedef HRESULT (WINAPI *PFN_CreateDXGIFactory1)(REFIID, void**);
+static PFN_RoInitialize pRoInitialize;
+static PFN_RoGetActivationFactory pRoGetActivationFactory;
+static PFN_WindowsCreateString pWindowsCreateString;
+static PFN_WindowsDeleteString pWindowsDeleteString;
+static PFN_D3D11CreateDevice pD3D11CreateDevice;
+static PFN_CreateDXGIFactory1 pCreateDXGIFactory1;
+static PFN_CreateD3DDeviceFromDXGI pCreateD3DDeviceFromDXGI;
+
+// Tudo carregado na hora: se faltar algo (Windows antigo), só a captura turbo fica indisponível.
+static bool videoApis(){
+  static int st = 0;
+  if (st) return st > 0;
+  HMODULE cb = LoadLibraryW(L"combase.dll"), d3 = LoadLibraryW(L"d3d11.dll"), dx = LoadLibraryW(L"dxgi.dll");
+  if (cb){
+    pRoInitialize = (PFN_RoInitialize)GetProcAddress(cb, "RoInitialize");
+    pRoGetActivationFactory = (PFN_RoGetActivationFactory)GetProcAddress(cb, "RoGetActivationFactory");
+    pWindowsCreateString = (PFN_WindowsCreateString)GetProcAddress(cb, "WindowsCreateString");
+    pWindowsDeleteString = (PFN_WindowsDeleteString)GetProcAddress(cb, "WindowsDeleteString");
+  }
+  if (d3){
+    pD3D11CreateDevice = (PFN_D3D11CreateDevice)GetProcAddress(d3, "D3D11CreateDevice");
+    pCreateD3DDeviceFromDXGI = (PFN_CreateD3DDeviceFromDXGI)GetProcAddress(d3, "CreateDirect3D11DeviceFromDXGIDevice");
+  }
+  if (dx) pCreateDXGIFactory1 = (PFN_CreateDXGIFactory1)GetProcAddress(dx, "CreateDXGIFactory1");
+  st = pRoInitialize && pRoGetActivationFactory && pWindowsCreateString && pWindowsDeleteString && pD3D11CreateDevice && pCreateD3DDeviceFromDXGI && pCreateDXGIFactory1 ? 1 : -1;
+  return st > 0;
+}
+static IInspectable* activationFactory(const wchar_t* cls, REFIID iid){
+  HSTRING s = nullptr; void* f = nullptr;
+  if (FAILED(pWindowsCreateString(cls, (UINT32)wcslen(cls), &s))) return nullptr;
+  HRESULT hr = pRoGetActivationFactory(s, iid, &f);
+  pWindowsDeleteString(s);
+  return SUCCEEDED(hr) ? (IInspectable*)f : nullptr;
+}
+static double nowMs(){ static LARGE_INTEGER f = {}; if (!f.QuadPart) QueryPerformanceFrequency(&f); LARGE_INTEGER c; QueryPerformanceCounter(&c); return c.QuadPart * 1000.0 / f.QuadPart; }
+// Espera curta e precisa sem depender da resolução do relógio do Windows (que ele limita em processos escondidos).
+static void hrSleep(HANDLE timer, double ms){
+  if (timer){
+    LARGE_INTEGER due; due.QuadPart = -(LONGLONG)(ms * 10000);
+    if (SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE)){ WaitForSingleObject(timer, 100); return; }
+  }
+  Sleep(ms < 1 ? 0 : (DWORD)ms);
+}
+template<class T> static void rel(T*& p){ if (p){ p->Release(); p = nullptr; } }
+static void closeObj(IUnknown* o){ if (!o) return; IClosable* c = nullptr; if (SUCCEEDED(o->QueryInterface(IID_IClosable, (void**)&c))){ c->Close(); c->Release(); } }
+
+struct VCap {
+  Conn* conn = nullptr;
+  HANDLE thread = nullptr;
+  volatile LONG stop = 0;
+  HWND hwnd = nullptr; HMONITOR mon = nullptr; bool monitor = false;
+  int boxW = 1920, boxH = 1080, fps = 60;
+  bool gpu = true;
+  DWORD pid = 0;
+  UINT vendor = 0, device = 0;
+};
+static CRITICAL_SECTION gVidLock;
+static VCap* gVid = nullptr;
+
+struct VRes {
+  ID3D11Device* dev = nullptr; ID3D11DeviceContext* ctx = nullptr;
+  ID3D11VideoDevice* vdev = nullptr; ID3D11VideoContext* vctx = nullptr;
+  IInspectable* rtDev = nullptr;
+  IGraphicsCaptureItem* item = nullptr; IDirect3D11CaptureFramePool* pool = nullptr; IGraphicsCaptureSession* ses = nullptr;
+  ID3D11Texture2D* inCopy = nullptr; int inW = 0, inH = 0;
+  ID3D11VideoProcessorEnumerator* vpe = nullptr; ID3D11VideoProcessor* vp = nullptr; ID3D11VideoProcessorInputView* vin = nullptr;
+  std::vector<ID3D11Texture2D*> out; std::vector<ID3D11VideoProcessorOutputView*> outView; std::vector<HANDLE> shared;
+  ID3D11Texture2D* staging = nullptr; ID3D11Query* query = nullptr;
+  HANDLE timer = nullptr, target = nullptr;
+  int ow = 0, oh = 0; bool nv12 = true;
+  std::string adapter;
+};
+static void freeVP(VRes& r){
+  for (auto*& v : r.outView) rel(v);
+  r.outView.clear();
+  rel(r.vin); rel(r.vp); rel(r.vpe);
+}
+static void freeRes(VRes& r){
+  freeVP(r);
+  rel(r.inCopy); rel(r.staging); rel(r.query);
+  for (auto*& t : r.out) rel(t);
+  r.out.clear();
+  for (HANDLE h : r.shared) CloseHandle(h);
+  r.shared.clear();
+  if (r.ses){ closeObj(r.ses); rel(r.ses); }
+  if (r.pool){ closeObj(r.pool); rel(r.pool); }
+  rel(r.item); rel(r.rtDev); rel(r.vctx); rel(r.vdev);
+  if (r.ctx){ r.ctx->ClearState(); r.ctx->Flush(); }
+  rel(r.ctx); rel(r.dev);
+  if (r.timer){ CloseHandle(r.timer); r.timer = nullptr; }
+  if (r.target){ CloseHandle(r.target); r.target = nullptr; }
+}
+static ID3D11Texture2D* makeTex(ID3D11Device* dev, UINT w, UINT h, DXGI_FORMAT f, D3D11_USAGE u, UINT bind, UINT cpu, UINT misc){
+  D3D11_TEXTURE2D_DESC d = {}; d.Width = w; d.Height = h; d.MipLevels = 1; d.ArraySize = 1; d.Format = f; d.SampleDesc.Count = 1;
+  d.Usage = u; d.BindFlags = bind; d.CPUAccessFlags = cpu; d.MiscFlags = misc;
+  ID3D11Texture2D* t = nullptr;
+  return SUCCEEDED(dev->CreateTexture2D(&d, nullptr, &t)) ? t : nullptr;
+}
+// Processador de vídeo da placa: entrada BGRA do tamanho da janela, saída do tamanho da transmissão.
+static HRESULT setupVP(VRes& r, int inW, int inH, int fps){
+  freeVP(r);
+  if (r.inW != inW || r.inH != inH || !r.inCopy){
+    rel(r.inCopy);
+    r.inCopy = makeTex(r.dev, inW, inH, DXGI_FORMAT_B8G8R8A8_UNORM, D3D11_USAGE_DEFAULT, D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE, 0, 0);
+    if (!r.inCopy) return E_OUTOFMEMORY;
+    r.inW = inW; r.inH = inH;
+  }
+  D3D11_VIDEO_PROCESSOR_CONTENT_DESC cd = {};
+  cd.InputFrameFormat = D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE;
+  cd.InputWidth = inW; cd.InputHeight = inH; cd.OutputWidth = r.ow; cd.OutputHeight = r.oh;
+  cd.InputFrameRate = {(UINT)fps, 1}; cd.OutputFrameRate = {(UINT)fps, 1};
+  cd.Usage = D3D11_VIDEO_USAGE_OPTIMAL_SPEED;
+  HRESULT hr = r.vdev->CreateVideoProcessorEnumerator(&cd, &r.vpe);
+  if (SUCCEEDED(hr)) hr = r.vdev->CreateVideoProcessor(r.vpe, 0, &r.vp);
+  if (FAILED(hr)) return hr;
+  D3D11_VIDEO_PROCESSOR_INPUT_VIEW_DESC iv = {}; iv.ViewDimension = D3D11_VPIV_DIMENSION_TEXTURE2D;
+  hr = r.vdev->CreateVideoProcessorInputView(r.inCopy, r.vpe, &iv, &r.vin);
+  if (FAILED(hr)) return hr;
+  for (auto* t : r.out){
+    D3D11_VIDEO_PROCESSOR_OUTPUT_VIEW_DESC ovd = {}; ovd.ViewDimension = D3D11_VPOV_DIMENSION_TEXTURE2D;
+    ID3D11VideoProcessorOutputView* v = nullptr;
+    hr = r.vdev->CreateVideoProcessorOutputView(t, r.vpe, &ovd, &v);
+    if (FAILED(hr)) return hr;
+    r.outView.push_back(v);
+  }
+  // cores: entrada RGB completa → saída BT.709 em faixa de TV (o padrão de vídeo/WebRTC)
+  D3D11_VIDEO_PROCESSOR_COLOR_SPACE in = {}; in.RGB_Range = 0;
+  D3D11_VIDEO_PROCESSOR_COLOR_SPACE out = {}; out.RGB_Range = 0; out.YCbCr_Matrix = 1; out.Nominal_Range = D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_16_235;
+  r.vctx->VideoProcessorSetStreamColorSpace(r.vp, 0, &in);
+  r.vctx->VideoProcessorSetOutputColorSpace(r.vp, &out);
+  r.vctx->VideoProcessorSetStreamFrameFormat(r.vp, 0, D3D11_VIDEO_FRAME_FORMAT_PROGRESSIVE);
+  r.vctx->VideoProcessorSetStreamAutoProcessingMode(r.vp, 0, FALSE);
+  D3D11_VIDEO_COLOR black = {}; black.RGBA.A = 1.0f;
+  r.vctx->VideoProcessorSetOutputBackgroundColor(r.vp, FALSE, &black);
+  RECT all = {0, 0, r.ow, r.oh};
+  r.vctx->VideoProcessorSetOutputTargetRect(r.vp, TRUE, &all);
+  return S_OK;
+}
+static ID3D11Texture2D* frameTexture(IDirect3D11CaptureFrame* fr){
+  IInspectable* surf = nullptr; if (FAILED(fr->get_Surface(&surf)) || !surf) return nullptr;
+  IDirect3DDxgiInterfaceAccess* acc = nullptr; ID3D11Texture2D* tex = nullptr;
+  if (SUCCEEDED(surf->QueryInterface(IID_IDxgiInterfaceAccess, (void**)&acc))){ acc->GetInterface(__uuidof(ID3D11Texture2D), (void**)&tex); acc->Release(); }
+  surf->Release();
+  return tex;
+}
+static void closeFrame(IDirect3D11CaptureFrame* fr){ closeObj(fr); fr->Release(); }
+
+// Mesma placa que o Telão usa (fabricante/modelo informados pela página); sem isso, a placa principal.
+static HRESULT makeDevice(VRes& r, UINT vendor, UINT device){
+  IDXGIFactory1* fac = nullptr; IDXGIAdapter1* pick = nullptr;
+  if (SUCCEEDED(pCreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&fac))){
+    IDXGIAdapter1* a = nullptr;
+    for (UINT i = 0; fac->EnumAdapters1(i, &a) != DXGI_ERROR_NOT_FOUND; i++){
+      DXGI_ADAPTER_DESC1 d; a->GetDesc1(&d);
+      bool sw = (d.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0;
+      if (!sw && !pick && (!vendor || (d.VendorId == vendor && (!device || d.DeviceId == device)))){ pick = a; continue; }
+      a->Release();
+    }
+    fac->Release();
+  }
+  D3D_FEATURE_LEVEL fl[] = {D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0};
+  UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT;
+  HRESULT hr = pD3D11CreateDevice(pick, pick ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE, nullptr, flags, fl, 2, D3D11_SDK_VERSION, &r.dev, nullptr, &r.ctx);
+  if (FAILED(hr)) hr = pD3D11CreateDevice(pick, pick ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE, nullptr, flags, fl + 1, 1, D3D11_SDK_VERSION, &r.dev, nullptr, &r.ctx);
+  if (pick) pick->Release();
+  if (FAILED(hr)) return hr;
+  IDXGIDevice* dx = nullptr; r.dev->QueryInterface(__uuidof(IDXGIDevice), (void**)&dx);
+  if (!dx) return E_NOINTERFACE;
+  IDXGIAdapter* ad = nullptr;
+  if (SUCCEEDED(dx->GetAdapter(&ad))){ DXGI_ADAPTER_DESC d; ad->GetDesc(&d); r.adapter = utf8(d.Description); ad->Release(); }
+  hr = pCreateD3DDeviceFromDXGI(dx, &r.rtDev);
+  dx->Release();
+  if (FAILED(hr)) return hr;
+  r.dev->QueryInterface(__uuidof(ID3D11VideoDevice), (void**)&r.vdev);
+  r.ctx->QueryInterface(__uuidof(ID3D11VideoContext), (void**)&r.vctx);
+  if (!r.vdev || !r.vctx) return E_NOINTERFACE;
+  // Várias threads podem usar o dispositivo (a captura do Windows usa por baixo): protege o contexto.
+  ID3D10Multithread* mt = nullptr;
+  if (SUCCEEDED(r.ctx->QueryInterface(__uuidof(ID3D10Multithread), (void**)&mt))){ mt->SetMultithreadProtected(TRUE); mt->Release(); }
+  return S_OK;
+}
+
+static void vSendErr(VCap* v, const std::string& type, const std::string& msg){
+  wsText(v->conn, "{\"type\":\"" + type + "\",\"message\":\"" + jsonEsc(msg) + "\"}");
+}
+#define VFAIL(msg, hr) do{ vSendErr(v, "verror", std::string(msg) + " (" + hrText(hr) + ")"); logf("Captura turbo: %s (%s)", msg, hrText(hr).c_str()); freeRes(r); return; }while(0)
+
+static void videoRun(VCap* v){
+  VRes r;
+  if (!videoApis()){ vSendErr(v, "verror", "Este Windows não tem a captura moderna (precisa do Windows 10 1903 ou mais novo)."); return; }
+  pRoInitialize(1);
+  HRESULT hr = makeDevice(r, v->vendor, v->device);
+  if (FAILED(hr)) VFAIL("não consegui usar a placa de vídeo", hr);
+  auto interop = (IGraphicsCaptureItemInterop*)activationFactory(L"Windows.Graphics.Capture.GraphicsCaptureItem", IID_IGraphicsCaptureItemInterop);
+  if (!interop) VFAIL("a captura do Windows não está disponível", E_NOINTERFACE);
+  hr = v->monitor ? interop->CreateForMonitor(v->mon, IID_IGraphicsCaptureItem, (void**)&r.item)
+                  : interop->CreateForWindow(v->hwnd, IID_IGraphicsCaptureItem, (void**)&r.item);
+  interop->Release();
+  if (FAILED(hr) || !r.item) VFAIL(v->monitor ? "o Windows não deixou capturar esse monitor" : "o Windows não deixou capturar essa janela", hr);
+  SizeInt32 sz{}; r.item->get_Size(&sz);
+  if (sz.Width < 16 || sz.Height < 16) VFAIL("a janela está minimizada ou sem tamanho", E_FAIL);
+  fitSize(sz.Width, sz.Height, v->boxW, v->boxH, &r.ow, &r.oh);
+
+  // saídas
+  std::vector<std::string> remote;   // handles das imagens compartilhadas, já valendo no processo do Telão
+  if (v->gpu){
+    r.target = OpenProcess(PROCESS_DUP_HANDLE, FALSE, v->pid);
+    if (!r.target) VFAIL("não consegui falar com o Telão para entregar os quadros", HRESULT_FROM_WIN32(GetLastError()));
+    const int K = 5;   // quadros em rodízio: o codificador lê um enquanto os próximos são escritos
+    UINT misc = D3D11_RESOURCE_MISC_SHARED_NTHANDLE | D3D11_RESOURCE_MISC_SHARED;
+    for (int pass = 0; pass < 2 && (int)r.out.size() < K; pass++){
+      r.nv12 = pass == 0;   // NV12 (o que o codificador quer); se a placa não deixar compartilhar, BGRA
+      for (auto*& t : r.out) rel(t);
+      r.out.clear();
+      for (int i = 0; i < K; i++){
+        ID3D11Texture2D* t = makeTex(r.dev, r.ow, r.oh, r.nv12 ? DXGI_FORMAT_NV12 : DXGI_FORMAT_B8G8R8A8_UNORM, D3D11_USAGE_DEFAULT,
+                                     D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE, 0, misc);
+        if (!t) break;
+        r.out.push_back(t);
+      }
+    }
+    if ((int)r.out.size() < K) VFAIL("a placa não deixou criar a imagem compartilhada", E_FAIL);
+    for (auto* t : r.out){
+      IDXGIResource1* r1 = nullptr; HANDLE h = nullptr, dup = nullptr;
+      hr = t->QueryInterface(__uuidof(IDXGIResource1), (void**)&r1);
+      if (SUCCEEDED(hr)){ hr = r1->CreateSharedHandle(nullptr, DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE, nullptr, &h); r1->Release(); }
+      if (FAILED(hr) || !h) VFAIL("a placa não deixou compartilhar a imagem", hr);
+      r.shared.push_back(h);
+      if (!DuplicateHandle(GetCurrentProcess(), h, r.target, &dup, 0, FALSE, DUPLICATE_SAME_ACCESS))
+        VFAIL("não consegui entregar a imagem ao Telão", HRESULT_FROM_WIN32(GetLastError()));
+      remote.push_back(std::to_string((unsigned long long)(uintptr_t)dup));   // vale dentro do processo do Telão
+    }
+    D3D11_QUERY_DESC qd = {D3D11_QUERY_EVENT, 0};
+    if (FAILED(r.dev->CreateQuery(&qd, &r.query))) VFAIL("a placa não deixou sincronizar", E_FAIL);
+  } else {
+    ID3D11Texture2D* t = makeTex(r.dev, r.ow, r.oh, DXGI_FORMAT_NV12, D3D11_USAGE_DEFAULT, D3D11_BIND_RENDER_TARGET, 0, 0);
+    if (!t) VFAIL("a placa não deixou criar a imagem de saída", E_FAIL);
+    r.out.push_back(t);
+    r.staging = makeTex(r.dev, r.ow, r.oh, DXGI_FORMAT_NV12, D3D11_USAGE_STAGING, 0, D3D11_CPU_ACCESS_READ, 0);
+    if (!r.staging) VFAIL("a placa não deixou criar a imagem de leitura", E_FAIL);
+  }
+  hr = setupVP(r, sz.Width, sz.Height, v->fps);
+  if (FAILED(hr)) VFAIL("o processador de vídeo da placa não aceitou esse tamanho", hr);
+
+  auto st2 = (IDirect3D11CaptureFramePoolStatics2*)activationFactory(L"Windows.Graphics.Capture.Direct3D11CaptureFramePool", IID_IFramePoolStatics2);
+  if (!st2) VFAIL("a captura do Windows não está disponível (precisa do Windows 10 1903+)", E_NOINTERFACE);
+  SizeInt32 poolSz = sz;
+  hr = st2->CreateFreeThreaded(r.rtDev, PIXEL_BGRA8, 3, poolSz, &r.pool);
+  st2->Release();
+  if (FAILED(hr)) VFAIL("não consegui preparar a captura", hr);
+  hr = r.pool->CreateCaptureSession(r.item, &r.ses);
+  if (FAILED(hr)) VFAIL("não consegui abrir a sessão de captura", hr);
+  bool border = true, minUpd = false;
+  { IGraphicsCaptureSession2* s2 = nullptr; if (SUCCEEDED(r.ses->QueryInterface(IID_ISession2, (void**)&s2))){ s2->put_IsCursorCaptureEnabled(true); s2->Release(); } }
+  { IGraphicsCaptureSession3* s3 = nullptr; if (SUCCEEDED(r.ses->QueryInterface(IID_ISession3, (void**)&s3))){ border = FAILED(s3->put_IsBorderRequired(false)); s3->Release(); } }
+  { IGraphicsCaptureSession5* s5 = nullptr;   // sem isso o Windows entrega no máximo ~60 por segundo
+    if (SUCCEEDED(r.ses->QueryInterface(IID_ISession5, (void**)&s5))){ minUpd = SUCCEEDED(s5->put_MinUpdateInterval(std::max<INT64>(10000000 / 240, 10000000 / (v->fps * 2)))); s5->Release(); } }
+  hr = r.ses->StartCapture();
+  if (FAILED(hr)) VFAIL("o Windows recusou iniciar a captura", hr);
+
+  r.timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+  if (!r.timer) r.timer = CreateWaitableTimerExW(nullptr, nullptr, 0, TIMER_ALL_ACCESS);
+
+  { std::string j = "{\"type\":\"vstarted\",\"mode\":\"" + std::string(v->gpu ? "gpu" : "mem") + "\",\"w\":" + std::to_string(r.ow) + ",\"h\":" + std::to_string(r.oh) +
+                    ",\"sw\":" + std::to_string(sz.Width) + ",\"sh\":" + std::to_string(sz.Height) + ",\"fmt\":\"" + (r.nv12 ? "nv12" : "bgra") + "\",\"slots\":[";
+    for (size_t i = 0; i < remote.size(); i++) j += (i ? ",\"" : "\"") + remote[i] + "\"";
+    j += "],\"adapter\":\"" + jsonEsc(r.adapter) + "\",\"border\":" + (border ? "true" : "false") + ",\"minUpdate\":" + (minUpd ? "true" : "false") + "}";
+    wsText(v->conn, j); }
+  logf("Captura turbo (%s): %dx%d → %dx%d a até %d fps, placa %s", v->gpu ? "placa" : "memória", sz.Width, sz.Height, r.ow, r.oh, v->fps, r.adapter.c_str());
+
+  Pacer pacer; pacer.setFps(v->fps);
+  std::vector<uint8_t> pkt;
+  int slot = -1, lastSlot = -1; uint32_t seq = 0;
+  double lastSend = 0, lastCheck = nowMs(), statT0 = nowMs();
+  int nWin = 0, nOut = 0, nRep = 0; std::vector<double> ms;
+  auto procCpu = []{ FILETIME c, e, k, u; if (!GetProcessTimes(GetCurrentProcess(), &c, &e, &k, &u)) return 0.0;
+    return ((double)(((ULONGLONG)k.dwHighDateTime << 32) | k.dwLowDateTime) + (double)(((ULONGLONG)u.dwHighDateTime << 32) | u.dwLowDateTime)) / 10000.0; };   // ms de processador
+  double cpu0 = procCpu();
+  std::string endReason;
+  while (!v->stop && v->conn->alive){
+    double now = nowMs();
+    if (now - lastCheck > 500){
+      lastCheck = now;
+      if (!v->monitor && !IsWindow(v->hwnd)){ endReason = "a janela fechou"; break; }
+      HRESULT dr = r.dev->GetDeviceRemovedReason();
+      if (dr != S_OK){ endReason = "a placa de vídeo reiniciou (" + hrText(dr) + ")"; break; }
+    }
+    if (now - statT0 >= 2000){
+      double secs = (now - statT0) / 1000, avg = 0, p95 = 0;
+      if (!ms.empty()){ for (double x : ms) avg += x; avg /= ms.size(); std::sort(ms.begin(), ms.end()); p95 = ms[std::min(ms.size() - 1, (size_t)(ms.size() * 0.95))]; }
+      double cpu1 = procCpu(), cpu = (cpu1 - cpu0) / (now - statT0) * 100; cpu0 = cpu1;   // % de um núcleo (o Telão Audio inteiro)
+      char b[240]; snprintf(b, sizeof b, "{\"type\":\"vstat\",\"win\":%.1f,\"out\":%.1f,\"rep\":%.1f,\"ms\":%.2f,\"p95\":%.2f,\"cpu\":%.1f}", nWin / secs, nOut / secs, nRep / secs, avg, p95, cpu);
+      wsText(v->conn, b);
+      statT0 = now; nWin = nOut = nRep = 0; ms.clear();
+    }
+    IDirect3D11CaptureFrame* fr = nullptr;
+    if (FAILED(r.pool->TryGetNextFrame(&fr)) || !fr){
+      // tela parada (o Windows só manda quadro quando algo muda): repete o último para quem entrar agora ver a imagem
+      if (lastSlot >= 0 && now - lastSend > 250){
+        if (v->gpu){ char b[80]; snprintf(b, sizeof b, "{\"type\":\"vf\",\"s\":%d,\"n\":%u}", lastSlot, seq); wsText(v->conn, b); }
+        else wsSend(v->conn, 2, pkt.data(), pkt.size());
+        lastSend = now; nRep++;
+      }
+      hrSleep(r.timer, 1);
+      continue;
+    }
+    nWin++;
+    // se juntou mais de um na fila (processamento atrasou), fica só com o mais novo: menos atraso pra quem assiste
+    for (IDirect3D11CaptureFrame* nx = nullptr; SUCCEEDED(r.pool->TryGetNextFrame(&nx)) && nx; nx = nullptr){ closeFrame(fr); fr = nx; nWin++; }
+    SizeInt32 cs{}; fr->get_ContentSize(&cs);
+    if (cs.Width >= 16 && cs.Height >= 16 && (cs.Width != poolSz.Width || cs.Height != poolSz.Height)){
+      // a janela mudou de tamanho: o Windows passa a entregar no tamanho novo (a saída continua igual, com faixas se precisar)
+      poolSz = cs;
+      r.pool->Recreate(r.rtDev, PIXEL_BGRA8, 3, poolSz);
+      closeFrame(fr);
+      continue;
+    }
+    if (!pacer.accept(now)){ closeFrame(fr); continue; }
+    ID3D11Texture2D* tex = frameTexture(fr);
+    if (!tex){ closeFrame(fr); continue; }
+    D3D11_TEXTURE2D_DESC td; tex->GetDesc(&td);
+    if ((int)td.Width != r.inW || (int)td.Height != r.inH){
+      hr = setupVP(r, td.Width, td.Height, v->fps);
+      if (FAILED(hr)){ tex->Release(); closeFrame(fr); endReason = "o processador de vídeo não aceitou o tamanho novo da janela (" + hrText(hr) + ")"; break; }
+    }
+    double t0 = nowMs();
+    r.ctx->CopyResource(r.inCopy, tex);
+    tex->Release();
+    int cw = std::min<int>(cs.Width > 0 ? cs.Width : td.Width, td.Width), ch = std::min<int>(cs.Height > 0 ? cs.Height : td.Height, td.Height);
+    RECT src = {0, 0, cw, ch};
+    IRect d = aspectRect(cw, ch, r.ow, r.oh);
+    RECT dst = {d.l, d.t, d.r, d.b};
+    r.vctx->VideoProcessorSetStreamSourceRect(r.vp, 0, TRUE, &src);
+    r.vctx->VideoProcessorSetStreamDestRect(r.vp, 0, TRUE, &dst);
+    D3D11_VIDEO_PROCESSOR_STREAM s = {}; s.Enable = TRUE; s.pInputSurface = r.vin;
+    bool sent = false;
+    if (v->gpu){
+      slot = (slot + 1) % (int)r.outView.size();
+      hr = r.vctx->VideoProcessorBlt(r.vp, r.outView[slot], 0, 1, &s);
+      r.ctx->End(r.query);
+      r.ctx->Flush();
+      // espera a placa terminar antes de avisar o Telão (os dois lados leem a mesma memória)
+      BOOL done = FALSE; double w0 = nowMs();
+      while (r.ctx->GetData(r.query, &done, sizeof done, 0) == S_FALSE && nowMs() - w0 < 100) hrSleep(r.timer, 0.25);
+      closeFrame(fr);
+      if (SUCCEEDED(hr)){
+        seq++;
+        char b[80]; snprintf(b, sizeof b, "{\"type\":\"vf\",\"s\":%d,\"n\":%u}", slot, seq);
+        wsText(v->conn, b);
+        sent = true;
+        lastSlot = slot;
+      }
+    } else {
+      hr = r.vctx->VideoProcessorBlt(r.vp, r.outView[0], 0, 1, &s);
+      r.ctx->CopyResource(r.staging, r.out[0]);
+      D3D11_MAPPED_SUBRESOURCE m;
+      HRESULT mh = SUCCEEDED(hr) ? r.ctx->Map(r.staging, 0, D3D11_MAP_READ, 0, &m) : hr;   // o Map espera a placa terminar
+      closeFrame(fr);   // só agora: antes disso o Windows poderia reaproveitar a imagem que ainda estava sendo copiada
+      if (SUCCEEDED(mh)){
+        size_t plane = (size_t)r.ow * r.oh;
+        pkt.resize(16 + plane * 3 / 2);
+        frameHeader(pkt.data(), r.ow, r.oh, ++seq);
+        const uint8_t* p = (const uint8_t*)m.pData; uint8_t* o = pkt.data() + 16;
+        for (int y = 0; y < r.oh; y++) memcpy(o + (size_t)y * r.ow, p + (size_t)y * m.RowPitch, r.ow);
+        const uint8_t* uv = p + (size_t)m.RowPitch * r.oh;
+        for (int y = 0; y < r.oh / 2; y++) memcpy(o + plane + (size_t)y * r.ow, uv + (size_t)y * m.RowPitch, r.ow);
+        r.ctx->Unmap(r.staging, 0);
+        ms.push_back(nowMs() - t0);   // tempo de placa + cópia (sem contar o envio)
+        wsSend(v->conn, 2, pkt.data(), pkt.size());
+        sent = true; lastSlot = 0;
+      }
+    }
+    if (v->gpu && sent) ms.push_back(nowMs() - t0);
+    if (sent){ nOut++; lastSend = nowMs(); }
+  }
+  if (!endReason.empty() && v->conn->alive){
+    wsText(v->conn, "{\"type\":\"vended\",\"reason\":\"" + jsonEsc(endReason) + "\"}");
+    logf("Captura turbo encerrada: %s", endReason.c_str());
+  }
+  freeRes(r);
+}
+static DWORD WINAPI videoThread(void* arg){
+  VCap* v = (VCap*)arg;
+  // Este programa roda escondido: no Windows 11 isso o coloca em modo economia (EcoQoS) e o jogo
+  // ganharia a disputa pelo processador. A captura pede prioridade de "captura multimídia".
+  { PROCESS_POWER_THROTTLING_STATE st{}; st.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+    st.ControlMask = PROCESS_POWER_THROTTLING_EXECUTION_SPEED | PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION; st.StateMask = 0;
+    if (!SetProcessInformation(GetCurrentProcess(), ProcessPowerThrottling, &st, sizeof st)){
+      st.ControlMask = PROCESS_POWER_THROTTLING_EXECUTION_SPEED; SetProcessInformation(GetCurrentProcess(), ProcessPowerThrottling, &st, sizeof st); } }
+  SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
+  typedef HANDLE (WINAPI *PFN_AvSet)(LPCWSTR, LPDWORD);
+  typedef BOOL (WINAPI *PFN_AvRevert)(HANDLE);
+  HMODULE avrt = LoadLibraryW(L"avrt.dll");
+  PFN_AvSet avSet = avrt ? (PFN_AvSet)GetProcAddress(avrt, "AvSetMmThreadCharacteristicsW") : nullptr;
+  PFN_AvRevert avRevert = avrt ? (PFN_AvRevert)GetProcAddress(avrt, "AvRevertMmThreadCharacteristics") : nullptr;
+  DWORD idx = 0; HANDLE mm = avSet ? avSet(L"Capture", &idx) : nullptr;
+  videoRun(v);
+  if (mm && avRevert) avRevert(mm);
+  return 0;
+}
+static void stopVideo(Conn* onlyFor){
+  EnterCriticalSection(&gVidLock);
+  VCap* v = gVid;
+  if (v && (!onlyFor || v->conn == onlyFor)){
+    gVid = nullptr;
+    InterlockedExchange(&v->stop, 1);
+    if (WaitForSingleObject(v->thread, 4000) == WAIT_OBJECT_0){ CloseHandle(v->thread); delete v; }
+    // se travou dentro do driver, deixa vazar em vez de derrubar o programa
+  }
+  LeaveCriticalSection(&gVidLock);
+}
+static void startVideo(Conn* c, const std::string& msg){
+  if (!(c->origin == "null" || c->origin.rfind("file://", 0) == 0)){ wsText(c, "{\"type\":\"verror\",\"message\":\"a captura turbo só funciona no app do Telão\"}"); return; }
+  stopVideo(nullptr);   // uma captura de vídeo por vez
+  VCap* v = new VCap();
+  v->conn = c;
+  v->gpu = jsonStr(msg, "mode") != "mem";
+  v->pid = (DWORD)strtoul(jsonStr(msg, "pid").c_str(), nullptr, 10);
+  v->boxW = std::max(160, std::min(3840, atoi(jsonStr(msg, "w").c_str())));
+  v->boxH = std::max(90, std::min(2160, atoi(jsonStr(msg, "h").c_str())));
+  v->fps = std::max(5, std::min(240, atoi(jsonStr(msg, "fps").c_str())));
+  v->vendor = (UINT)strtoul(jsonStr(msg, "vendor").c_str(), nullptr, 10);
+  v->device = (UINT)strtoul(jsonStr(msg, "device").c_str(), nullptr, 10);
+  if (jsonStr(msg, "target") == "monitor"){
+    v->monitor = true;
+    POINT pt = {atol(jsonStr(msg, "x").c_str()), atol(jsonStr(msg, "y").c_str())};
+    v->mon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+  } else {
+    unsigned long long hv = strtoull(jsonStr(msg, "hwnd").c_str(), nullptr, 10);
+    v->hwnd = (HWND)(uintptr_t)hv;
+    if (!hv || !IsWindow(v->hwnd)){ delete v; wsText(c, "{\"type\":\"verror\",\"message\":\"a janela escolhida não existe mais\"}"); return; }
+  }
+  if (v->gpu && !v->pid){ delete v; wsText(c, "{\"type\":\"verror\",\"message\":\"faltou o processo do Telão\"}"); return; }
+  EnterCriticalSection(&gVidLock);
+  gVid = v;
+  v->thread = CreateThread(nullptr, 0, videoThread, v, 0, nullptr);
+  if (!v->thread){ gVid = nullptr; delete v; wsText(c, "{\"type\":\"verror\",\"message\":\"não consegui iniciar a captura\"}"); }
+  LeaveCriticalSection(&gVidLock);
+}
+
 static void handleCommand(Conn* c, const std::string& msg){
   std::string cmd = jsonStr(msg, "cmd");
   if (cmd == "list"){ wsText(c, buildAppList()); return; }
   if (cmd == "stop"){ stopCapture(c); return; }
+  if (cmd == "vstart"){ startVideo(c, msg); return; }
+  if (cmd == "vstop"){ stopVideo(c); return; }
   if (cmd == "winrect"){
     // Retângulo da janela (pixels físicos) e do monitor onde ela está: usado pela camada de reações do app.
     unsigned long long hv = strtoull(jsonStr(msg, "hwnd").c_str(), nullptr, 10);
@@ -671,6 +1240,7 @@ static DWORD WINAPI connThread(void* arg){
   }
   InterlockedExchange(&c->alive, 0);
   stopCapture(c);
+  stopVideo(c);
   closesocket(c->s);
   DeleteCriticalSection(&c->sendLock);
   delete c;
@@ -730,6 +1300,7 @@ int main(int argc, char** argv){
   InitializeCriticalSection(&gLogLock);
   InitializeCriticalSection(&gOriginLock);
   InitializeCriticalSection(&gCapLock);
+  InitializeCriticalSection(&gVidLock);
   loadOrigins();
   if (gBoostRoot){ HANDLE bt = CreateThread(nullptr, 0, boostThread, nullptr, 0, nullptr); if (bt) CloseHandle(bt); }
 
