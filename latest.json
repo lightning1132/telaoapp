@@ -1,25 +1,25 @@
 {
-  "version": "1.12.6",
+  "version": "1.12.7",
   "minShell": 2,
-  "page": "versoes/telao-1.12.6.html",
-  "sha256": "d3c9d57ec86c911725f13ce51e714d457e4cfc53fdf154becf38916f6c212aea",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.6",
+  "page": "versoes/telao-1.12.7.html",
+  "sha256": "9a4d2ee73d8e31cc81bdc39f29fc896afe580ae9a6562e6cc918f6945f5ccbcc",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.7",
   "notes": [
-    "iPhone 15 Pro, 16 e mais novos: recebem em AV1, codificado pela placa de vídeo de quem transmite (antes iam em H.264 Baseline, pelo processador)",
-    "Se o AV1 não aparecer na tela de quem assiste, volta sozinho para o H.264"
+    "Teste de encoder testa também o H.265 (HEVC)",
+    "iPhone/iPad recebem em H.265 pela placa de vídeo de quem transmite, quando ela codifica H.265 (o Safari não oferece AV1 em chamadas)"
   ],
   "app": {
-    "version": "1.12.6",
+    "version": "1.12.7",
     "shell": 9,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.12.6/app.asar",
-        "sha256": "5d65c1d8c5d6d2014a121e07bdae21004b81f7d56fbcd744f8273045b801690a",
-        "size": 371106
+        "path": "versoes/app-1.12.7/app.asar",
+        "sha256": "58b4d40f36e2c9106e288e9779a2edbe3be7cbfcbbeffe69be8e2009a19cb2ef",
+        "size": 372432
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.12.6/telao-audio.exe",
+        "path": "versoes/app-1.12.7/telao-audio.exe",
         "sha256": "161f8e2d029fb7a8f0db08eb5de50e8d92d5f52829fd17a71994a723aa9d0bae",
         "size": 627200
       }
