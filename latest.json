@@ -1,25 +1,25 @@
 {
-  "version": "1.12.7",
+  "version": "1.13.0",
   "minShell": 2,
-  "page": "versoes/telao-1.12.7.html",
-  "sha256": "9a4d2ee73d8e31cc81bdc39f29fc896afe580ae9a6562e6cc918f6945f5ccbcc",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.7",
+  "page": "versoes/telao-1.13.0.html",
+  "sha256": "4ade0322375b12b8b109495e12fe4dd5c25f8a728ee6b6c351d4195d41e47f53",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.13.0",
   "notes": [
-    "Teste de encoder testa também o H.265 (HEVC)",
-    "iPhone/iPad recebem em H.265 pela placa de vídeo de quem transmite, quando ela codifica H.265 (o Safari não oferece AV1 em chamadas)"
+    "H.265 automático entre PCs: quando os dois lados têm placa compatível, o vídeo vai em H.265 (menos internet para a mesma imagem). Desliga em Opções",
+    "iPhone/iPad continuam recebendo em H.265 pela placa de quem transmite"
   ],
   "app": {
-    "version": "1.12.7",
+    "version": "1.13.0",
     "shell": 9,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.12.7/app.asar",
-        "sha256": "58b4d40f36e2c9106e288e9779a2edbe3be7cbfcbbeffe69be8e2009a19cb2ef",
-        "size": 372432
+        "path": "versoes/app-1.13.0/app.asar",
+        "sha256": "0ff86cf88e8a6a8177ea0e35fe389c8710fda18b551d9cdddeed82eee9b00e95",
+        "size": 374053
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.12.7/telao-audio.exe",
+        "path": "versoes/app-1.13.0/telao-audio.exe",
         "sha256": "161f8e2d029fb7a8f0db08eb5de50e8d92d5f52829fd17a71994a723aa9d0bae",
         "size": 627200
       }

@@ -563,6 +563,11 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
         <button type="button" class="ghost" id="optRx">Personalizar reações e figurinhas</button>
       </section>
       <section>
+        <h3>Formato do vídeo</h3>
+        <label class="chk"><input type="checkbox" id="optH265"> H.265 automático</label>
+        <p class="muted dg-p" style="margin-top:6px">Quando quem transmite e quem assiste têm placa de vídeo que codifica e decodifica H.265, o vídeo vai em H.265: mesma imagem com uns 20–30% menos internet (ou imagem melhor na mesma internet). Precisa estar ligado dos dois lados. Se a tela não aparecer, volta sozinho para o H.264.</p>
+      </section>
+      <section>
         <h3>Retransmissão</h3>
         <label class="chk"><input type="checkbox" id="optRelay"> Permitir que eu retransmita para amigos</label>
         <p class="muted dg-p" style="margin-top:6px">Quando a internet de quem transmite está no limite, ou alguém não consegue receber direto, o Telão pede a quem já está assistindo para repassar o vídeo. Gasta o seu upload e a sua placa de vídeo enquanto estiver repassando. Dá pra parar a qualquer momento.</p>
@@ -614,7 +619,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.12.7';
+const TELAO_VERSION = '1.13.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -624,7 +629,9 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 9;       // nível do app desktop mais novo (9: captura turbo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.12.7', 'hoje', ['Teste de encoder testa também o H.265 (HEVC)',
+  ['1.13.0', 'hoje', ['H.265 automático entre PCs: quando os dois lados têm placa compatível, o vídeo vai em H.265 (menos internet para a mesma imagem). Desliga em Opções',
+                      'iPhone/iPad continuam recebendo em H.265 pela placa de quem transmite']],
+  ['1.12.7', '22/10', ['Teste de encoder testa também o H.265 (HEVC)',
                       'iPhone/iPad recebem em H.265 pela placa de vídeo de quem transmite, quando ela codifica H.265 (o Safari não oferece AV1 em chamadas)']],
   ['1.12.6', '22/10', ['iPhone 15 Pro, 16 e mais novos: recebem em AV1, codificado pela placa de vídeo de quem transmite (antes iam em H.264 Baseline, pelo processador)',
                       'Se o AV1 não aparecer na tela de quem assiste, volta sozinho para o H.264']],
@@ -1832,9 +1839,12 @@ function av1Instead(){
   if (av1PrefCache === null) av1PrefCache = recvNoMain() && recvCodecs().some(x => /av1/i.test(x.mimeType)) && !badDecode.has('AV1');
   return av1PrefCache;
 }
-// Mesma ideia com o H.265 (HEVC): o iPhone aceita e decodifica no chip; a placa de quem transmite precisa codificar.
+// H.265 (HEVC): o iPhone aceita e decodifica no chip (e não aceita H.264 Main, então é a única saída pela placa).
+// Entre PCs, vale quando os dois lados têm placa compatível e o "H.265 automático" está ligado dos dois lados.
+const h265Auto = () => store.get('h265auto', true) !== false;
+const h265Recv = () => recvCodecs().some(x => /h265/i.test(x.mimeType)) && !badDecode.has('H265');   // o Chromium só lista H.265 se decodifica na placa
 function h265Instead(){
-  if (h265PrefCache === null) h265PrefCache = recvNoMain() && recvCodecs().some(x => /h265/i.test(x.mimeType)) && !badDecode.has('H265');
+  if (h265PrefCache === null) h265PrefCache = recvNoMain() && h265Recv();
   return h265PrefCache;
 }
 
@@ -2226,7 +2236,7 @@ function callPeer(pid){
   if (!localStream || !me || me.destroyed) return;
   const codec = currentCodec();
   const hi = myHighHw();
-  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi, av1: myAv1Hw(), h265: myH265Hw()}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
+  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi, av1: myAv1Hw(), h265: myH265Hw(), h265all: h265Auto()}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
   if (!call) return;
   outCalls.set(pid, call);
   const pc = call.peerConnection;
@@ -2588,6 +2598,7 @@ const badDecode = new Set(store.get('badDecode', []));
 function viewerCodec(sender, meta){
   if (sender === 'H264' && meta && meta.av1 === true && av1Instead()) return 'AV1';
   if (sender === 'H264' && meta && meta.h265 === true && h265Instead()) return 'H265';
+  if (sender === 'H264' && meta && meta.h265 === true && meta.h265all === true && h265Auto() && h265Recv()) return 'H265';
   return answerCodec(sender);
 }
 function answerCodec(senderCodec){
@@ -2605,6 +2616,7 @@ function onPullCall(call){
   let codec = !avoid.includes(pref) ? pref : (['VP9', 'VP8', 'H264'].find(c => !avoid.includes(c)) || pref);
   if (codec === 'H264' && call.metadata && call.metadata.av1ok === true && myAv1Hw()) codec = 'AV1';
   else if (codec === 'H264' && call.metadata && call.metadata.h265ok === true && myH265Hw()) codec = 'H265';
+  else if (codec === 'H264' && call.metadata && call.metadata.h265all === true && h265Auto() && myH265Hw()) codec = 'H265';
   const old = outCalls.get(pid);
   if (old && old !== call){ outCalls.delete(pid); try{ old.close(); }catch{} }
   relayVia.delete(pid);   // pediu direto: não precisa mais do repasse
@@ -2630,7 +2642,7 @@ function pullFrom(pid, force){
   let call;
   try{
     call = me.call(pid, new MediaStream(), {
-      metadata: {name: myName, pull: true, avoid: [...badDecode], av1ok: av1Instead(), h265ok: h265Instead()},
+      metadata: {name: myName, pull: true, avoid: [...badDecode], av1ok: av1Instead(), h265ok: h265Instead(), h265all: h265Auto() && h265Recv()},
       constraints: {offerToReceiveAudio: true, offerToReceiveVideo: true},
       sdpTransform: sdp => startBitrateSdp(stereoSdp(sdp)),   // quem responde (e transmite) escolhe o codec
     });
@@ -3713,7 +3725,7 @@ function relayStartTo(s, v, codec){
   const src = t.video.srcObject;
   const stream = new MediaStream([...src.getVideoTracks(), ...src.getAudioTracks()]);
   let call = null;
-  try{ call = sendOnly(() => me.call(v, stream, {metadata: {name: nameOf(s), codec, relayOf: s, relayName: myName, av1: myAv1Hw(), h265: myH265Hw()}, sdpTransform: makeSdpTransform(codec)})); }catch{}
+  try{ call = sendOnly(() => me.call(v, stream, {metadata: {name: nameOf(s), codec, relayOf: s, relayName: myName, av1: myAv1Hw(), h265: myH265Hw(), h265all: h265Auto()}, sdpTransform: makeSdpTransform(codec)})); }catch{}
   if (!call){ hubSend({t: 'relay', to: s, data: {k: 'rly-fail', vs: [v]}}); return; }
   const ent = {s, v, call, ok: false, want: null, paused: false};
   relayOut.set(key, ent);
@@ -3811,6 +3823,7 @@ function renderRelayBar(){
 /* ---------- Opções ---------- */
 function syncOpts(){
   $('#optRelay').checked = relayAllowed();
+  $('#optH265').checked = h265Auto();
   $('#optPrivMsg').value = privateMsg();
   renderLobbyAvatar();
 }
@@ -3823,6 +3836,7 @@ function initOpts(){
     if (!$('#optRelay').checked) for (const s of new Set([...relayOut.values()].map(e => e.s))) relayStopFor(s, true);
     sendBulletin();
   };
+  $('#optH265').onchange = () => { store.set('h265auto', $('#optH265').checked); h265PrefCache = null; toast('Vale a partir da próxima conexão (comece a transmitir de novo, ou recarregue quem assiste).'); };
   $('#optPrivMsg').oninput = () => { store.set('privateMsg', $('#optPrivMsg').value.slice(0, 80)); if (privateOn) drawPrivate(); };
   $('#optRx').onclick = () => { $('#opts').hidden = true; openRxEdit(); };
 }

@@ -15,6 +15,10 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.13
+- H.265 automático: quando quem transmite e quem assiste têm placa de vídeo que faz H.265, o vídeo vai em
+  H.265 (mesma imagem com menos internet). iPhone/iPad também recebem em H.265. Desliga em Opções.
+
 NOVIDADES DO APP 1.12
 - Captura turbo (experimental, vem desligada): o Telão Audio embutido pega a imagem do jogo direto do Windows
   e já reduz e converte na placa de vídeo, sem passar pelo motor de captura do Chromium (que em alguns PCs
