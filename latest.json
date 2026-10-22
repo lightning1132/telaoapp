@@ -1,25 +1,24 @@
 {
-  "version": "1.15.0",
+  "version": "1.15.1",
   "minShell": 2,
-  "page": "versoes/telao-1.15.0.html",
-  "sha256": "dbf2cf917d87e444fbdab6fd4830621318cbc475b41e07e26a9998a3cf66d75b",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.15.0",
+  "page": "versoes/telao-1.15.1.html",
+  "sha256": "a65674d41e58e1ff353f8e8899fe5f29e1eb92784c0218367dbe1e43b8bcc86e",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.15.1",
   "notes": [
-    "App: o painel do \"Ao vivo\" mostra o uso da placa de vídeo pelo Telão (com quanto é codificação) e o da placa inteira, com o jogo",
-    "Medição de uso real (Diagnóstico) inclui a placa de vídeo: Telão, encoder da placa e PC inteiro, com aviso quando a placa ou o encoder estão no limite"
+    "App: ícone do Telão na barra de tarefas e nas janelas (no lugar do ícone do Electron)"
   ],
   "app": {
-    "version": "1.15.0",
+    "version": "1.15.1",
     "shell": 11,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.15.0/app.asar",
-        "sha256": "e1e9e0d63b296fee9a6c1488918ba379df63ff56de989d631e3d3d54954d2c3c",
-        "size": 430358
+        "path": "versoes/app-1.15.1/app.asar",
+        "sha256": "c119bb8f97770c1f54cf8af786e4ec9df924038d3e0fdedbf223e021459581ec",
+        "size": 460558
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.15.0/telao-audio.exe",
+        "path": "versoes/app-1.15.1/telao-audio.exe",
         "sha256": "8b216f472cf06bb24721d994b7b80890728971168ec24218c49e6ca8c67e751d",
         "size": 637952
       }

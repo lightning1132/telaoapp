@@ -855,7 +855,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.15.0';
+const TELAO_VERSION = '1.15.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -865,7 +865,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 11;      // nível do app desktop mais novo (11: uso da placa de vídeo pelo Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.15.0', 'hoje', ['App: o painel do "Ao vivo" mostra o uso da placa de vídeo pelo Telão (com quanto é codificação) e o da placa inteira, com o jogo',
+  ['1.15.1', 'hoje', ['App: ícone do Telão na barra de tarefas e nas janelas (no lugar do ícone do Electron)']],
+  ['1.15.0', '22/10', ['App: o painel do "Ao vivo" mostra o uso da placa de vídeo pelo Telão (com quanto é codificação) e o da placa inteira, com o jogo',
                       'Medição de uso real (Diagnóstico) inclui a placa de vídeo: Telão, encoder da placa e PC inteiro, com aviso quando a placa ou o encoder estão no limite']],
   ['1.14.0', '22/10', ['Visual novo: logo, barra da sala mais limpa (qualidade e som no ▾ do Compartilhar; opções, diagnóstico e sair no ⋯) e rostos de quem está na sala',
                       'No app, a barra do Telão é a própria barra da janela (os botões de minimizar, maximizar e fechar continuam os do Windows)',

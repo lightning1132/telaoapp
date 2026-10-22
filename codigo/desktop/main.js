@@ -63,6 +63,8 @@ function stopHelper(){ if (helper){ try{ helper.kill(); }catch{} helper = null; 
 // próprio Windows (com o menu de encaixe do Windows 11), desenhados por cima do canto direito da barra da página.
 // A página que vem com este app e as mais novas sabem disso (shell 10+); TELAO_WCO=0 desliga, TELAO_WCO=1 liga em outro sistema.
 const WCO_H = 52;
+// Ícone do Telão nas janelas (barra de tarefas e Alt+Tab). O do Telao.exe (atalho, Explorer) vem do pacote completo.
+const APP_ICON = path.join(__dirname, process.platform === 'win32' ? 'icon.ico' : 'icon.png');
 const useWco = () => process.env.TELAO_WCO === '1' || (process.platform === 'win32' && process.env.TELAO_WCO !== '0');
 function createWindow(){
   const wco = useWco();
@@ -70,6 +72,7 @@ function createWindow(){
     width: 1280, height: 800, minWidth: 720, minHeight: 480,
     backgroundColor: '#0d0f12',
     title: 'Telão',
+    icon: APP_ICON,
     autoHideMenuBar: true,
     ...(wco ? {titleBarStyle: 'hidden', titleBarOverlay: {color: '#12151a', symbolColor: '#8a93a2', height: WCO_H}} : {}),
     webPreferences: {
@@ -93,7 +96,7 @@ function createWindow(){
     if ((url === 'about:blank' || url === '') && /^telao-float-/.test(frameName || '')){
       return {action: 'allow', overrideBrowserWindowOptions: {
         width: 520, height: 300, minWidth: 240, minHeight: 140, alwaysOnTop: true, autoHideMenuBar: true,
-        backgroundColor: '#000000', title: 'Telão', fullscreenable: true, minimizable: true,
+        backgroundColor: '#000000', title: 'Telão', icon: APP_ICON, fullscreenable: true, minimizable: true,
         webPreferences: {contextIsolation: true, nodeIntegration: false, backgroundThrottling: false},
       }};
     }
@@ -303,7 +306,7 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('telao:restart', () => { app.relaunch(); app.exit(0); });
   ipcMain.handle('telao:gpuPage', () => {
-    const w = new BrowserWindow({width: 1000, height: 800, title: 'Detalhes da placa de vídeo', autoHideMenuBar: true});
+    const w = new BrowserWindow({width: 1000, height: 800, title: 'Detalhes da placa de vídeo', icon: APP_ICON, autoHideMenuBar: true});
     w.loadURL('chrome://gpu');
     return true;
   });
