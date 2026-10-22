@@ -147,6 +147,27 @@ app.whenReady().then(() => {
         icon: s.appIcon && !s.appIcon.isEmpty() ? s.appIcon.toDataURL() : '',
       }));
   });
+  // Medição de uso real (Diagnóstico): processador e memória de cada parte do Telão e do PC inteiro.
+  const os = require('os');
+  let cpuPrev = null;
+  const cpuTimes = () => os.cpus().reduce((a, c) => { const t = c.times; a.busy += t.user + t.nice + t.sys + t.irq; a.all += t.user + t.nice + t.sys + t.irq + t.idle; return a; }, {busy: 0, all: 0});
+  ipcMain.handle('telao:metrics', () => {
+    const labels = new Map();
+    for (const w of BrowserWindow.getAllWindows()){
+      if (w.isDestroyed()) continue;
+      let pid = 0; try{ pid = w.webContents.getOSProcessId(); }catch{}
+      const label = w === win ? 'janela principal do Telão' : w === overlay ? 'camada por cima do jogo' : /^about:blank/.test(w.webContents.getURL()) ? 'janela flutuante' : 'outra janela do Telão';
+      if (pid && !labels.has(pid)) labels.set(pid, label);
+    }
+    const names = {Browser: 'processo principal', GPU: 'vídeo e composição (placa)', Utility: 'serviços (rede, áudio)', Zygote: 'auxiliar', Sandbox_helper: 'auxiliar'};
+    const procs = app.getAppMetrics().map(m => ({label: labels.get(m.pid) || (m.type === 'Utility' && m.serviceName ? 'serviço: ' + String(m.serviceName).replace(/^.*\./, '') : names[m.type] || m.type),
+      cpu: Math.round(m.cpu.percentCPUUsage * 10) / 10, mem: Math.round(m.memory.workingSetSize / 1024)}));
+    const t = cpuTimes();
+    let sysCpu = null;
+    if (cpuPrev && t.all > cpuPrev.all) sysCpu = Math.round((t.busy - cpuPrev.busy) / (t.all - cpuPrev.all) * 1000) / 10;
+    cpuPrev = t;
+    return {procs, sysCpu, cores: os.cpus().length, memTotal: os.totalmem(), memFree: os.freemem()};
+  });
   // Fundo da entrada: procura um jogo pelo nome na loja da Steam (no navegador a Steam bloqueia essa consulta).
   ipcMain.handle('telao:steamSearch', async (_e, term) => {
     term = String(term || '').replace(/\s+/g, ' ').trim().slice(0, 80);

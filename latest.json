@@ -1,25 +1,26 @@
 {
-  "version": "1.10.1",
+  "version": "1.11.0",
   "minShell": 2,
-  "page": "versoes/telao-1.10.1.html",
-  "sha256": "630c653e768c02646394b4cec79e9f31c221d7806a4cd5accfb03b6009d699eb",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.10.1",
+  "page": "versoes/telao-1.11.0.html",
+  "sha256": "01179d81a10db45ca01bacbf7e188da279a540332b1ce42776e59b00e7254437",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.11.0",
   "notes": [
-    "Tela de entrada bem mais leve: o fundo só se mexe com o Telão em foco, por até 1 minuto",
-    "Chat mais leve: só desenha as mensagens novas, e nada com o painel fechado"
+    "Diagnóstico → \"Medir uso real (60 s)\": quanto o Telão gasta do PC e como estão imagem e rede de cada transmissão, com avisos",
+    "Fundo da entrada: o sorteio não fica mais sem imagem quando uma das listas de jogos acaba",
+    "Chat: mensagem mandada logo em seguida da outra não se perde mais"
   ],
   "app": {
-    "version": "1.10.1",
-    "shell": 7,
+    "version": "1.11.0",
+    "shell": 8,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.10.1/app.asar",
-        "sha256": "1df47e804f6e71a05367bfd89e674d392beb4efa1a2f717432f42ead34bd028f",
-        "size": 297397
+        "path": "versoes/app-1.11.0/app.asar",
+        "sha256": "9bb70445cbfd6518e06103983e51a8fe2d46b801af265c561821e63ea81dc842",
+        "size": 318803
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.10.1/telao-audio.exe",
+        "path": "versoes/app-1.11.0/telao-audio.exe",
         "sha256": "8a12183c7c83bfdc8da81f4ee0b81ad2fc7988769da6ce3c2b636b4c85ab0205",
         "size": 505856
       }

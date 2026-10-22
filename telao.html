@@ -238,6 +238,16 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 .dg-table th{text-align:left;color:var(--muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line)}
 .dg-table td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .dg-table td:last-child{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--muted);word-break:break-all}
+.pf-bar{flex:1;min-width:120px;height:6px;border-radius:999px;background:var(--panel2);overflow:hidden}
+.pf-bar[hidden]{display:none}
+.pf-bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .9s linear}
+.pf-out{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;max-height:340px;overflow:auto}
+.pf-out[hidden]{display:none}
+.pf-out .pf-h{color:var(--text);font-weight:700;margin-top:2px}
+.pf-out .pf-warn{color:var(--warn)}
+.pf-out .pf-ok{color:var(--accent)}
+.pf-out div{color:var(--muted)}
+#pfCopy:disabled{opacity:.5}
 .dg-advice{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--panel2);border-left:4px solid var(--accent);font-size:13px}
 .dg-advice.warn{border-left-color:var(--warn)}
 .dg-advice button{margin-top:8px;padding:6px 12px}
@@ -481,6 +491,13 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
   <div class="pk-card dg-card" role="dialog" aria-label="Diagnóstico de vídeo">
     <div class="pk-head"><b>Diagnóstico de vídeo</b></div>
     <div class="dg-body">
+      <section>
+        <h3>Medir uso real</h3>
+        <p class="muted dg-p">Deixe o Telão fazendo o que você quer medir (transmitindo, assistindo, com o jogo rodando) e clique em medir. Pode fechar esta janela e voltar pro jogo: em 60 s fica pronto e o Telão avisa. Mostra quanto o Telão gasta do PC e como estão a imagem e a rede de cada transmissão.</p>
+        <div class="dg-row"><button type="button" class="primary" id="pfRun">Medir uso real (60 s)</button><button type="button" class="ghost" id="pfStop" hidden>Parar</button>
+          <div id="pfBar" class="pf-bar" hidden><span></span></div><span class="grow"></span><button type="button" class="ghost" id="pfCopy">Copiar medição</button></div>
+        <div id="pfOut" class="pf-out" hidden></div>
+      </section>
       <section id="dgGpuSec" hidden>
         <h3>Placa de vídeo</h3>
         <div id="dgGpu" class="muted">Carregando…</div>
@@ -586,17 +603,20 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.10.1';
+const TELAO_VERSION = '1.11.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 7;       // nível do app desktop mais novo (7: busca de jogos na Steam para o fundo da entrada)
+const LATEST_SHELL = 8;       // nível do app desktop mais novo (8: medição de processador e memória no Diagnóstico)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.10.1', 'hoje', ['Tela de entrada bem mais leve: o fundo só se mexe com o Telão em foco, por até 1 minuto',
+  ['1.11.0', 'hoje', ['Diagnóstico → "Medir uso real (60 s)": quanto o Telão gasta do PC e como estão imagem e rede de cada transmissão, com avisos',
+                      'Fundo da entrada: o sorteio não fica mais sem imagem quando uma das listas de jogos acaba',
+                      'Chat: mensagem mandada logo em seguida da outra não se perde mais']],
+  ['1.10.1', '21/10', ['Tela de entrada bem mais leve: o fundo só se mexe com o Telão em foco, por até 1 minuto',
                       'Chat mais leve: só desenha as mensagens novas, e nada com o painel fechado']],
   ['1.10.0', '21/10', ['Tela de entrada com arte de jogos ao fundo, diferente a cada vez que o Telão abre',
                       'Os jogos que vocês transmitem entram no sorteio do fundo (o app procura o jogo na Steam e conta pra sala)']],
@@ -1022,8 +1042,9 @@ function addGroupGame(g){
 }
 function pickSplash(tried){
   const group = groupGames().filter(g => !tried.has(g.id));
-  if (group.length && Math.random() < 0.6){ const g = group[Math.floor(Math.random() * group.length)]; return {id: g.id, name: g.name, by: g.by}; }
   const pool = SPLASH_POPULAR.filter(([id]) => !tried.has(id));
+  // jogos da galera têm mais chance; se uma das listas acabou, usa a outra
+  if (group.length && (!pool.length || Math.random() < 0.6)){ const g = group[Math.floor(Math.random() * group.length)]; return {id: g.id, name: g.name, by: g.by}; }
   if (!pool.length) return null;
   const [id, name] = pool[Math.floor(Math.random() * pool.length)];
   return {id, name};
@@ -3309,7 +3330,8 @@ function sendChat(text, st){
   text = String(text || '').trim().slice(0, CHAT_MAX_LEN);
   if (!text && !st) return;
   const now = Date.now();
-  if (now - lastChatAt < 300) return;
+  // anti-spam: mensagem muito em seguida da anterior espera um instante (em vez de sumir)
+  if (now - lastChatAt < 300){ const t = text, k = st; setTimeout(() => sendChat(t, k), 300 - (now - lastChatAt) + 5); return; }
   lastChatAt = now;
   const m = {id: genCode() + now.toString(36), from: me.id, n: myName, x: text, st: st || '', at: now};
   for (const p of members) if (p.id !== me.id) hubSend({t: 'relay', to: p.id, data: {k: 'chat', m}});
@@ -4550,6 +4572,7 @@ function diagReport(){
            (r.encMs != null ? ' ' + r.encMs.toFixed(1) + 'ms/quadro' : '') + (r.limit ? ' limite=' + r.limit : '') + ' encoder=' + (r.impl || '-') + (r.note ? ' (' + r.note + ')' : ''));
   if (!diagResults.length) L.push('(teste de encoder não executado)');
   for (const el of $('#dgLive').children) L.push('Ao vivo — ' + el.textContent);
+  if (perfLast){ L.push('--- medição de uso real ---'); L.push(perfLast.text); }
   L.push('--- conexão com a sala ---');
   for (const e of netEvents.slice(-40)) L.push(e);
   if (!netEvents.length) L.push('(ainda não entrou em nenhuma sala nesta sessão)');
@@ -4562,6 +4585,7 @@ function initDiag(){
   $('#diag').onclick = e => { if (e.target === $('#diag')) closeDiag(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#diag').hidden) closeDiag(); });
   $('#dgRun').onclick = runDiag;
+  initPerf();
   $('#dgCopy').onclick = async () => {
     const txt = diagReport();
     try{ await navigator.clipboard.writeText(txt); toast('Relatório copiado. É só colar na conversa.'); }
@@ -4594,6 +4618,252 @@ function confirmRestart(){
   restartWarned = true;
   toast('Você está transmitindo: reiniciar vai encerrar a transmissão. Clique em "Reiniciar" de novo para confirmar.', 'warn', 7000);
   return false;
+}
+
+/* ---------- Medir uso real (Diagnóstico) ----------
+   Grava 60 s do que estiver acontecendo (transmitindo, assistindo, jogando) e resume: processador e memória
+   de cada parte do Telão (app), e, por conexão, quadros, codificação/decodificação, rede e travadas. */
+const PERF_SECS = 60, PERF_STEP = 2000;
+let perfRun = null, perfLast = null;
+async function pcSnap(pc){
+  const o = {out: null, src: null, rin: null, inb: null, pair: null, codec: {}, cand: {}};
+  if (!pc) return o;
+  const rep = await pc.getStats();
+  rep.forEach(r => {
+    if (r.type === 'outbound-rtp' && r.kind === 'video') o.out = r;
+    else if (r.type === 'media-source' && r.kind === 'video') o.src = r;
+    else if (r.type === 'remote-inbound-rtp' && r.kind === 'video') o.rin = r;
+    else if (r.type === 'inbound-rtp' && r.kind === 'video') o.inb = r;
+    else if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded') o.pair = r;
+    else if (r.type === 'codec') o.codec[r.id] = r;
+    else if (r.type === 'local-candidate' || r.type === 'remote-candidate') o.cand[r.id] = r;
+  });
+  return o;
+}
+// lista das conexões que existem agora: o que eu mando, o que eu recebo e o que eu repasso
+function perfConns(){
+  const list = [];
+  for (const [pid, c] of outCalls) list.push({key: 'out:' + pid, kind: 'out', who: nameOf(pid), pc: c.peerConnection, paused: () => !!pausedBy.get(pid) && !isRelayHub(pid)});
+  for (const [pid, t] of tiles) if (t.call) list.push({key: 'in:' + pid, kind: 'in', who: nameOf(pid), via: t.via ? nameOf(t.via) : '', pc: t.call.peerConnection, hidden: () => t.el.hidden});
+  for (const ent of relayOut.values()) list.push({key: 'rly:' + ent.s + '|' + ent.v, kind: 'rly', who: nameOf(ent.s) + ' → ' + nameOf(ent.v), pc: ent.call && ent.call.peerConnection, paused: () => ent.paused});
+  return list;
+}
+const dl = (a, b, k) => (a && b && a[k] != null && b[k] != null) ? a[k] - b[k] : null;
+function perfDelta(kind, cur, prev, dt){
+  const s = {};
+  if (kind !== 'in' && cur.out){
+    const o = cur.out, p = prev && prev.out;
+    const fr = dl(o, p, 'framesEncoded'), by = dl(o, p, 'bytesSent');
+    s.fps = fr != null ? fr / dt : (o.framesPerSecond || 0);
+    s.h = o.frameHeight || 0;
+    s.kbps = by != null ? by * 8 / dt / 1000 : null;
+    const et = dl(o, p, 'totalEncodeTime');
+    if (et != null && fr > 0) s.encMs = et / fr * 1000;
+    s.impl = o.encoderImplementation || ''; s.hw = o.powerEfficientEncoder;
+    s.codec = ((cur.codec[o.codecId] || {}).mimeType || '').replace(/^video\//i, '');
+    const qd = o.qualityLimitationDurations, qp = p && p.qualityLimitationDurations;
+    if (qd && qp) for (const k of ['cpu', 'bandwidth', 'other']) s['lim_' + k] = Math.max(0, (qd[k] || 0) - (qp[k] || 0)) / dt;
+    else s['lim_' + (o.qualityLimitationReason || 'none')] = 1;
+    const rb = dl(o, p, 'retransmittedBytesSent'); if (rb != null && by > 0) s.retx = rb / by;
+    if (cur.src && cur.src.framesPerSecond != null) s.capFps = cur.src.framesPerSecond;
+    if (cur.rin){ if (cur.rin.fractionLost != null) s.loss = cur.rin.fractionLost; if (cur.rin.roundTripTime != null) s.rtt = cur.rin.roundTripTime * 1000; }
+    if (cur.pair && cur.pair.availableOutgoingBitrate) s.avail = cur.pair.availableOutgoingBitrate / 1000;
+  }
+  if (kind === 'in' && cur.inb){
+    const v = cur.inb, p = prev && prev.inb;
+    const fd = dl(v, p, 'framesDecoded');
+    s.fps = fd != null ? fd / dt : (v.framesPerSecond || 0);
+    s.h = v.frameHeight || 0;
+    const by = dl(v, p, 'bytesReceived'); s.kbps = by != null ? by * 8 / dt / 1000 : null;
+    const dt2 = dl(v, p, 'totalDecodeTime'); if (dt2 != null && fd > 0) s.decMs = dt2 / fd * 1000;
+    const dr = dl(v, p, 'framesDropped'), fr = dl(v, p, 'framesReceived');
+    if (dr != null && fr > 0) s.drop = dr / fr;
+    s.freezes = dl(v, p, 'freezeCount') || 0; s.freezeS = dl(v, p, 'totalFreezesDuration') || 0;
+    const pl = dl(v, p, 'packetsLost'), pr = dl(v, p, 'packetsReceived');
+    if (pl != null && pr != null && pl + pr > 0) s.loss = Math.max(0, pl) / (Math.max(0, pl) + pr);
+    if (v.jitter != null) s.jitter = v.jitter * 1000;
+    const jb = dl(v, p, 'jitterBufferDelay'), je = dl(v, p, 'jitterBufferEmittedCount'); if (jb != null && je > 0) s.buffer = jb / je * 1000;
+    s.impl = v.decoderImplementation || ''; s.hw = v.powerEfficientDecoder;
+    s.codec = ((cur.codec[v.codecId] || {}).mimeType || '').replace(/^video\//i, '');
+    if (cur.pair && cur.pair.currentRoundTripTime != null) s.rtt = cur.pair.currentRoundTripTime * 1000;
+  }
+  if (cur.pair){
+    const rc = cur.cand[cur.pair.remoteCandidateId], lc = cur.cand[cur.pair.localCandidateId];
+    s.path = (lc && lc.candidateType === 'relay') || (rc && rc.candidateType === 'relay') ? 'TURN' : (rc && rc.candidateType === 'host' ? 'rede local' : 'direto');
+  }
+  return s;
+}
+// fluidez da interface: tempo entre quadros desenhados nos últimos ~1,5 s e tarefas longas
+let perfLong = 0;
+try{ new PerformanceObserver(l => { perfLong += l.getEntries().length; }).observe({entryTypes: ['longtask']}); }catch{}
+function uiFrames(){
+  return new Promise(res => {
+    const t = []; let last = performance.now(), n = 0;
+    const step = ts => { t.push(ts - last); last = ts; if (++n < 45) requestAnimationFrame(step); else res(t); };
+    requestAnimationFrame(step);
+    setTimeout(() => res(t), 1500);   // janela minimizada não desenha: não fica esperando
+  });
+}
+async function runPerf(){
+  if (perfRun) return;
+  const secs = window.__perfSecs || PERF_SECS;
+  const run = perfRun = {t0: Date.now(), secs, samples: [], conns: new Map(), procs: [], ui: [], ctx: perfContext()};
+  syncPerfUi();
+  let prev = new Map(), prevT = performance.now();
+  if (DESKTOP && window.telaoDesktop.metrics) try{ await window.telaoDesktop.metrics(); }catch{}   // zera a contagem de processador
+  const long0 = perfLong;
+  for (const c of perfConns()) try{ prev.set(c.key, await pcSnap(c.pc)); }catch{}
+  while (perfRun === run && Date.now() - run.t0 < secs * 1000){
+    await sleep(PERF_STEP);
+    if (perfRun !== run) return;
+    const now = performance.now(), dt = (now - prevT) / 1000; prevT = now;
+    const cur = new Map();
+    for (const c of perfConns()){
+      let snap; try{ snap = await pcSnap(c.pc); }catch{ continue; }
+      cur.set(c.key, snap);
+      if (!prev.has(c.key)) continue;
+      let e = run.conns.get(c.key);
+      if (!e){ e = {kind: c.kind, who: c.who, via: c.via || '', samples: []}; run.conns.set(c.key, e); }
+      const d = perfDelta(c.kind, snap, prev.get(c.key), dt);
+      d.off = c.paused ? c.paused() : (c.hidden ? c.hidden() : false);
+      e.samples.push(d);
+    }
+    prev = cur;
+    if (DESKTOP && window.telaoDesktop.metrics) try{ run.procs.push(await window.telaoDesktop.metrics()); }catch{}
+    if (!document.hidden) run.ui.push(...(await uiFrames()));
+    run.long = perfLong - long0;
+    syncPerfUi();
+  }
+  if (perfRun !== run) return;
+  perfRun = null;
+  perfLast = {at: Date.now(), text: perfSummary(run)};
+  syncPerfUi();
+  if ($('#diag').hidden) toast('Medição de uso real pronta: veja no Diagnóstico.', 'ok', 8000);
+}
+function perfContext(){
+  const q = QUALITY[currentQ()];
+  return {sharing: !!localStream, quality: q.label, target: q.fps, codec: currentCodec(), private: privateOn, fast: fastCapture,
+    tiles: tiles.size, hidden: hiddenIds.size, relaying: relayOut.size, members: members.length, clips: !!store.get('clips', false)};
+}
+// ---------- resumo ----------
+const avg = v => v.length ? v.reduce((s, x) => s + x, 0) / v.length : null;
+const pct = (v, p) => { if (!v.length) return null; const s = [...v].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(s.length * p))]; };
+const nums = (arr, k) => arr.map(x => x[k]).filter(x => typeof x === 'number' && isFinite(x));
+const f0 = x => x == null ? '–' : Math.round(x).toString();
+const f1 = x => x == null ? '–' : (Math.round(x * 10) / 10).toString().replace('.', ',');
+const pc1 = x => x == null ? '–' : f1(x * 100) + '%';
+function perfSummary(run){
+  const L = [], W = [];
+  const c = run.ctx;
+  L.push('Medição de uso real: ' + Math.round((Date.now() - run.t0) / 1000) + ' s · ' + new Date(run.t0).toLocaleString('pt-BR'));
+  L.push('Situação: ' + (c.sharing ? 'transmitindo (' + c.quality + ', ' + c.codec + (c.private ? ', tela privada' : '') + (c.fast ? ', modo rápido' : '') + ')' : 'sem transmitir') +
+    ' · assistindo ' + (c.tiles - c.hidden) + (c.hidden ? ' (+' + c.hidden + ' ocultas)' : '') + (c.relaying ? ' · repassando ' + c.relaying : '') + (c.clips ? ' · clipes ligados' : '') + ' · ' + c.members + ' na sala');
+  // processos (app)
+  if (run.procs.length){
+    const cores = run.procs[0].cores || 1;
+    const byLabel = new Map();
+    for (const snap of run.procs) for (const p of snap.procs){ const e = byLabel.get(p.label) || {cpu: [], mem: []}; e.cpu.push(p.cpu); e.mem.push(p.mem); byLabel.set(p.label, e); }
+    const tel = run.procs.map(s => s.procs.reduce((a, p) => a + p.cpu, 0));
+    const sys = nums(run.procs, 'sysCpu');
+    L.push('');
+    L.push('PROCESSADOR E MEMÓRIA (' + cores + ' núcleos; % = de um núcleo)');
+    L.push('  Telão inteiro: média ' + f0(avg(tel)) + '% · pico ' + f0(Math.max(...tel)) + '% (≈ ' + f1(avg(tel) / cores) + '% do processador)');
+    if (sys.length) L.push('  PC inteiro (jogo incluído): média ' + f0(avg(sys)) + '% do processador · pico ' + f0(Math.max(...sys)) + '%');
+    for (const [k, e] of [...byLabel].sort((a, b) => avg(b[1].cpu) - avg(a[1].cpu))) if (avg(e.cpu) >= 0.5 || avg(e.mem) > 60)
+      L.push('  ' + k + ': ' + f0(avg(e.cpu)) + '% · ' + f0(avg(e.mem)) + ' MB');
+    const last = run.procs[run.procs.length - 1];
+    if (last.memTotal) L.push('  Memória do PC: ' + f1((last.memTotal - last.memFree) / 1073741824) + ' de ' + f1(last.memTotal / 1073741824) + ' GB em uso');
+    L.push('  (uso da placa de vídeo o Windows não informa ao app: veja no Gerenciador de Tarefas → Desempenho → GPU)');
+    if (sys.length && avg(sys) > 90) W.push('PC com o processador no limite (' + f0(avg(sys)) + '%): o jogo e o Telão estão disputando. Baixar a qualidade da transmissão ou limitar o FPS do jogo ajuda.');
+    else if (avg(tel) / cores > 35) W.push('O Telão está usando bastante processador (≈' + f0(avg(tel) / cores) + '% do total). Se a codificação estiver no processador, prefira H.264 (placa de vídeo).');
+  } else {
+    L.push('');
+    L.push('PROCESSADOR E MEMÓRIA: só o app desktop consegue medir (no navegador fica de fora).');
+  }
+  // conexões
+  const target = c.target;
+  for (const [, e] of run.conns){
+    const live = e.samples.filter(s => !s.off);
+    const all = live.length ? live : e.samples;
+    if (!all.length) continue;
+    const last = all[all.length - 1];
+    L.push('');
+    if (e.kind === 'out' || e.kind === 'rly'){
+      const title = e.kind === 'out' ? 'ENVIANDO PARA ' + e.who : 'REPASSANDO ' + e.who;
+      if (!live.length){ L.push(title + ': pausado (ocultou a tela)'); continue; }
+      const fps = nums(live, 'fps'), enc = nums(live, 'encMs'), cap = nums(live, 'capFps');
+      const limCpu = avg(live.map(s => s.lim_cpu || 0)), limBw = avg(live.map(s => s.lim_bandwidth || 0));
+      L.push(title + ' (' + (last.codec || '?') + ' · ' + (last.hw === true ? 'placa de vídeo' : last.hw === false ? 'processador' : (last.impl || '?')) + (last.path ? ' · ' + last.path : '') + ')');
+      if (cap.length && e.kind === 'out') L.push('  captura: ' + f0(avg(cap)) + ' fps (mín ' + f0(Math.min(...cap)) + ')');
+      L.push('  envio: ' + f0(avg(fps)) + ' fps (mín ' + f0(Math.min(...fps)) + ') · ' + f0(avg(nums(live, 'h'))) + 'p · ' + f1(avg(nums(live, 'kbps')) / 1000) + ' Mbps' +
+        (nums(live, 'avail').length ? ' (a rede aguentaria ~' + f1(avg(nums(live, 'avail')) / 1000) + ' Mbps)' : ''));
+      if (enc.length) L.push('  codificação: ' + f1(avg(enc)) + ' ms por quadro (95% abaixo de ' + f1(pct(enc, 0.95)) + ' ms)');
+      L.push('  limitado pelo processador ' + pc1(limCpu) + ' do tempo · pela rede ' + pc1(limBw) +
+        ' · perda ' + pc1(avg(nums(live, 'loss'))) + ' · reenvio ' + pc1(avg(nums(live, 'retx'))) + ' · atraso ' + f0(avg(nums(live, 'rtt'))) + ' ms');
+      if (e.kind === 'out' && cap.length && avg(cap) < target * 0.8) W.push('Captura da tela abaixo do esperado (' + f0(avg(cap)) + ' de ' + target + ' fps). No Windows 10, experimente o "Modo rápido" no seletor; também acontece se o próprio jogo estiver abaixo disso.');
+      if (limCpu > 0.2) W.push('Envio para ' + e.who + ' limitado pelo processador em ' + pc1(limCpu) + ' do tempo. Use H.264 (placa de vídeo) ou uma qualidade menor.');
+      if (limBw > 0.2) W.push('Envio para ' + e.who + ' limitado pela internet em ' + pc1(limBw) + ' do tempo (upload). Uma qualidade menor ajuda; com 2+ pessoas assistindo, a retransmissão pode entrar sozinha.');
+      if (enc.length && pct(enc, 0.95) > 1000 / Math.max(30, target) * 0.85) W.push('Codificação lenta para ' + e.who + ' (' + f1(pct(enc, 0.95)) + ' ms por quadro): o codificador não está dando conta de ' + target + ' fps.');
+      if (avg(nums(live, 'loss')) > 0.02) W.push('Perda de pacotes no caminho até ' + e.who + ' (' + pc1(avg(nums(live, 'loss'))) + '): rede instável de algum dos lados (Wi-Fi costuma ser o motivo).');
+    } else {
+      if (!live.length){ L.push('RECEBENDO DE ' + e.who + ': oculta'); continue; }
+      const fps = nums(live, 'fps'), dec = nums(live, 'decMs');
+      const frz = live.reduce((a, s) => a + (s.freezes || 0), 0), frzS = live.reduce((a, s) => a + (s.freezeS || 0), 0);
+      L.push('RECEBENDO DE ' + e.who + (e.via ? ' (via ' + e.via + ')' : '') + ' (' + (last.codec || '?') + ' · ' + (last.hw === true ? 'placa de vídeo' : last.hw === false ? 'processador' : (last.impl || '?')) + (last.path ? ' · ' + last.path : '') + ')');
+      L.push('  ' + f0(avg(fps)) + ' fps (mín ' + f0(Math.min(...fps)) + ') · ' + f0(avg(nums(live, 'h'))) + 'p · ' + f1(avg(nums(live, 'kbps')) / 1000) + ' Mbps');
+      if (dec.length) L.push('  decodificação: ' + f1(avg(dec)) + ' ms por quadro (95% abaixo de ' + f1(pct(dec, 0.95)) + ' ms) · descartados ' + pc1(avg(nums(live, 'drop'))));
+      L.push('  travadas: ' + frz + (frz ? ' (' + f1(frzS) + ' s no total)' : '') + ' · perda ' + pc1(avg(nums(live, 'loss'))) + ' · oscilação ' + f0(avg(nums(live, 'jitter'))) + ' ms · espera no buffer ' + f0(avg(nums(live, 'buffer'))) + ' ms · atraso ' + f0(avg(nums(live, 'rtt'))) + ' ms');
+      if (frz >= 2) W.push('A tela de ' + e.who + ' travou ' + frz + ' vezes (' + f1(frzS) + ' s).' + (avg(nums(live, 'loss')) > 0.01 ? ' Há perda de pacotes: rede instável no caminho.' : ''));
+      if (dec.length && pct(dec, 0.95) > 1000 / Math.max(30, avg(fps) || 30)) W.push('Decodificação lenta da tela de ' + e.who + ' (' + f1(pct(dec, 0.95)) + ' ms por quadro): este PC está no limite para essa tela. Ocultar outras telas ajuda.');
+      if (avg(nums(live, 'drop')) > 0.03) W.push('Quadros descartados na tela de ' + e.who + ' (' + pc1(avg(nums(live, 'drop'))) + '): o PC não está conseguindo exibir tudo.');
+      if (avg(nums(live, 'loss')) > 0.02) W.push('Perda de pacotes vindo de ' + e.who + ' (' + pc1(avg(nums(live, 'loss'))) + ').');
+    }
+  }
+  if (!run.conns.size){ L.push(''); L.push('Nenhuma transmissão aconteceu durante a medição (nada sendo enviado nem recebido).'); }
+  // interface
+  if (run.ui.length > 10){
+    L.push('');
+    L.push('INTERFACE DO TELÃO: quadro a cada ' + f1(pct(run.ui, 0.5)) + ' ms (95% abaixo de ' + f1(pct(run.ui, 0.95)) + ' ms) · travadinhas longas: ' + (run.long || 0));
+    if (pct(run.ui, 0.95) > 50) W.push('A própria janela do Telão está engasgando (' + f1(pct(run.ui, 0.95)) + ' ms entre quadros).');
+  }
+  L.push('');
+  if (W.length){ L.push('AVISOS'); for (const w of W) L.push('  ⚠ ' + w); }
+  else L.push('Nenhum problema encontrado: tudo dentro do esperado.');
+  return L.join('\n');
+}
+function syncPerfUi(){
+  const btn = $('#pfRun'); if (!btn) return;
+  const r = perfRun;
+  btn.disabled = !!r;
+  if (r){
+    const left = Math.max(0, r.secs - Math.round((Date.now() - r.t0) / 1000));
+    btn.textContent = 'Medindo… ' + left + ' s';
+    $('#pfBar').hidden = false; $('#pfBar span').style.width = Math.min(100, (Date.now() - r.t0) / (r.secs * 10)) + '%';
+  } else { btn.textContent = perfLast ? 'Medir de novo (60 s)' : 'Medir uso real (60 s)'; $('#pfBar').hidden = true; }
+  $('#pfStop').hidden = !r;
+  const out = $('#pfOut');
+  out.hidden = !perfLast;
+  if (perfLast){
+    out.textContent = '';
+    for (const line of perfLast.text.split('\n')){
+      const d = document.createElement('div'); d.textContent = line || ' ';
+      if (/^\s*⚠/.test(line)) d.className = 'pf-warn';
+      else if (/^[A-ZÇÃÕÉ ]{6,}/.test(line)) d.className = 'pf-h';
+      else if (/^Nenhum problema/.test(line)) d.className = 'pf-ok';
+      out.appendChild(d);
+    }
+  }
+}
+function initPerf(){
+  $('#pfRun').onclick = () => runPerf();
+  $('#pfStop').onclick = () => { perfRun = null; syncPerfUi(); };
+  $('#pfCopy').onclick = async () => {
+    if (!perfLast) return;
+    try{ await navigator.clipboard.writeText('TELÃO ' + TELAO_VERSION + (DESKTOP ? ' (app ' + window.telaoDesktop.version + ')' : ' (navegador)') + '\n' + perfLast.text); toast('Medição copiada. É só colar na conversa.'); }
+    catch{ toast('Não consegui copiar automaticamente.', 'warn'); }
+  };
+  setInterval(() => { if (perfRun && !$('#diag').hidden) syncPerfUi(); }, 1000);
+  syncPerfUi();
 }
 
 /* ---------- Saída ---------- */

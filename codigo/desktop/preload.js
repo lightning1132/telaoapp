@@ -23,5 +23,6 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   overlayItem: item => ipcRenderer.send('telao:overlayItem', item),
   screenForWindow: m => ipcRenderer.invoke('telao:screenFor', m),
   steamSearch: term => ipcRenderer.invoke('telao:steamSearch', term),
+  metrics: () => ipcRenderer.invoke('telao:metrics'),
   floatWindows: true,
 });
