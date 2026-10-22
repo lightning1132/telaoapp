@@ -20,6 +20,11 @@ OPÇÕES DE ÁUDIO NO TELÃO
                                    das telas dos amigos que você estiver assistindo no Telão.
 - Sistema inteiro               → tudo, inclusive o Discord (é o que causava o eco).
 
+ÍCONE DO TELAO.EXE (só no Telão Desktop)
+Uma vez, quando o Telão fecha, ele pede ao Telão Audio para gravar o ícone do Telão dentro do Telao.exe
+(telao-audio.exe --patch-icon). O trabalho é feito numa cópia, conferida antes de trocar; o original fica
+como Telao.exe.old até o Telão abrir de novo. Se algo falhar, o exe continua como estava.
+
 USO DA PLACA DE VÍDEO (só no Telão Desktop)
 Enquanto o painel do "Ao vivo" está aberto (ou o Diagnóstico está medindo), o Telão Audio lê os contadores
 "GPU Engine" do Windows, os mesmos do Gerenciador de Tarefas, e conta quanto da placa os processos do Telão

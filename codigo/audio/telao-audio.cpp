@@ -226,6 +226,40 @@ static GpuUse gpuAggregate(const std::vector<std::pair<std::string, double>>& v,
   return u;
 }
 
+/* ---------- ícone do Telao.exe: partes portáveis ----------
+   Arquivo .ico → imagens; e o diretório de grupo (RT_GROUP_ICON) que o Windows guarda dentro do exe,
+   que aponta para cada imagem pelo número do recurso (RT_ICON). */
+struct IcoImg { uint8_t w = 0, h = 0, colors = 0; uint16_t planes = 0, bits = 0; std::vector<uint8_t> data; };
+static uint16_t rd16(const std::vector<uint8_t>& b, size_t o){ return (uint16_t)(b[o] | (b[o + 1] << 8)); }
+static uint32_t rd32(const std::vector<uint8_t>& b, size_t o){ return (uint32_t)b[o] | ((uint32_t)b[o + 1] << 8) | ((uint32_t)b[o + 2] << 16) | ((uint32_t)b[o + 3] << 24); }
+static bool parseIco(const std::vector<uint8_t>& f, std::vector<IcoImg>* out){
+  out->clear();
+  if (f.size() < 6 || rd16(f, 0) != 0 || rd16(f, 2) != 1) return false;
+  size_t n = rd16(f, 4);
+  if (!n || n > 64 || f.size() < 6 + 16 * n) return false;
+  for (size_t i = 0; i < n; i++){
+    size_t e = 6 + 16 * i;
+    IcoImg im; im.w = f[e]; im.h = f[e + 1]; im.colors = f[e + 2]; im.planes = rd16(f, e + 4); im.bits = rd16(f, e + 6);
+    uint32_t size = rd32(f, e + 8), off = rd32(f, e + 12);
+    if (!size || off < 6 + 16 * n || (uint64_t)off + size > f.size()) return false;
+    im.data.assign(f.begin() + off, f.begin() + off + size);
+    out->push_back(std::move(im));
+  }
+  return true;
+}
+static std::vector<uint8_t> grpIconDir(const std::vector<IcoImg>& imgs, uint16_t firstId){
+  std::vector<uint8_t> g;
+  auto p16 = [&](uint16_t v){ g.push_back(v & 255); g.push_back(v >> 8); };
+  auto p32 = [&](uint32_t v){ for (int i = 0; i < 4; i++) g.push_back((v >> (8 * i)) & 255); };
+  p16(0); p16(1); p16((uint16_t)imgs.size());
+  for (size_t i = 0; i < imgs.size(); i++){
+    const IcoImg& im = imgs[i];
+    g.push_back(im.w); g.push_back(im.h); g.push_back(im.colors); g.push_back(0);
+    p16(im.planes); p16(im.bits); p32((uint32_t)im.data.size()); p16((uint16_t)(firstId + i));
+  }
+  return g;
+}
+
 #ifdef TELAO_PORTABLE_TEST
 int main(){
   int fails = 0;
@@ -293,6 +327,21 @@ int main(){
     v.push_back({I(20, 3, "VideoEncode"), 150});
     check(gpuAggregate(v, {20}).mine == 100, "placa: nunca passa de 100%");
     check(gpuAggregate({}, {20}).inst == 0, "placa: sem contadores = zero");
+  }
+  {
+    // .ico com 2 imagens (16 e 256 px; 256 vira 0 no arquivo)
+    std::vector<uint8_t> a = {1, 2, 3}, b = {9, 8, 7, 6, 5};
+    std::vector<uint8_t> f = {0, 0, 1, 0, 2, 0};
+    auto e = [&](uint8_t w, uint32_t size, uint32_t off){ uint8_t x[16] = {w, w, 0, 0, 1, 0, 32, 0}; for (int i = 0; i < 4; i++){ x[8 + i] = (size >> (8 * i)) & 255; x[12 + i] = (off >> (8 * i)) & 255; } f.insert(f.end(), x, x + 16); };
+    e(16, 3, 38); e(0, 5, 41); f.insert(f.end(), a.begin(), a.end()); f.insert(f.end(), b.begin(), b.end());
+    std::vector<IcoImg> im;
+    check(parseIco(f, &im) && im.size() == 2 && im[0].w == 16 && im[0].data == a && im[1].w == 0 && im[1].bits == 32 && im[1].data == b, "ícone: lê o .ico");
+    std::vector<uint8_t> g = grpIconDir(im, 7);
+    check(g.size() == 6 + 14 * 2 && g[4] == 2 && g[6] == 16 && g[6 + 8] == 3 && g[6 + 12] == 7 && g[20 + 12] == 8 && g[20 + 8] == 5, "ícone: diretório do grupo aponta para os recursos 7 e 8");
+    std::vector<uint8_t> bad = f; bad[2] = 2;
+    check(!parseIco(bad, &im), "ícone: recusa arquivo que não é .ico");
+    std::vector<uint8_t> cut(f.begin(), f.end() - 2);
+    check(!parseIco(cut, &im), "ícone: recusa .ico cortado");
   }
   return fails;
 }
@@ -1427,7 +1476,144 @@ static DWORD WINAPI boostThread(void*){
   }
 }
 
+/* ---------- ícone do Telao.exe ----------
+   O Telão Desktop pede isto ao fechar (uma vez): grava o ícone do Telão dentro do Telao.exe instalado,
+   sem baixar o app inteiro. Espera o app fechar, trabalha numa cópia, confere a cópia e só então troca
+   (o original fica como Telao.exe.old). Qualquer falha deixa o exe como estava. */
+#define WRT_ICON MAKEINTRESOURCEW(3)
+#define WRT_GROUP_ICON MAKEINTRESOURCEW(14)
+struct ResName { bool isInt = true; WORD id = 0; std::wstring s; LPCWSTR ptr() const { return isInt ? MAKEINTRESOURCEW(id) : s.c_str(); } };
+struct OldGroup { ResName name; WORD lang = 0; std::vector<WORD> icons; };
+static BOOL CALLBACK enumGroupLang(HMODULE m, LPCWSTR type, LPCWSTR name, WORD lang, LONG_PTR p){
+  auto* v = (std::vector<OldGroup>*)p;
+  OldGroup g;
+  if (IS_INTRESOURCE(name)){ g.name.isInt = true; g.name.id = (WORD)(uintptr_t)name; } else { g.name.isInt = false; g.name.s = name; }
+  g.lang = lang;
+  HRSRC r = FindResourceExW(m, type, name, lang);
+  HGLOBAL h = r ? LoadResource(m, r) : nullptr;
+  const uint8_t* d = h ? (const uint8_t*)LockResource(h) : nullptr;
+  DWORD sz = r ? SizeofResource(m, r) : 0;
+  if (d && sz >= 6){ uint16_t n = d[4] | (d[5] << 8); for (uint16_t i = 0; i < n && 6 + 14u * (i + 1) <= sz; i++){ size_t e = 6 + 14u * i; g.icons.push_back((WORD)(d[e + 12] | (d[e + 13] << 8))); } }
+  v->push_back(g);
+  return TRUE;
+}
+static BOOL CALLBACK enumGroupName(HMODULE m, LPCWSTR type, LPWSTR name, LONG_PTR p){
+  EnumResourceLanguagesW(m, type, name, enumGroupLang, p);
+  return TRUE;
+}
+static BOOL CALLBACK enumIconName(HMODULE, LPCWSTR, LPWSTR name, LONG_PTR p){
+  if (IS_INTRESOURCE(name)){ WORD* mx = (WORD*)p; *mx = std::max(*mx, (WORD)(uintptr_t)name); }
+  return TRUE;
+}
+static FILE* gIconLog = nullptr;
+static void ilog(const char* fmt, ...){
+  if (!gIconLog) return;
+  SYSTEMTIME t; GetLocalTime(&t);
+  fprintf(gIconLog, "%04d-%02d-%02d %02d:%02d:%02d ", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
+  va_list a; va_start(a, fmt); vfprintf(gIconLog, fmt, a); va_end(a);
+  fputc('\n', gIconLog); fflush(gIconLog);
+}
+static bool readFileW(const std::wstring& p, std::vector<uint8_t>* out){
+  HANDLE f = CreateFileW(p.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+  if (f == INVALID_HANDLE_VALUE) return false;
+  LARGE_INTEGER sz{}; GetFileSizeEx(f, &sz);
+  bool ok = sz.QuadPart > 0 && sz.QuadPart < (1 << 20);
+  if (ok){ out->resize((size_t)sz.QuadPart); DWORD rd = 0; ok = ReadFile(f, out->data(), (DWORD)out->size(), &rd, nullptr) && rd == out->size(); }
+  CloseHandle(f);
+  return ok;
+}
+static bool writeIcon(const std::wstring& tmp, const std::vector<IcoImg>& imgs, std::vector<uint8_t>* groupOut, ResName* nameOut, WORD* langOut){
+  std::vector<OldGroup> groups; WORD maxIcon = 0;
+  HMODULE m = LoadLibraryExW(tmp.c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+  if (!m){ ilog("não consegui abrir a cópia do exe (%lu)", GetLastError()); return false; }
+  EnumResourceNamesW(m, WRT_GROUP_ICON, enumGroupName, (LONG_PTR)&groups);
+  EnumResourceNamesW(m, WRT_ICON, enumIconName, (LONG_PTR)&maxIcon);
+  FreeLibrary(m);
+  ResName name; name.isInt = true; name.id = 1; WORD lang = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
+  if (!groups.empty()){ name = groups[0].name; lang = groups[0].lang; }
+  if ((size_t)maxIcon + imgs.size() > 0xFFF0){ ilog("números de recurso esgotados"); return false; }
+  WORD first = (WORD)(maxIcon + 1);
+  HANDLE h = BeginUpdateResourceW(tmp.c_str(), FALSE);
+  if (!h){ ilog("BeginUpdateResource falhou (%lu)", GetLastError()); return false; }
+  bool ok = true;
+  for (auto& g : groups){   // o ícone antigo sai inteiro (imagens e grupo)
+    for (WORD id : g.icons) UpdateResourceW(h, WRT_ICON, MAKEINTRESOURCEW(id), g.lang, nullptr, 0);
+    if (&g != &groups[0]) UpdateResourceW(h, WRT_GROUP_ICON, g.name.ptr(), g.lang, nullptr, 0);
+  }
+  for (size_t i = 0; ok && i < imgs.size(); i++)
+    ok = UpdateResourceW(h, WRT_ICON, MAKEINTRESOURCEW(first + i), lang, (void*)imgs[i].data.data(), (DWORD)imgs[i].data.size()) != FALSE;
+  std::vector<uint8_t> grp = grpIconDir(imgs, first);
+  if (ok) ok = UpdateResourceW(h, WRT_GROUP_ICON, name.ptr(), lang, grp.data(), (DWORD)grp.size()) != FALSE;
+  if (!ok) ilog("UpdateResource falhou (%lu)", GetLastError());
+  if (!EndUpdateResourceW(h, ok ? FALSE : TRUE)){ ilog("EndUpdateResource falhou (%lu)", GetLastError()); return false; }
+  *groupOut = grp; *nameOut = name; *langOut = lang;
+  return ok;
+}
+static bool verifyIcon(const std::wstring& tmp, const std::vector<IcoImg>& imgs, const std::vector<uint8_t>& grp, const ResName& name, WORD lang){
+  HMODULE m = LoadLibraryExW(tmp.c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+  if (!m) return false;
+  bool ok = false;
+  HRSRC r = FindResourceExW(m, WRT_GROUP_ICON, name.ptr(), lang);
+  if (r && SizeofResource(m, r) == grp.size()){
+    const uint8_t* d = (const uint8_t*)LockResource(LoadResource(m, r));
+    ok = d && memcmp(d, grp.data(), grp.size()) == 0;
+    for (size_t i = 0; ok && i < imgs.size(); i++){
+      size_t e = 6 + 14 * i; WORD id = (WORD)(grp[e + 12] | (grp[e + 13] << 8));
+      HRSRC ri = FindResourceExW(m, WRT_ICON, MAKEINTRESOURCEW(id), lang);
+      const uint8_t* di = ri ? (const uint8_t*)LockResource(LoadResource(m, ri)) : nullptr;
+      ok = di && SizeofResource(m, ri) == imgs[i].data.size() && memcmp(di, imgs[i].data.data(), imgs[i].data.size()) == 0;
+    }
+  }
+  FreeLibrary(m);
+  return ok;
+}
+// telao-audio.exe --patch-icon <pid do Telão> <Telao.exe> <icone.ico> <marca> <log>
+static int patchIconMain(int argc, wchar_t** argv){
+  if (argc < 7) return 2;
+  DWORD pid = (DWORD)wcstoul(argv[2], nullptr, 10);
+  std::wstring exe = argv[3], ico = argv[4], marker = argv[5];
+  gIconLog = _wfopen(argv[6], L"a");
+  ilog("ícone: começando");
+  HANDLE ph = OpenProcess(SYNCHRONIZE, FALSE, pid);
+  if (ph){ DWORD w = WaitForSingleObject(ph, 30000); CloseHandle(ph); if (w != WAIT_OBJECT_0){ ilog("o Telão não fechou; nada mudou"); return 3; } }
+  Sleep(800);
+  std::vector<uint8_t> icoBytes; std::vector<IcoImg> imgs;
+  if (!readFileW(ico, &icoBytes) || !parseIco(icoBytes, &imgs)){ ilog("ícone novo ilegível"); return 4; }
+  std::wstring tmp = exe + L".icone.tmp", old = exe + L".old";
+  DeleteFileW(tmp.c_str());
+  if (!CopyFileW(exe.c_str(), tmp.c_str(), FALSE)){ ilog("não consegui copiar o exe (%lu)", GetLastError()); return 5; }
+  std::vector<uint8_t> grp; ResName name; WORD lang = 0;
+  if (!writeIcon(tmp, imgs, &grp, &name, &lang) || !verifyIcon(tmp, imgs, grp, name, lang)){
+    ilog("a cópia não ficou certa; o exe continua como estava");
+    DeleteFileW(tmp.c_str()); return 6;
+  }
+  // troca: o original vira .old (renomear funciona mesmo se algo ainda estiver usando o exe)
+  bool moved = false;
+  for (int k = 0; k < 20 && !moved; k++){ moved = MoveFileExW(exe.c_str(), old.c_str(), MOVEFILE_REPLACE_EXISTING) != FALSE; if (!moved) Sleep(500); }
+  if (!moved){ ilog("não consegui trocar o exe (%lu); nada mudou", GetLastError()); DeleteFileW(tmp.c_str()); return 7; }
+  if (!MoveFileExW(tmp.c_str(), exe.c_str(), 0)){
+    ilog("falha ao colocar o exe novo (%lu); voltando o original", GetLastError());
+    MoveFileExW(old.c_str(), exe.c_str(), 0); DeleteFileW(tmp.c_str()); return 8;
+  }
+  HANDLE mk = CreateFileW(marker.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
+  if (mk != INVALID_HANDLE_VALUE){ std::string u = utf8(exe); DWORD wr = 0; WriteFile(mk, u.data(), (DWORD)u.size(), &wr, nullptr); CloseHandle(mk); }
+  // avisa o Explorer: atalhos e a pasta mostram o ícone novo sem precisar reiniciar
+  typedef void (WINAPI *PFN_SHChangeNotify)(LONG, UINT, LPCVOID, LPCVOID);
+  HMODULE sh = LoadLibraryW(L"shell32.dll");
+  auto notify = sh ? (PFN_SHChangeNotify)GetProcAddress(sh, "SHChangeNotify") : nullptr;
+  if (notify){ notify(0x00002000 /*SHCNE_UPDATEITEM*/, 0x0005 /*SHCNF_PATHW*/, exe.c_str(), nullptr); notify(0x08000000 /*SHCNE_ASSOCCHANGED*/, 0, nullptr, nullptr); }
+  ilog("ícone aplicado (%u imagens)", (unsigned)imgs.size());
+  return 0;
+}
+
 int main(int argc, char** argv){
+  {
+    typedef LPWSTR* (WINAPI *PFN_CmdToArgv)(LPCWSTR, int*);
+    HMODULE sh = LoadLibraryW(L"shell32.dll");
+    auto toArgv = sh ? (PFN_CmdToArgv)GetProcAddress(sh, "CommandLineToArgvW") : nullptr;
+    int wc = 0; wchar_t** wv = toArgv ? toArgv(GetCommandLineW(), &wc) : nullptr;
+    if (wv && wc >= 2 && wcscmp(wv[1], L"--patch-icon") == 0) return patchIconMain(wc, wv);
+  }
   for (int i = 1; i + 1 < argc; i++)
     if (strcmp(argv[i], "--boost-tree") == 0) gBoostRoot = (DWORD)strtoul(argv[i + 1], nullptr, 10);
   SetConsoleOutputCP(CP_UTF8);

@@ -211,6 +211,7 @@ class Updater {
     const env = Object.assign({}, process.env, {ELECTRON_RUN_AS_NODE: '1', ELECTRON_NO_ASAR: '1'});
     const child = spawn(process.execPath, [script, JSON.stringify(args)], {detached: true, stdio: 'ignore', env, windowsHide: true});
     child.unref();
+    this.applying = true;   // a troca do app está esperando: nada mais mexe na pasta ao fechar
     setTimeout(() => app.quit(), 300);
     return true;
   }

@@ -15,6 +15,13 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.15.2
+- Ícone do Telão no Telao.exe: na primeira vez que você fechar o Telão depois desta atualização, o Telão Audio
+  grava o ícone novo dentro do Telao.exe (numa cópia, conferida antes de trocar; o original fica como
+  Telao.exe.old e é apagado quando o Telão abrir de novo). Se o Telão estiver fixado na barra de tarefas e
+  o ícone antigo continuar lá, desafixe e fixe de novo. O que aconteceu fica anotado em icone.log, na pasta
+  de dados do Telão (%APPDATA%\Telão).
+
 NOVIDADES DO APP 1.15
 - O painel do "Ao vivo" (e a medição de uso real do Diagnóstico) mostra quanto da placa de vídeo o Telão usa,
   quanto disso é a codificação do vídeo e quanto a placa inteira está ocupada com o jogo. O Telão Audio lê

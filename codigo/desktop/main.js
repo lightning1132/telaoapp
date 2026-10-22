@@ -59,6 +59,32 @@ function startHelper(){
 }
 function stopHelper(){ if (helper){ try{ helper.kill(); }catch{} helper = null; } }
 
+// Ícone do Telão no Telao.exe instalado (uma vez, sem baixar o app inteiro): ao fechar, o Telão Audio espera o app sair,
+// grava o ícone numa cópia do exe, confere e troca (o original fica como Telao.exe.old). Se falhar, tenta no máximo 3 vezes.
+const ICON_MARK = () => path.join(app.getPath('userData'), 'exe-icone.txt');
+const ICON_TRIES = () => path.join(app.getPath('userData'), 'exe-icone-tentativas.json');
+function exeIconDone(){ try{ return fs.readFileSync(ICON_MARK(), 'utf8').trim().toLowerCase() === process.execPath.toLowerCase(); }catch{ return false; } }
+function scheduleExeIcon(){
+  if (process.platform !== 'win32' || !app.isPackaged || (updater && updater.applying) || exeIconDone()) return;
+  try{
+    const exe = process.execPath, hp = helperPath(), ud = app.getPath('userData');
+    if (!fs.existsSync(hp) || !fs.readFileSync(hp).includes(Buffer.from('--patch-icon', 'utf16le'))) return;   // Telão Audio antigo não sabe fazer
+    let t = {}; try{ t = JSON.parse(fs.readFileSync(ICON_TRIES(), 'utf8')) || {}; }catch{}
+    if (t.exe === exe && t.n >= 3) return;
+    const probe = path.join(path.dirname(exe), '.telao-write-test');
+    fs.writeFileSync(probe, 'x'); fs.unlinkSync(probe);   // pasta sem permissão: nem tenta
+    const ico = path.join(ud, 'icone.ico');
+    fs.writeFileSync(ico, fs.readFileSync(path.join(__dirname, 'icon.ico')));
+    fs.writeFileSync(ICON_TRIES(), JSON.stringify({exe, n: (t.exe === exe ? t.n || 0 : 0) + 1}));
+    spawn(hp, ['--patch-icon', String(process.pid), exe, ico, ICON_MARK(), path.join(ud, 'icone.log')], {detached: true, stdio: 'ignore', windowsHide: true}).unref();
+  }catch{}
+}
+// Depois que o exe com o ícone abriu bem, a cópia antiga pode sair.
+function cleanExeIcon(){
+  if (process.platform !== 'win32' || !app.isPackaged || !exeIconDone()) return;
+  try{ fs.unlinkSync(process.execPath + '.old'); }catch{}
+}
+
 // Barra do Telão junto com a da janela (Windows): os botões de minimizar/maximizar/fechar continuam sendo os do
 // próprio Windows (com o menu de encaixe do Windows 11), desenhados por cima do canto direito da barra da página.
 // A página que vem com este app e as mais novas sabem disso (shell 10+); TELAO_WCO=0 desliga, TELAO_WCO=1 liga em outro sistema.
@@ -390,7 +416,7 @@ app.whenReady().then(() => {
   });
 
   // ---- atualização automática ----
-  ipcMain.handle('telao:ready', (_e, v) => { updater.pageReady(v); updater.markAppOk(); return {shell: SHELL_VERSION, cached: !!(updater.loaded && updater.loaded.cached)}; });
+  ipcMain.handle('telao:ready', (_e, v) => { updater.pageReady(v); updater.markAppOk(); cleanExeIcon(); return {shell: SHELL_VERSION, cached: !!(updater.loaded && updater.loaded.cached)}; });
   ipcMain.handle('telao:applyApp', () => updater.applyApp());
   ipcMain.handle('telao:checkUpdate', () => updater.check());
   ipcMain.handle('telao:applyUpdate', () => {
@@ -408,6 +434,7 @@ app.whenReady().then(() => {
 });
 
 app.on('before-quit', () => { stopHelper(); if (overlay && !overlay.isDestroyed()) overlay.destroy(); });
+app.on('will-quit', scheduleExeIcon);
 app.on('window-all-closed', () => { stopHelper(); app.quit(); });
 // a camada não é "janela de verdade": fechar a janela principal fecha o app mesmo com ela aberta
 app.on('browser-window-created', (_e, w) => {
