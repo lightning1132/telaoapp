@@ -614,7 +614,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.12.5';
+const TELAO_VERSION = '1.12.6';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -624,7 +624,9 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 9;       // nível do app desktop mais novo (9: captura turbo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.12.5', 'hoje', ['iPhone/iPad: o vídeo vai em H.264 "Constrained High" (o High que o iPhone aceita), pela placa de vídeo, quando o teste confirma que funciona neste PC']],
+  ['1.12.6', 'hoje', ['iPhone 15 Pro, 16 e mais novos: recebem em AV1, codificado pela placa de vídeo de quem transmite (antes iam em H.264 Baseline, pelo processador)',
+                      'Se o AV1 não aparecer na tela de quem assiste, volta sozinho para o H.264']],
+  ['1.12.5', '22/10', ['iPhone/iPad: o vídeo vai em H.264 "Constrained High" (o High que o iPhone aceita), pela placa de vídeo, quando o teste confirma que funciona neste PC']],
   ['1.12.4', '22/10', ['iPhone/iPad: agora o H.264 High chega de verdade (a conexão de quem transmite passa a ser "só envio", e assim o High entra na negociação)']],
   ['1.12.3', '22/10', ['iPhone/iPad assistindo: o H.264 vai no perfil High pela placa de vídeo (antes ia em Baseline pelo processador), quando a placa de quem transmite aceita',
                       'Teste de encoder testa cada perfil do H.264 (Main, High, Baseline); relatórios mostram o perfil combinado com cada pessoa']],
@@ -1817,6 +1819,19 @@ const h264Name = fmtp => { const id = h264Profile(fmtp); const n = H264_NAMES.fi
 const CHROME_V = (navigator.userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || '';
 function h264Hw(){ const x = store.get('h264hw', null); return x && x.v === CHROME_V && x.p ? x.p : null; }
 const myHighHw = () => { const p = h264Hw(); return !!(p && p['640c'] === 'hw'); };
+const myAv1Hw = () => { const p = h264Hw(); return !!(p && p.av1 === 'hw'); };
+/* Quem assiste e não aceita H.264 Main mas decodifica AV1 (iPhone 15 Pro, 16 e mais novos: o chip decodifica AV1)
+   pede AV1 quando quem transmite codifica AV1 pela placa. Sem isso, cairia no H.264 Baseline, que sai pelo processador. */
+let av1PrefCache = null;
+function av1Instead(){
+  if (av1PrefCache !== null) return av1PrefCache;
+  try{
+    const c = (window.RTCRtpReceiver && RTCRtpReceiver.getCapabilities && RTCRtpReceiver.getCapabilities('video') || {}).codecs || [];
+    const main = c.some(x => /h264/i.test(x.mimeType) && h264Profile(x.sdpFmtpLine).startsWith('4d'));
+    av1PrefCache = !main && c.some(x => /av1/i.test(x.mimeType)) && !badDecode.has('AV1');
+  }catch{ av1PrefCache = false; }
+  return av1PrefCache;
+}
 
 /* Coloca o codec escolhido na frente da lista de vídeo da negociação.
    Aplicado na oferta (quem transmite) e na resposta (quem assiste, lendo o codec pelo metadata),
@@ -2206,7 +2221,7 @@ function callPeer(pid){
   if (!localStream || !me || me.destroyed) return;
   const codec = currentCodec();
   const hi = myHighHw();
-  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
+  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi, av1: myAv1Hw()}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
   if (!call) return;
   outCalls.set(pid, call);
   const pc = call.peerConnection;
@@ -2565,6 +2580,10 @@ function renderHiddenBar(){
 /* Formatos de vídeo que chegaram aqui mas não viraram imagem: ficam guardados e o app
    responde às próximas chamadas pedindo outro formato (quem decide o codec é a resposta). */
 const badDecode = new Set(store.get('badDecode', []));
+function viewerCodec(sender, meta){
+  if (sender === 'H264' && meta && meta.av1 === true && av1Instead()) return 'AV1';
+  return answerCodec(sender);
+}
 function answerCodec(senderCodec){
   if (!badDecode.size) return senderCodec;
   return [senderCodec, 'VP9', 'VP8', 'H264'].filter(Boolean).find(c => !badDecode.has(c)) || senderCodec;
@@ -2577,7 +2596,8 @@ function onPullCall(call){
   if (!localStream){ try{ call.close(); }catch{} return; }
   const avoid = Array.isArray(call.metadata && call.metadata.avoid) ? call.metadata.avoid : [];
   const pref = currentCodec();
-  const codec = !avoid.includes(pref) ? pref : (['VP9', 'VP8', 'H264'].find(c => !avoid.includes(c)) || pref);
+  let codec = !avoid.includes(pref) ? pref : (['VP9', 'VP8', 'H264'].find(c => !avoid.includes(c)) || pref);
+  if (codec === 'H264' && call.metadata && call.metadata.av1ok === true && myAv1Hw()) codec = 'AV1';
   const old = outCalls.get(pid);
   if (old && old !== call){ outCalls.delete(pid); try{ old.close(); }catch{} }
   relayVia.delete(pid);   // pediu direto: não precisa mais do repasse
@@ -2603,7 +2623,7 @@ function pullFrom(pid, force){
   let call;
   try{
     call = me.call(pid, new MediaStream(), {
-      metadata: {name: myName, pull: true, avoid: [...badDecode]},
+      metadata: {name: myName, pull: true, avoid: [...badDecode], av1ok: av1Instead()},
       constraints: {offerToReceiveAudio: true, offerToReceiveVideo: true},
       sdpTransform: sdp => startBitrateSdp(stereoSdp(sdp)),   // quem responde (e transmite) escolhe o codec
     });
@@ -2620,12 +2640,12 @@ function onIncomingCall(call){
     const s = call.metadata.relayOf;
     if (!me || s === me.id || !members.some(m => m.id === s && m.sharing) || !members.some(m => m.id === call.peer)){ try{ call.close(); }catch{} return; }
     const sender = CODECS[call.metadata.codec] ? call.metadata.codec : null;
-    call.answer(undefined, {sdpTransform: makeSdpTransform(answerCodec(sender))});
+    call.answer(undefined, {sdpTransform: makeSdpTransform(viewerCodec(sender, call.metadata))});
     attachIncoming(call, s, call.peer);
     return;
   }
   const sender = call.metadata && CODECS[call.metadata.codec] ? call.metadata.codec : null;
-  call.answer(undefined, {sdpTransform: makeSdpTransform(answerCodec(sender), call.metadata && call.metadata.hi === true)});
+  call.answer(undefined, {sdpTransform: makeSdpTransform(viewerCodec(sender, call.metadata), call.metadata && call.metadata.hi === true)});
   attachIncoming(call, call.peer);
 }
 
@@ -3686,7 +3706,7 @@ function relayStartTo(s, v, codec){
   const src = t.video.srcObject;
   const stream = new MediaStream([...src.getVideoTracks(), ...src.getAudioTracks()]);
   let call = null;
-  try{ call = sendOnly(() => me.call(v, stream, {metadata: {name: nameOf(s), codec, relayOf: s, relayName: myName}, sdpTransform: makeSdpTransform(codec)})); }catch{}
+  try{ call = sendOnly(() => me.call(v, stream, {metadata: {name: nameOf(s), codec, relayOf: s, relayName: myName, av1: myAv1Hw()}, sdpTransform: makeSdpTransform(codec)})); }catch{}
   if (!call){ hubSend({t: 'relay', to: s, data: {k: 'rly-fail', vs: [v]}}); return; }
   const ent = {s, v, call, ok: false, want: null, paused: false};
   relayOut.set(key, ent);
@@ -4786,7 +4806,8 @@ function checkDecoding(pid, t, v, codec){
   if (!t.dataSince && (v.bytesReceived || 0) > 30000) t.dataSince = Date.now();
   if (!t.dataSince || Date.now() - t.dataSince < 5000) return;
   t.codecSwitched = true;
-  if (codec && CODECS[codec] && !badDecode.has(codec) && badDecode.size < Object.keys(CODECS).length - 1){
+  if (codec && (CODECS[codec] || codec === 'AV1') && !badDecode.has(codec) && (codec === 'AV1' || [...badDecode].filter(c => CODECS[c]).length < Object.keys(CODECS).length - 1)){
+    if (codec === 'AV1') av1PrefCache = false;
     badDecode.add(codec);
     store.set('badDecode', [...badDecode]);
     toast('O vídeo de ' + t.nameEl.textContent + ' chegou em ' + codec + ', que este PC não conseguiu exibir. Pedindo outro formato…', 'warn', 7000);
@@ -4911,7 +4932,11 @@ function h264Profiles(){
 }
 function saveH264Hw(results){
   const p = {};
-  for (const r of results) if (r.codec === 'H264' && r.prof && (r.status === 'hw' || r.status === 'sw')) p[r.prof] = r.status;
+  for (const r of results){
+    if (r.codec === 'H264' && r.prof && (r.status === 'hw' || r.status === 'sw')) p[r.prof] = r.status;
+    else if (r.codec === 'H264' && r.prof === '640c') p['640c'] = 'falhou';
+    if (r.codec === 'AV1' && (r.status === 'hw' || r.status === 'sw')) p.av1 = r.status;
+  }
   if (Object.keys(p).length) store.set('h264hw', {v: CHROME_V, p, at: Date.now()});
 }
 // Primeira transmissão com esta versão do Chromium: descobre sozinho (em segundo plano, com um vídeo pequeno de teste)
@@ -4919,13 +4944,14 @@ function saveH264Hw(results){
 let h264AutoProbing = false, h264AutoLast = null;
 async function autoProbeH264(){
   const known = h264Hw();
-  if (!DESKTOP || h264AutoProbing || (known && !(known['64'] === 'hw' && !('640c' in known))) || currentCodec() !== 'H264' || !localStream) return;
+  if (!DESKTOP || h264AutoProbing || (known && 'av1' in known && !(known['64'] === 'hw' && !('640c' in known))) || currentCodec() !== 'H264' || !localStream) return;
   h264AutoProbing = true;
   const src = canvasSource(640, 360), res = [];
   try{
     for (const p of h264Profiles().filter(Boolean)){ if (!localStream) break; try{ res.push(await probeCodec('H264', src.track, p)); }catch{} }
+    if (localStream) try{ res.push(await probeCodec('AV1', src.track)); }catch{}
     saveH264Hw(res);   // só guarda se o Chromium revelou quem codificou (com uma captura de verdade aberta)
-    h264AutoLast = res.map(r => r.prof + ':' + r.status).join(' ');
+    h264AutoLast = res.map(r => (r.prof || r.codec) + ':' + r.status).join(' ');
   }finally{ src.stop(); h264AutoProbing = false; }
 }
 
@@ -5187,6 +5213,9 @@ function diagReport(){
     if (diagGpu.features) L.push('flags do app: ' + diagGpu.features);
     L.push('desempenho minimizado: ' + (helper.ready ? helper.boost : 'helper desconectado'));
   }
+  try{ const rc = (RTCRtpReceiver.getCapabilities('video') || {}).codecs || [];
+    L.push('Este aparelho recebe: ' + [...new Set(rc.map(c => c.mimeType.replace(/^video\//i, '') + (/h264/i.test(c.mimeType) ? ' ' + h264Profile(c.sdpFmtpLine).slice(0, 4) : '')))].filter(x => !/rtx|red|ulpfec|flexfec/i.test(x)).join(', ') +
+           ' · pede AV1 no lugar do H.264: ' + (av1Instead() ? 'sim' : 'não')); }catch{}
   L.push('Formato escolhido: ' + currentCodec() + ' · qualidade: ' + currentQ() + ' · H.264 pela placa neste PC: ' + (h264Hw() ? JSON.stringify(h264Hw()) : 'ainda não testado') + (myHighHw() ? ' (oferece High a quem não aceita Main)' : '') + (h264AutoLast ? ' · teste automático: ' + h264AutoLast : ''));
   for (const r of diagResults)
     L.push(r.codec + (r.prof ? ' ' + r.prof : '') + ': ' + r.status + (r.used ? ' (saiu ' + r.used + ')' : '') + (r.fps ? ' ' + r.fps + 'fps' : '') + (r.h ? ' ' + r.h + 'p' : '') +
