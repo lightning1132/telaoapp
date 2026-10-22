@@ -4,12 +4,48 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Telão</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Crect x=%272%27 y=%272%27 width=%2796%27 height=%2796%27 rx=%2724%27 fill=%27%23161920%27/%3E%3Cpath d=%27M27 25c7-9 15-9 23 0s16 9 23 0%27 fill=%27none%27 stroke=%27%237cf29a%27 stroke-width=%2710%27 stroke-linecap=%27round%27/%3E%3Crect x=%2718%27 y=%2738%27 width=%2764%27 height=%2742%27 rx=%279%27 fill=%27none%27 stroke=%27%23e9ebee%27 stroke-width=%279%27/%3E%3Cpath d=%27M40 88h20%27 stroke=%27%23e9ebee%27 stroke-width=%279%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<script id="themeBoot">
+/* Tema escolhido em Opções › Aparência: aplicado antes de desenhar a página (evita piscar no tema padrão). */
+(() => {
+  try{
+    const g = k => { const v = localStorage.getItem('telao:' + k); return v === null ? null : JSON.parse(v); };
+    let t = g('theme') || 'grafite';
+    if (t === 'sistema') t = matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'grafite';
+    document.documentElement.dataset.theme = t;
+    const a = g('accent');
+    if (typeof a === 'string' && /^#[0-9a-f]{6}$/i.test(a)){
+      const n = parseInt(a.slice(1), 16), L = (0.2126 * (n >> 16) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
+      document.documentElement.style.setProperty('--accent', a);
+      document.documentElement.style.setProperty('--accent-ink', L > 0.55 ? '#0a1210' : '#ffffff');
+    }
+    if (window.telaoDesktop && window.telaoDesktop.wco > 0){
+      document.documentElement.classList.add('wco');
+      document.documentElement.style.setProperty('--tbh', window.telaoDesktop.wco + 'px');
+    }
+  }catch{}
+})();
+</script>
 <style>
 :root{
-  --bg:#0d0f12;--panel:#161920;--panel2:#1e222a;--line:#2a303a;
+  --bg:#0d0f12;--panel:#161920;--panel2:#1e222a;--line:#2a303a;--top:#12151a;
   --text:#e9ebee;--muted:#8a93a2;--accent:#7cf29a;--accent-ink:#0a1a0f;
-  --danger:#ff6b6b;--warn:#ffc857;
+  --danger:#ff6b6b;--danger-ink:#1a0606;--warn:#ffc857;--warn-ink:#201500;
+  --glass:rgba(22,25,32,.80);--glass-line:rgba(255,255,255,.08);--shadow:rgba(0,0,0,.5);
+  --over:rgba(13,15,18,.8);--over-text:#e9ebee;--over-muted:#b4bcc8;
+  --tbh:0px;--wco-r:0px;
+  color-scheme:dark;
 }
+/* Temas: só as cores centrais mudam. Vídeo e o que fica por cima dele continuam escuros em todos. */
+:root[data-theme=azul]{--bg:#0b1020;--panel:#121a2e;--panel2:#1a2440;--line:#26314f;--top:#0f1628;--text:#e8ecf6;--muted:#8b96b3;
+  --accent:#6ea8ff;--accent-ink:#06142e;--glass:rgba(18,26,46,.82)}
+:root[data-theme=oled]{--bg:#000;--panel:#0b0b0d;--panel2:#141417;--line:#222226;--top:#050506;--text:#f2f2f2;--muted:#8c8c94;
+  --accent:#c38bff;--accent-ink:#1a0630;--glass:rgba(11,11,13,.86)}
+:root[data-theme=cafe]{--bg:#14100d;--panel:#1d1814;--panel2:#27201a;--line:#3a2f26;--top:#191411;--text:#f1e9e1;--muted:#a39383;
+  --accent:#6fd6c4;--accent-ink:#05201b;--glass:rgba(29,24,20,.82)}
+:root[data-theme=claro]{--bg:#eef0f3;--panel:#fff;--panel2:#e6e9ee;--line:#d3d8e0;--top:#ffffff;--text:#15181d;--muted:#5d6675;
+  --accent:#16a34a;--accent-ink:#fff;--danger:#d93636;--danger-ink:#fff;--warn:#b7791f;--warn-ink:#fff;
+  --glass:rgba(255,255,255,.88);--glass-line:rgba(0,0,0,.08);--shadow:rgba(20,30,50,.18);color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
   font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -23,7 +59,7 @@ svg.i{width:18px;height:18px;fill:currentColor;display:block}
 .primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:8px 14px;font-weight:600}
 .primary:hover{filter:brightness(1.08)}
 .primary:disabled{opacity:.5;cursor:default}
-.primary.stop{background:var(--danger);color:#1a0606}
+.primary.stop{background:var(--danger);color:var(--danger-ink)}
 .ghost{background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 12px}
 .ghost:hover{background:var(--panel2)}
 .big{width:100%;padding:12px;font-size:15px}
@@ -32,19 +68,26 @@ svg.i{width:18px;height:18px;fill:currentColor;display:block}
 #lobby{min-height:100%;display:grid;place-items:center;padding:16px;position:relative}
 /* fundo da entrada: arte de jogos */
 #splash{position:fixed;inset:0;z-index:0;overflow:hidden;
-  background:radial-gradient(1100px 620px at 15% 10%,rgba(124,242,154,.10),transparent 60%),radial-gradient(900px 520px at 90% 95%,rgba(90,120,255,.13),transparent 60%),var(--bg)}
+  background:radial-gradient(1100px 620px at 15% 10%,color-mix(in srgb,var(--accent) 10%,transparent),transparent 60%),radial-gradient(900px 520px at 90% 95%,rgba(90,120,255,.13),transparent 60%),var(--bg)}
 #splashImg{position:absolute;inset:-4%;background-size:cover;background-position:center;opacity:0;transition:opacity 1.4s ease}
 #splashImg.on{opacity:1;animation:kenburns 45s ease-in-out infinite alternate;animation-play-state:paused}
 #splashImg.on.moving{animation-play-state:running}
 @keyframes kenburns{from{transform:scale(1.03) translate(0,0)}to{transform:scale(1.12) translate(-2%,-1.5%)}}
+:root[data-theme=claro] #splashShade{background:linear-gradient(90deg,rgba(238,240,243,.35),rgba(238,240,243,.55)),linear-gradient(180deg,rgba(238,240,243,.2) 0%,rgba(238,240,243,.6) 55%,rgba(238,240,243,.94) 100%)!important}
+:root[data-theme=claro] #splashCap{color:rgba(21,24,29,.7);text-shadow:none}
 #splashShade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(13,15,18,.30),rgba(13,15,18,.50)),linear-gradient(180deg,rgba(13,15,18,.15) 0%,rgba(13,15,18,.55) 55%,rgba(13,15,18,.92) 100%)}
 #splashCap{position:fixed;left:16px;bottom:12px;z-index:1;font-size:12px;color:rgba(233,235,238,.72);text-shadow:0 1px 4px #000;pointer-events:none}
-#lobby .card{position:relative;z-index:1;background:rgba(22,25,32,.80);backdrop-filter:blur(16px) saturate(1.15);-webkit-backdrop-filter:blur(16px) saturate(1.15);
-  border-color:rgba(255,255,255,.08);box-shadow:0 24px 70px rgba(0,0,0,.55)}
+#lobby .card{position:relative;z-index:1;background:var(--glass);backdrop-filter:blur(16px) saturate(1.15);-webkit-backdrop-filter:blur(16px) saturate(1.15);
+  border-color:var(--glass-line);box-shadow:0 24px 70px rgba(0,0,0,.55)}
 @media (prefers-reduced-motion:reduce){#splashImg.on{animation:none}}
 .card{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
 .card h1{margin:0 0 4px;font-size:28px;letter-spacing:-.5px}
 .card h1 span{color:var(--accent)}
+.lobby-h{display:flex;align-items:center;gap:12px}
+.lobby-h .logo{width:42px;height:42px}
+.lobby-h .wm{font-size:32px}
+.card h1.lobby-h .wm{color:var(--text)}
+.lobby-h .wm span{color:var(--accent)}
 .card p{margin:0 0 18px}
 .ver-line{font-size:12px;color:var(--muted);margin:2px 0 14px}
 .linkish{background:none;border:0;padding:0;color:var(--accent);font-size:12px;text-decoration:underline;text-underline-offset:2px}
@@ -86,23 +129,128 @@ details .fields{margin-top:10px}
 
 /* Sala */
 #room{height:100%;display:flex;flex-direction:column}
-#bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
-.brand{font-weight:700;display:flex;align-items:center;gap:8px;margin-right:4px}
+#bar{position:relative;z-index:8;display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-height:52px;padding:7px 12px 7px 14px;
+  background:var(--top);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:8px;margin-right:2px;position:relative}
+.logo{width:26px;height:26px;flex:none;display:block}
+.wm{font-weight:800;font-size:19px;letter-spacing:-.5px;line-height:1}
+.wm span{color:var(--accent)}
+.brand .dot{position:absolute;left:19px;top:19px;width:10px;height:10px;border:2px solid var(--top)}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
 .dot.ok{background:var(--accent)}.dot.warn{background:var(--warn)}.dot.danger{background:var(--danger)}
-.pill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--muted)}
+.pill{display:flex;align-items:center;gap:7px;height:32px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:0 12px;color:var(--muted)}
 .pill b{color:var(--text);letter-spacing:1px;font-family:ui-monospace,Consolas,monospace}
+.pill svg{width:15px;height:15px;flex:none}
 .pill:hover{border-color:var(--accent)}
-#members{display:flex;flex-wrap:wrap;gap:6px}
-.chip{display:flex;align-items:center;gap:6px;background:var(--panel2);border-radius:999px;padding:4px 10px;font-size:13px}
-.chip .live{width:7px;height:7px;border-radius:50%;background:var(--muted)}
-.chip.sharing .live{background:var(--danger);box-shadow:0 0 0 3px rgba(255,107,107,.18)}
-.chip.me{border:1px solid var(--line)}
-.chip .ver{font-size:11px;color:var(--warn)}
-.chip.old{border:1px solid var(--warn)}
+#membersBtn{display:flex;align-items:center;gap:10px;height:36px;padding:0 8px 0 4px;background:transparent;border:0;border-radius:999px;color:var(--muted)}
+#membersBtn:hover{background:var(--panel2)}
+#members{display:flex;align-items:center}
+.chip{position:relative;display:inline-flex;margin-left:-8px;border-radius:50%;border:2px solid var(--top);background:var(--top)}
+.chip:first-child{margin-left:0}
+.chip.sharing{border-color:var(--accent)}
+.chip.me.sharing{border-color:var(--danger)}
+.chip.old::after{content:"";position:absolute;right:-3px;top:-3px;width:10px;height:10px;border-radius:50%;background:var(--warn);border:2px solid var(--top)}
+.chip .nm,.chip .ver,.chip .live,.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.chip.more{display:grid;place-items:center;width:32px;height:32px;font-size:11px;font-weight:700;color:var(--text);background:var(--panel2)}
+#memSum{font-size:13px;white-space:nowrap}
 .grow{flex:1}
 #status{font-size:12px}
+#status[data-k=ok]{display:none}
 select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 8px}
+#bar .primary,#bar .ghost{height:36px;display:inline-flex;align-items:center;gap:8px;padding:0 13px;white-space:nowrap}
+#bar .ico{width:36px;padding:0;justify-content:center}
+#bar svg.i{width:17px;height:17px}
+.split{display:flex}
+#shareBtn{border-radius:8px 0 0 8px;font-weight:700}
+#shareMore{border-radius:0 8px 8px 0;border-left:1px solid color-mix(in srgb,var(--accent-ink) 30%,transparent);width:34px;padding:0;justify-content:center}
+#shareMore.solo{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:8px;width:36px}
+#shareMore.solo:hover{background:var(--panel2)}
+#chatBtn .badge{background:var(--accent);color:var(--accent-ink)}
+#chatBtn.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+#clipsBtn{border-color:color-mix(in srgb,var(--accent) 60%,transparent)!important;color:var(--accent)}
+/* "Ao vivo" (quem está transmitindo) */
+#live{display:flex;align-items:center;gap:4px;height:38px;padding:0 4px 0 4px;border-radius:9px;
+  background:color-mix(in srgb,var(--danger) 12%,transparent);border:1px solid color-mix(in srgb,var(--danger) 45%,transparent)}
+#live[hidden]{display:none}
+#liveBtn{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;background:transparent;border:0;border-radius:6px;color:var(--text);white-space:nowrap}
+#liveBtn:hover{background:color-mix(in srgb,var(--danger) 10%,transparent)}
+#liveBtn .ldot{width:9px;height:9px;border-radius:50%;background:var(--danger);flex:none;animation:lpulse 2s ease-in-out infinite}
+@keyframes lpulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--danger) 25%,transparent)}}
+@media (prefers-reduced-motion:reduce){#liveBtn .ldot{animation:none}}
+#liveTxt{color:var(--muted)}
+#liveTxt b{font-weight:600}
+#liveBtn svg{width:14px;height:14px;color:var(--muted)}
+#live.warn{background:color-mix(in srgb,var(--warn) 12%,transparent);border-color:color-mix(in srgb,var(--warn) 60%,transparent)}
+#live.warn #liveTxt b{color:var(--warn)}
+#live.bad{background:color-mix(in srgb,var(--danger) 18%,transparent);border-color:var(--danger)}
+#live.bad #liveTxt b{color:var(--danger)}
+#liveStop{display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;background:var(--danger);color:var(--danger-ink);border:0;border-radius:6px;font-weight:700}
+#liveStop svg{width:11px;height:11px}
+/* menus que abrem da barra */
+.pop{position:fixed;z-index:30;width:320px;max-width:calc(100vw - 16px);max-height:calc(100vh - 80px);overflow:auto;display:flex;flex-direction:column;gap:14px;padding:14px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px var(--shadow);font-size:13px}
+.pop[hidden]{display:none}
+.pop h4{margin:0;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.pop .pgrp{display:flex;flex-direction:column;gap:6px}
+.pop select{width:100%;background:var(--bg)}
+.pop .pnote{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:10px}
+.pop .mi{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:transparent;border:0;border-radius:8px;color:var(--text);text-align:left}
+.pop .mi:hover{background:var(--panel2)}
+.pop .mi svg{width:17px;height:17px;flex:none;color:var(--muted)}
+.pop .mi.danger{color:var(--danger)} .pop .mi.danger svg{color:var(--danger)}
+.pop .sep{height:1px;background:var(--line);margin:2px 0}
+#moreMenu{width:240px;gap:2px;padding:6px}
+#moreMenu .pver{padding:6px 10px 4px;color:var(--muted);font-size:12px}
+.tgl{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
+.tgl span{display:flex;flex-direction:column}
+.tgl small{color:var(--muted);font-size:12px}
+.tgl input{appearance:none;-webkit-appearance:none;flex:none;width:38px;height:22px;margin:0;border-radius:999px;background:var(--line);position:relative;cursor:pointer;transition:background .15s}
+.tgl input::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--text);transition:transform .15s}
+.tgl input:checked{background:var(--accent)} .tgl input:checked::after{transform:translateX(16px);background:var(--accent-ink)}
+.tgl input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* quem está na sala */
+#memPop{width:300px;gap:4px}
+.mrow{display:flex;align-items:center;gap:10px;padding:6px 4px}
+.mrow .mn{flex:1;min-width:0;display:flex;flex-direction:column}
+.mrow .mn b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .mn small{color:var(--muted);font-size:12px}
+.mrow .mn small.old{color:var(--warn)}
+.mrow .mst{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.mrow .mst i{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.mrow .mst.me i{background:var(--danger)}
+/* custo da transmissão */
+#costPop{width:400px;gap:16px}
+#costPop .ctitle{font-weight:600;font-size:15px}
+.cm{display:flex;flex-direction:column;gap:6px}
+.cm .cl{display:flex;justify-content:space-between;gap:10px}
+.cm .cl span:last-child{text-align:right}
+.cm .cl b{font-weight:600}
+.cm .cl small{color:var(--muted);font-size:12px}
+.cbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.cbar span{display:block;height:100%;width:0;background:var(--accent);transition:width .6s}
+.cbar.warn span{background:var(--warn)} .cbar.bad span{background:var(--danger)}
+.csec{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--line)}
+.cv{display:flex;align-items:center;gap:8px}
+.cv .cvn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cv small{color:var(--muted);white-space:nowrap}
+.cv b{width:72px;text-align:right;font-weight:600;white-space:nowrap}
+.cv.paused{opacity:.55}
+.calert{padding:10px 12px;border-radius:8px;background:color-mix(in srgb,var(--warn) 12%,transparent);border-left:3px solid var(--warn)}
+.calert.bad{background:color-mix(in srgb,var(--danger) 12%,transparent);border-left-color:var(--danger)}
+.cfoot{display:flex;align-items:center;gap:8px;padding-top:14px;border-top:1px solid var(--line)}
+.cfoot span{flex:1;color:var(--muted)}
+.cfoot .ghost{padding:5px 10px;font-size:12px}
+/* barra integrada à janela (app no Windows): os botões de minimizar/maximizar/fechar são os do próprio Windows */
+#winTop{display:none}
+html.wco #winTop{position:fixed;z-index:16;left:0;top:0;right:0;height:var(--tbh);display:flex;align-items:center;gap:8px;padding-left:14px;
+  background:var(--top);border-bottom:1px solid var(--line);-webkit-app-region:drag;app-region:drag}
+html.wco #lobby{padding-top:calc(16px + var(--tbh))}
+html.wco #room #winTop{display:none}
+html.wco #bar{min-height:var(--tbh);padding-right:calc(var(--wco-r) + 10px);-webkit-app-region:drag;app-region:drag}
+html.wco #bar button,html.wco #bar select,html.wco #bar input,html.wco #bar a,html.wco #bar label,html.wco #bar #live{-webkit-app-region:no-drag;app-region:no-drag}
+html.wco #upd{position:fixed;left:0;right:0;top:var(--tbh)}
+html.wco body:has(#upd:not([hidden])) #room{height:100%}
+html.wco body:has(#room:not([hidden])) #winTop{display:none}
 .chk{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;cursor:pointer}
 
 #netBanner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;font-size:13px;
@@ -116,30 +264,49 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 #hiddenBar .hchip{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);
   border-radius:999px;padding:3px 4px 3px 10px;color:var(--text)}
 #hiddenBar .hchip button{background:transparent;border:0;border-radius:999px;padding:3px 9px;color:var(--accent);font-weight:600}
-#hiddenBar .hchip button:hover{background:rgba(124,242,154,.12)}
-#stage{flex:1;min-height:0;display:grid;gap:10px;padding:10px;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));align-content:center;overflow:auto}
-#stage.focused{grid-template-columns:1fr minmax(180px,22%);grid-auto-rows:min-content;align-content:start}
+#hiddenBar .hchip button:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+/* Grade das telas: o tamanho de cada tela é calculado (fitGrid) para caber tudo sem rolagem e sem buraco no meio. */
+#stage{flex:1;min-height:0;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:12px;padding:16px;overflow:auto}
+#stage:not(.focused) > .tile{flex:none;width:var(--tw,100%)}
+#stage.focused{display:grid;gap:10px;padding:10px;grid-template-columns:1fr minmax(180px,22%);grid-auto-rows:min-content;align-content:start}
 #stage.focused .tile.is-focus{grid-column:1;grid-row:1 / span 20;max-height:calc(100vh - 90px)}
 #stage.focused .tile:not(.is-focus){grid-column:2}
 @media (max-width:760px){
   #stage.focused{grid-template-columns:1fr}
   #stage.focused .tile.is-focus,#stage.focused .tile:not(.is-focus){grid-column:1;grid-row:auto}
 }
-.tile{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9;width:100%;
-  max-height:calc(100vh - 90px);border:1px solid var(--line)}
+.tile{position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:16/9;width:100%;color:#e9ebee}
 .tile video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
-.tile .tbar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;padding:8px 10px;
-  background:linear-gradient(transparent,rgba(0,0,0,.75));opacity:0;transition:opacity .15s}
+.tile .tbar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:8px;padding:28px 12px 10px;
+  background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.72));opacity:0;transition:opacity .15s;z-index:5}
 .tile:hover .tbar,.tile:focus-within .tbar{opacity:1}
-.tile .name{font-weight:600}
-.tile .stats{font-size:12px;color:#c7ccd4;font-family:ui-monospace,Consolas,monospace}
-.tile .tbar button{background:rgba(255,255,255,.08);border:0;border-radius:6px;padding:6px;color:#fff}
-.tile .tbar button:hover{background:rgba(255,255,255,.18)}
-.tile input[type=range]{width:90px;accent-color:var(--accent)}
-.tile .tag{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);border-radius:6px;padding:3px 8px;font-size:12px}
-.tile.weak::after{content:"conexão instável…";position:absolute;top:8px;right:8px;background:var(--warn);color:#201500;
-  border-radius:6px;padding:3px 8px;font-size:12px;font-weight:600}
+.tile .tgrp{display:flex;align-items:center;gap:2px;padding:3px;background:var(--over);border:1px solid rgba(255,255,255,.12);border-radius:999px}
+.tile .tbar .tgrp button{width:32px;height:32px;display:grid;place-items:center;background:transparent;border:0;border-radius:50%;padding:0;color:#e9ebee}
+.tile .tbar .tgrp button:hover{background:rgba(255,255,255,.14)}
+.tile .tbar .tgrp button[hidden]{display:none}
+.tile .tbar .clip{display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;background:var(--over);border:1px solid rgba(255,255,255,.12);border-radius:999px;color:#e9ebee;font-size:13px}
+.tile .tbar .clip:hover{background:rgba(30,34,42,.92)}
+.tile .tbar svg.i{width:17px;height:17px}
+.tile input[type=range]{width:90px;accent-color:var(--accent);margin:0 8px 0 2px}
+.tile .tag{position:absolute;top:10px;left:10px;z-index:4;display:flex;align-items:center;gap:8px;max-width:calc(100% - 120px);
+  padding:4px 12px 4px 4px;background:var(--over);border-radius:999px;font-size:13px;pointer-events:none}
+.tile .tag .tname{font-weight:600;white-space:nowrap}
+.tile .tag .tgame{color:var(--over-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .tag .tgame:empty{display:none}
+.tile.wait .tag{padding:5px 12px}
+.tile .tq{position:absolute;top:10px;right:10px;z-index:4;display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--over);
+  border-radius:999px;font-size:12px;pointer-events:none}
+.tile .tq:empty{display:none}
+.tile .tq::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.tile .tq.warn::before{background:#ffc857}
+.tile.weak .tq,.tile.weak .tq:empty{display:flex;font-size:0;gap:0} .tile.weak .tq::before{background:#ff6b6b;margin-right:6px}
+.tile.weak .tq::after{content:"conexão instável";font-size:12px}
+.tile .tinfo{position:absolute;top:44px;right:10px;z-index:4;display:flex;flex-direction:column;gap:3px;padding:9px 11px;
+  background:rgba(22,25,32,.92);border:1px solid rgba(255,255,255,.1);border-radius:10px;font-size:12px;color:#c9ced6;
+  opacity:0;transition:opacity .15s;pointer-events:none;max-width:calc(100% - 20px)}
+.tile:hover .tinfo,.tile:focus-within .tinfo{opacity:1}
+.tile .tinfo:has(.stats:empty){display:none}
+.tile .stats{white-space:normal}
 /* reações */
 .fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:3}
 .fx .rx{position:absolute;bottom:8%;display:flex;flex-direction:column;align-items:center;animation:rise 2.6s ease-out forwards;will-change:transform,opacity}
@@ -148,9 +315,9 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 #pip .fx .rx b{font-size:26px}
 @keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}12%{transform:translateY(-10%) scale(1.15);opacity:1}
   70%{opacity:1}100%{transform:translateY(-260%) scale(1);opacity:0}}
-.tile .reacts{position:absolute;left:10px;bottom:46px;display:flex;gap:4px;opacity:0;transition:opacity .15s;z-index:4}
+.tile .reacts{position:absolute;left:12px;bottom:58px;display:flex;flex-wrap:wrap;gap:4px;opacity:0;transition:opacity .15s;z-index:6;max-width:calc(100% - 24px)}
 .tile:hover .reacts,.tile:focus-within .reacts{opacity:1}
-.tile .reacts button{background:rgba(0,0,0,.55);border:0;border-radius:999px;width:34px;height:34px;font-size:18px;line-height:1;padding:0;cursor:pointer}
+.tile .reacts button{background:var(--over);border:1px solid rgba(255,255,255,.12);border-radius:999px;width:36px;height:36px;font-size:18px;line-height:1;padding:0;cursor:pointer;color:#e9ebee}
 .tile .reacts button:hover{background:rgba(0,0,0,.8);transform:scale(1.12)}
 .tile .clip.on{color:var(--accent)}
 .tile.floating{width:100vw;height:100vh;max-height:none;aspect-ratio:auto;border:0;border-radius:0}
@@ -158,33 +325,52 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 .tile.float-holder .wbox b{color:var(--text)}
 #pipOverlay.off{opacity:.45}
 .tile .clip.busy{opacity:.5;pointer-events:none}
-#clipsBtn{border-color:var(--accent);color:var(--accent)}
 .tile .tmsg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;color:var(--muted);font-size:14px;pointer-events:none}
 .tile .tmsg:empty{display:none}
-.tile.wait{display:grid;place-items:center;background:var(--panel);border-style:dashed}
+.tile.wait{display:grid;place-items:center;background:var(--panel);border:1px dashed var(--line);color:var(--text)}
+.tile.wait .tag{background:var(--panel2);color:var(--text)}
 .tile.wait .wbox{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--muted);text-align:center;padding:16px}
 .tile.wait .wbox button{padding:6px 14px}
 .tile .clickplay{position:absolute;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);font-weight:600;cursor:pointer}
 .tile.needs-click .clickplay{display:grid}
 .tile:fullscreen{border:0;border-radius:0;max-height:none}
+.tile.float-holder{background:var(--panel)}
 
-#empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 16px}
-#empty h2{color:var(--text);margin:0 0 8px;font-size:20px}
+#empty{width:100%;max-width:680px;margin:auto;display:flex;flex-direction:column;align-items:center;gap:26px;text-align:center;color:var(--muted);padding:32px 16px}
+#empty h2{color:var(--text);margin:0 0 8px;font-size:30px;font-weight:700;letter-spacing:-.5px}
+#empty p{margin:0;font-size:15px}
+#emptyPeople{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+#emptyPeople[hidden]{display:none}
+.ecard{width:170px;display:flex;flex-direction:column;align-items:center;gap:9px;padding:18px 12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;color:var(--text)}
+.ecard b{font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ecard b small{color:var(--muted);font-weight:400;font-size:14px}
+.ecard > small{color:var(--muted);font-size:12px}
+.ecard.call{background:transparent;border-style:dashed;color:var(--muted);font:inherit;cursor:pointer}
+.ecard.call:hover{border-color:var(--accent)}
+.ecard.call .ecirc{width:56px;height:56px;border-radius:50%;border:1px dashed var(--line);display:grid;place-items:center;color:var(--muted)}
+.ecard.call .ecirc svg{width:22px;height:22px}
+#emptyShare{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 24px;border-radius:10px;font-size:16px;font-weight:700}
+#emptyShare svg{width:18px;height:18px}
 
-#pip{position:fixed;right:16px;bottom:16px;width:260px;background:var(--panel);border:1px solid var(--line);
-  border-radius:10px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:5;
+#pip{position:fixed;left:16px;bottom:16px;width:270px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:5;
   cursor:grab;touch-action:none;user-select:none}
 #pip.dragging{cursor:grabbing;opacity:.92;box-shadow:0 14px 40px rgba(0,0,0,.65)}
 #pip video{width:100%;aspect-ratio:16/9;background:#000;display:block;object-fit:contain;pointer-events:none}
 #pip.mini video{display:none}
-#pip .pbar{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:12px}
+#pip .pbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px;font-size:12px}
+#pip .pbar #pipTxt{order:-1;flex:1 1 100%;display:flex;align-items:center;gap:6px;padding:0 2px 2px}
+#pip .pbar #pipTxt::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none}
+#pip .pbar .rec{display:none}
 #pip .pbar .grow{flex:1}
 #pip .rec{width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none}
 #pip .pbar button{padding:4px 10px;font-size:12px;cursor:pointer}
-#pip .pbar .ghost{padding:3px 9px}
+#pip .pbar .ghost{width:30px;height:30px;padding:0;display:grid;place-items:center;flex:none;background:var(--panel2)}
+#pip .pbar .ghost svg{width:15px;height:15px}
+#pip .pbar .primary{flex:none}
 #pip .pdiag{padding:0 10px 8px;font-size:11px;line-height:1.35;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
 #pip .pdiag:empty{display:none}
-#privBtn.on,#pip .pbar #pipPriv.on{background:var(--warn);color:#201500;border-color:var(--warn)}
+#privBtn.on,#pip .pbar #pipPriv.on{background:var(--warn);color:var(--warn-ink);border-color:var(--warn)}
 #pip.private{border-color:var(--warn)}
 #pipPrivBox{display:flex;flex-direction:column;gap:4px;padding:0 10px 8px;font-size:11px;color:var(--warn)}
 #pipPrivBox[hidden]{display:none}
@@ -296,7 +482,7 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 .stk-cell > button:first-child:hover{border-color:var(--accent)}
 .stk-cell img{max-width:100%;max-height:100%;object-fit:contain}
 .stk-del{position:absolute;top:-6px;right:-6px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:11px;padding:0 6px;line-height:18px}
-.stk-del.confirm{background:var(--danger);color:#fff;border-color:var(--danger)}
+.stk-del.confirm{background:var(--danger);color:var(--danger-ink);border-color:var(--danger)}
 .stk-empty{grid-column:1/-1;font-size:12px}
 .tile .reacts .stk,.tile .reacts img{width:22px;height:22px;object-fit:contain}
 .tile .reacts .rx-txt{font-size:11px;font-weight:700}
@@ -321,11 +507,25 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 .modal{position:fixed;inset:0;z-index:22;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
 .modal[hidden]{display:none}
 .op-card{width:min(640px,100%)}
+.op-sub{font-size:13px;color:var(--text);margin:10px 0 8px}
+.thm-row{display:flex;flex-wrap:wrap;gap:8px}
+.thm{display:flex;flex-direction:column;gap:6px;width:88px;padding:6px;background:transparent;border:2px solid var(--line);border-radius:10px;color:var(--text);font-size:12px;text-align:left}
+.thm:hover{border-color:var(--muted)}
+.thm[aria-checked=true]{border-color:var(--accent)}
+.thm i{display:block;height:44px;border-radius:6px;position:relative;overflow:hidden;border:1px solid rgba(127,127,127,.25)}
+.thm i::before{content:"";position:absolute;left:0;right:0;top:0;height:9px;background:var(--sw-top)}
+.thm i::after{content:"";position:absolute;right:7px;top:16px;width:22px;height:9px;border-radius:3px;background:var(--sw-acc)}
+.thm i b{position:absolute;left:7px;top:16px;width:34px;height:20px;border-radius:3px;background:#1d1f24}
+.acc-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.acc{width:28px;height:28px;border-radius:50%;border:2px solid transparent;padding:0;box-shadow:inset 0 0 0 1px rgba(127,127,127,.3)}
+.acc[aria-checked=true]{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--text)}
+.acc.def{width:auto;height:28px;border-radius:999px;padding:0 12px;background:transparent;border:1px solid var(--line);color:var(--text);font-size:12px;box-shadow:none}
+.acc.def[aria-checked=true]{border-color:var(--accent);box-shadow:none;background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .crop-card{width:min(360px,100%)}
 .crop-body{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px}
 #cropCanvas{border-radius:8px;cursor:grab;touch-action:none;background:#000}
 /* retransmissão */
-#relayBar{display:flex;flex-direction:column;gap:6px;padding:8px 12px;font-size:13px;background:rgba(124,242,154,.08);border-bottom:1px solid var(--accent)}
+#relayBar{display:flex;flex-direction:column;gap:6px;padding:8px 12px;font-size:13px;background:color-mix(in srgb,var(--accent) 8%,transparent);border-bottom:1px solid var(--accent)}
 #relayBar[hidden]{display:none}
 #relayBar .rrow{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 #relayBar .rrow span{flex:1;min-width:240px}
@@ -359,7 +559,7 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
   <div id="splash" aria-hidden="true"><div id="splashImg"></div><div id="splashShade"></div></div>
   <div id="splashCap" hidden></div>
   <div class="card">
-    <h1>Tel<span>ã</span>o</h1>
+    <h1 class="lobby-h"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="24" style="fill:var(--panel2)"/><path d="M27 25c7-9 15-9 23 0s16 9 23 0" style="fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round"/><rect x="18" y="38" width="64" height="42" rx="9" style="fill:none;stroke:var(--text);stroke-width:7"/><path d="M40 88h20" style="stroke:var(--text);stroke-width:7;stroke-linecap:round"/></svg><span class="wm">tel<span>ã</span>o</span></h1>
     <div class="ver-line"><span id="verTxt"></span> · <button type="button" class="linkish" id="newsBtn" aria-expanded="false">Novidades</button><span id="updCheckWrap" hidden> · <button type="button" class="linkish" id="updCheck">Procurar atualização</button></span></div>
     <div id="news" hidden></div>
     <p class="muted">Compartilhamento de tela entre amigos, direto de um PC pro outro. Sem conta, sem OBS, sem stream pública.</p>
@@ -408,21 +608,23 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
 
 <section id="room" hidden>
   <header id="bar">
-    <div class="brand"><span class="dot" id="dot"></span>Telão <span class="bver" id="barVer"></span></div>
-    <button class="pill" id="codePill" title="Copiar">sala <b id="codeTxt"></b></button>
-    <div id="members"></div>
+    <div class="brand"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="24" style="fill:var(--panel2)"/><path d="M27 25c7-9 15-9 23 0s16 9 23 0" style="fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round"/><rect x="18" y="38" width="64" height="42" rx="9" style="fill:none;stroke:var(--text);stroke-width:7"/><path d="M40 88h20" style="stroke:var(--text);stroke-width:7;stroke-linecap:round"/></svg><span class="dot" id="dot"></span><span class="wm">tel<span>ã</span>o</span></div>
+    <button type="button" class="pill" id="codePill" title="Copiar convite da sala"><span>sala</span><b id="codeTxt"></b><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></button>
+    <button type="button" id="membersBtn" aria-haspopup="true" aria-expanded="false" title="Quem está na sala"><span id="members"></span><span id="memSum"></span></button>
     <div class="grow"></div>
     <span id="status" class="muted"></span>
-    <select id="quality" title="Qualidade da sua transmissão"></select>
-    <select id="codec" title="Codec de vídeo. H.264 usa a placa de vídeo na maioria dos PCs, o que libera o processador."></select>
-    <select id="audioSrc" title="Qual áudio vai junto com a sua tela"></select>
-    <button id="privBtn" class="ghost" hidden>🔒 Tela privada</button>
-    <button id="shareBtn" class="primary">Compartilhar tela</button>
-    <button id="clipsBtn" class="ghost" hidden title="O Telão está guardando os últimos 30 s de cada tela. Clique para desligar.">✂ Clipes ligados</button>
-    <button id="chatBtn" class="ghost" title="Chat da sala">💬 Chat <span id="chatBadge" class="badge" hidden></span></button>
-    <button id="optsBtn" class="ghost" title="Foto de perfil, tela privada, retransmissão, figurinhas">Opções</button>
-    <button id="diagBtn" class="ghost" title="Diagnóstico de vídeo: placa de vídeo, encoder e transmissão">Diagnóstico</button>
-    <button id="leaveBtn" class="ghost">Sair</button>
+    <div id="live" hidden>
+      <button type="button" id="liveBtn" aria-haspopup="true" aria-expanded="false" title="Quanto a transmissão custa e quem está assistindo"><span class="ldot"></span><span id="liveTxt"><b>Ao vivo</b></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      <button type="button" id="liveStop"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>Parar</button>
+    </div>
+    <button id="privBtn" class="ghost" hidden></button>
+    <div class="split">
+      <button id="shareBtn" class="primary"><svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>Compartilhar tela</span></button>
+      <button id="shareMore" class="primary" aria-haspopup="true" aria-expanded="false" aria-label="Opções da transmissão" title="Qualidade, som e captura"><svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>
+    <button id="clipsBtn" class="ghost" hidden title="O Telão está guardando os últimos 30 s de cada tela. Clique para desligar."><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 7.5L20 18M8.5 16.5L20 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Clipes ligados</button>
+    <button id="chatBtn" class="ghost" title="Chat da sala"><svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/></svg>Chat <span id="chatBadge" class="badge" hidden></span></button>
+    <button id="moreBtn" class="ghost ico" aria-haspopup="true" aria-expanded="false" aria-label="Mais: opções, diagnóstico, sair" title="Opções, diagnóstico, sair"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
   </header>
   <div id="netBanner" hidden>
     <span id="netText"></span>
@@ -434,9 +636,12 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
   <div id="mainRow">
   <main id="stage">
     <div id="empty">
-      <h2 id="emptyTitle">Ninguém compartilhando ainda</h2>
-      <div>Clique em <b>Compartilhar tela</b> e escolha o jogo. Quem estiver na sala vê na hora.<br>
-      A call de voz continua onde vocês já estão; aqui é só o vídeo.</div>
+      <div>
+        <h2 id="emptyTitle">Ninguém transmitindo ainda</h2>
+        <p id="emptySub">Quem compartilhar a tela aparece aqui na hora. A call de voz continua onde vocês já estão; aqui é só o vídeo.</p>
+      </div>
+      <div id="emptyPeople"></div>
+      <button type="button" class="primary" id="emptyShare"><svg viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Compartilhar minha tela</button>
     </div>
   </main>
   <aside id="chat" hidden>
@@ -452,14 +657,37 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
   </div>
 </section>
 
+<div id="winTop" aria-hidden="true"><svg class="logo" viewBox="0 0 100 100" style="width:22px;height:22px"><rect x="2" y="2" width="96" height="96" rx="24" style="fill:var(--panel2)"/><path d="M27 25c7-9 15-9 23 0s16 9 23 0" style="fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round"/><rect x="18" y="38" width="64" height="42" rx="9" style="fill:none;stroke:var(--text);stroke-width:7"/><path d="M40 88h20" style="stroke:var(--text);stroke-width:7;stroke-linecap:round"/></svg><span class="wm" style="font-size:16px">tel<span>ã</span>o</span></div>
+
+<div id="shareMenu" class="pop" hidden role="dialog" aria-label="Opções da transmissão">
+  <div class="pgrp"><h4>Qualidade</h4><select id="quality" aria-label="Qualidade da sua transmissão"></select></div>
+  <div class="pgrp" id="smAudio"><h4>Som</h4><select id="audioSrc" aria-label="Qual áudio vai junto com a sua tela"></select></div>
+  <div class="pgrp" id="smAudioApp" hidden><h4>Som</h4><span class="muted">Você escolhe o som junto com a janela, na hora de compartilhar.</span></div>
+  <label class="tgl" id="smTurboWrap" hidden><span><b>Captura turbo</b><small>mais fps, pela placa de vídeo (experimental)</small></span><input type="checkbox" id="smTurbo"></label>
+  <div class="pgrp"><h4>Formato preferido</h4><select id="codec" aria-label="Codec de vídeo. H.264 usa a placa de vídeo na maioria dos PCs, o que libera o processador."></select></div>
+  <div class="pnote">O formato que cada amigo recebe (H.264, H.265, AV1) é ajustado sozinho conforme o que o aparelho dele aguenta.</div>
+</div>
+
+<div id="moreMenu" class="pop" hidden role="menu" aria-label="Mais">
+  <button type="button" class="mi" id="optsBtn" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Opções e aparência</button>
+  <button type="button" class="mi" id="diagBtn" role="menuitem" title="Diagnóstico de vídeo: placa de vídeo, encoder e transmissão"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Diagnóstico</button>
+  <div class="sep"></div>
+  <button type="button" class="mi danger" id="leaveBtn" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/></svg>Sair da sala</button>
+  <div class="pver">Telão <span class="bver" id="barVer"></span></div>
+</div>
+
+<div id="memPop" class="pop" hidden role="dialog" aria-label="Quem está na sala"></div>
+
+<div id="costPop" class="pop" hidden role="dialog" aria-label="Custo da transmissão"></div>
+
 <div id="pip" hidden>
   <video id="pipVideo" autoplay playsinline muted></video>
   <div class="fx" id="pipFx"></div>
   <div class="pbar" title="Arraste para mover"><span class="rec"></span><span id="pipTxt">Transmitindo</span><span class="grow"></span>
-    <button class="ghost" id="pipPriv" title="Tela privada">🔒</button>
-    <button class="ghost" id="pipOverlay" hidden title="Reações por cima do jogo: ligado. Clique para desligar.">🎮</button>
-    <button class="ghost" id="pipChat" hidden title="Chat por cima do jogo">💬</button>
-    <button class="ghost" id="pipMin" title="Minimizar / expandir">–</button>
+    <button class="ghost" id="pipPriv" title="Tela privada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+    <button class="ghost" id="pipOverlay" hidden title="Reações por cima do jogo: ligado. Clique para desligar."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></svg></button>
+    <button class="ghost" id="pipChat" hidden title="Chat por cima do jogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/></svg></button>
+    <button class="ghost" id="pipMin" title="Minimizar / expandir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
     <button class="primary stop" id="pipStop">Parar</button></div>
   <div id="pipPrivBox" hidden><span>Tela privada ligada · seus amigos veem:</span><input id="pipPrivMsg" maxlength="80" placeholder="Volto já"></div>
   <div class="pdiag" id="pipDiag" title=""></div>
@@ -548,6 +776,14 @@ select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;p
     <div class="pk-head"><b>Opções</b></div>
     <div class="dg-body">
       <section>
+        <h3>Aparência</h3>
+        <div class="op-sub">Tema</div>
+        <div id="optTheme" class="thm-row" role="radiogroup" aria-label="Tema"></div>
+        <div class="op-sub">Cor de destaque <span class="muted">(troca só a cor dos botões e detalhes)</span></div>
+        <div id="optAccent" class="acc-row" role="radiogroup" aria-label="Cor de destaque"></div>
+        <p class="muted dg-p" style="margin-top:10px">Fica salvo neste aparelho; cada amigo vê o tema que escolheu. O vermelho do ao vivo, o amarelo de aviso e o fundo dos vídeos são iguais em todos.</p>
+      </section>
+      <section>
         <h3>Foto de perfil</h3>
         <div class="av-row"><button type="button" class="av-pick av-big" title="Trocar foto"><span class="my-av" data-size="56"></span></button>
           <div><button type="button" class="ghost av-pick">Trocar foto</button> <button type="button" class="ghost av-remove" hidden>Remover</button>
@@ -619,17 +855,23 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.13.0';
+const TELAO_VERSION = '1.14.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 9;       // nível do app desktop mais novo (9: captura turbo)
+const LATEST_SHELL = 10;      // nível do app desktop mais novo (10: barra integrada à janela)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.13.0', 'hoje', ['H.265 automático entre PCs: quando os dois lados têm placa compatível, o vídeo vai em H.265 (menos internet para a mesma imagem). Desliga em Opções',
+  ['1.14.0', 'hoje', ['Visual novo: logo, barra da sala mais limpa (qualidade e som no ▾ do Compartilhar; opções, diagnóstico e sair no ⋯) e rostos de quem está na sala',
+                      'No app, a barra do Telão é a própria barra da janela (os botões de minimizar, maximizar e fechar continuam os do Windows)',
+                      'Temas: Grafite, Azul-noite, Preto OLED, Café, Claro ou igual ao sistema, e cor de destaque à sua escolha (Opções)',
+                      '"Ao vivo" de quem transmite: quantos assistem, upload e, clicando, o custo no PC (processador no app) e o que cada amigo recebe. Fica amarelo ou vermelho sozinho quando algo aperta',
+                      'Telas se ajustam para caber sem rolagem e sem buraco; cada uma mostra se está lisa ou engasgando, e os detalhes técnicos ao passar o mouse',
+                      'Sala vazia mostra quem está aqui e um botão grande para transmitir; a miniatura de quem transmite não cobre mais o chat']],
+  ['1.13.0', '22/10', ['H.265 automático entre PCs: quando os dois lados têm placa compatível, o vídeo vai em H.265 (menos internet para a mesma imagem). Desliga em Opções',
                       'iPhone/iPad continuam recebendo em H.265 pela placa de quem transmite']],
   ['1.12.7', '22/10', ['Teste de encoder testa também o H.265 (HEVC)',
                       'iPhone/iPad recebem em H.265 pela placa de vídeo de quem transmite, quando ela codifica H.265 (o Safari não oferece AV1 em chamadas)']],
@@ -856,8 +1098,111 @@ const store = {
   set(k, v){ try{ localStorage.setItem('telao:'+k, JSON.stringify(v)); }catch{} }
 };
 
+/* ---------- Aparência ----------
+   5 temas + "igual ao Windows" e uma cor de destaque opcional. Tudo neste aparelho (store). */
+const THEMES = [
+  {k: 'grafite', l: 'Grafite',     bg: '#0d0f12', top: '#12151a', acc: '#7cf29a'},
+  {k: 'azul',    l: 'Azul-noite',  bg: '#0b1020', top: '#0f1628', acc: '#6ea8ff'},
+  {k: 'oled',    l: 'Preto OLED',  bg: '#000000', top: '#050506', acc: '#c38bff'},
+  {k: 'cafe',    l: 'Café',        bg: '#14100d', top: '#191411', acc: '#6fd6c4'},
+  {k: 'claro',   l: 'Claro',       bg: '#eef0f3', top: '#ffffff', acc: '#16a34a'},
+  {k: 'sistema', l: 'Igual ao sistema', bg: 'linear-gradient(135deg,#0d0f12 50%,#eef0f3 50%)', top: 'linear-gradient(90deg,#12151a 50%,#ffffff 50%)', acc: '#7cf29a'},
+];
+const ACCENTS = ['#7cf29a', '#6ea8ff', '#c38bff', '#6fd6c4', '#ff8fc7', '#f2b84b'];
+const themeKey = () => { const t = store.get('theme', 'grafite'); return THEMES.some(x => x.k === t) ? t : 'grafite'; };
+const lightQuery = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
+function resolvedTheme(){ const t = themeKey(); return t === 'sistema' ? (lightQuery && lightQuery.matches ? 'claro' : 'grafite') : t; }
+function applyTheme(){
+  const root = document.documentElement;
+  root.dataset.theme = resolvedTheme();
+  const a = store.get('accent', null);
+  if (typeof a === 'string' && /^#[0-9a-f]{6}$/i.test(a)){
+    const n = parseInt(a.slice(1), 16), L = (0.2126 * (n >> 16) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
+    root.style.setProperty('--accent', a);
+    root.style.setProperty('--accent-ink', L > 0.55 ? '#0a1210' : '#ffffff');
+  } else { root.style.removeProperty('--accent'); root.style.removeProperty('--accent-ink'); }
+  syncTitleBar();
+}
+// App com a barra integrada: os botões de minimizar/maximizar/fechar do Windows acompanham o tema.
+function syncTitleBar(){
+  if (!(window.telaoDesktop && window.telaoDesktop.wco > 0 && window.telaoDesktop.titleBar)) return;
+  const cs = getComputedStyle(document.documentElement);
+  const color = cs.getPropertyValue('--top').trim(), symbolColor = cs.getPropertyValue('--muted').trim();
+  window.telaoDesktop.titleBar({color, symbolColor}).catch(() => {});
+}
+// Espaço reservado à direita da barra para os botões do Windows.
+function syncWcoInset(){
+  if (!document.documentElement.classList.contains('wco')) return;
+  const o = navigator.windowControlsOverlay;
+  let r = 138;
+  try{ if (o && o.visible){ const b = o.getTitlebarAreaRect(); if (b && b.width > 0) r = Math.max(0, Math.round(innerWidth - (b.x + b.width))); } }catch{}
+  document.documentElement.style.setProperty('--wco-r', r + 'px');
+}
+if (lightQuery && lightQuery.addEventListener) lightQuery.addEventListener('change', () => { if (themeKey() === 'sistema'){ applyTheme(); renderThemeOpts(); } });
+function renderThemeOpts(){
+  const box = $('#optTheme'); if (!box) return;
+  box.textContent = '';
+  const cur = themeKey();
+  for (const t of THEMES){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'thm'; b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(t.k === cur));
+    const sw = document.createElement('i'); sw.style.background = t.bg; sw.style.setProperty('--sw-top', t.top); sw.style.setProperty('--sw-acc', t.acc);
+    sw.appendChild(document.createElement('b'));
+    const l = document.createElement('span'); l.textContent = t.l;
+    b.append(sw, l);
+    b.onclick = () => { store.set('theme', t.k); applyTheme(); renderThemeOpts(); };
+    box.appendChild(b);
+  }
+  const ab = $('#optAccent'); ab.textContent = '';
+  const ca = store.get('accent', null);
+  const def = document.createElement('button'); def.type = 'button'; def.className = 'acc def'; def.textContent = 'Do tema';
+  def.setAttribute('role', 'radio'); def.setAttribute('aria-checked', String(!ca));
+  def.onclick = () => { store.set('accent', null); applyTheme(); renderThemeOpts(); };
+  ab.appendChild(def);
+  for (const c of ACCENTS){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'acc'; b.style.background = c; b.title = c;
+    b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(ca === c)); b.setAttribute('aria-label', 'Destaque ' + c);
+    b.onclick = () => { store.set('accent', c); applyTheme(); renderThemeOpts(); };
+    ab.appendChild(b);
+  }
+}
+
+/* ---------- Menus da barra ----------
+   Abrem por baixo do botão; fecham ao clicar fora, com Esc ou ao abrir outro. */
+let openPop = null;
+function closePop(){
+  if (!openPop) return;
+  const {el, btn} = openPop; openPop = null;
+  el.hidden = true; if (btn) btn.setAttribute('aria-expanded', 'false');
+  if (el.id === 'costPop') stopCostTimer();
+}
+function placePop(el, btn){
+  const r = btn.getBoundingClientRect();
+  el.style.top = Math.round(r.bottom + 8) + 'px';
+  const w = el.offsetWidth;
+  let left = Math.round(r.right - w);
+  if (btn.dataset.popAlign === 'left') left = Math.round(r.left);
+  el.style.left = Math.max(8, Math.min(innerWidth - w - 8, left)) + 'px';
+}
+function togglePop(el, btn, onOpen){
+  if (openPop && openPop.el === el){ closePop(); return; }
+  closePop();
+  el.hidden = false; btn.setAttribute('aria-expanded', 'true');
+  openPop = {el, btn};
+  if (onOpen) onOpen();
+  placePop(el, btn);
+}
+document.addEventListener('pointerdown', e => {
+  if (!openPop) return;
+  if (openPop.el.contains(e.target) || openPop.btn.contains(e.target)) return;
+  closePop();
+}, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && openPop){ const b = openPop.btn; closePop(); try{ b.focus(); }catch{} } });
+window.addEventListener('resize', () => { if (openPop) placePop(openPop.el, openPop.btn); syncWcoInset(); });
+
 const ICON = {
-  vol:  '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  lock: '<svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  vol:'<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   mute: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   hide: '<svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3"/><path d="M4 20L20 4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
   float:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="11" y="11" width="8" height="6" rx="1"/></svg>',
@@ -889,7 +1234,32 @@ function toast(msg, kind = 'ok', ms = 4500){
 }
 function setStatus(txt, kind = ''){
   $('#status').textContent = txt;
+  $('#status').dataset.k = kind;   // "Na sala" (ok) some da barra: o ponto verde no logo já diz isso
   $('#dot').className = 'dot ' + kind;
+  $('#dot').title = txt;
+}
+async function copyInvite(){
+  const text = location.protocol === 'file:' ? room : location.href;
+  try{ await navigator.clipboard.writeText(text); toast(location.protocol === 'file:' ? 'Código da sala copiado. Mande para quem você quer chamar.' : 'Link da sala copiado. Mande para quem você quer chamar.'); }
+  catch{ toast('Código da sala: ' + room); }
+}
+// Botão de compartilhar x "Ao vivo": quem transmite vê o "Ao vivo" com o Parar; o ▾ continua para ajustar a qualidade.
+function syncShareUi(){
+  const on = !!localStream;
+  $('#shareBtn').hidden = on;
+  $('#shareMore').classList.toggle('solo', on);
+  $('#shareMore').classList.toggle('primary', !on);
+  $('#shareMore').classList.toggle('ghost', on);
+  $('#live').hidden = !on;
+  if (!on){ $('#live').className = ''; liveAlert = null; livePend = null; shareStartedAt = 0; if (openPop && openPop.el.id === 'costPop') closePop(); }
+  else if (!shareStartedAt) shareStartedAt = Date.now();
+  updateLive();
+  renderEmptyPeople();
+}
+function syncShareMenu(){
+  const ok = typeof turboAvailable === 'function' && turboAvailable();
+  $('#smTurboWrap').hidden = !ok;
+  if (ok) $('#smTurbo').checked = turboOn();
 }
 function genCode(){
   const a = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -1012,6 +1382,8 @@ function initLobby(){
     setTimeout(() => { $('#turnBox').scrollIntoView({block: 'center'}); $('#turnLink').focus(); }, 50);
   }
 
+  applyTheme();
+  syncWcoInset();
   measureHz();
   document.addEventListener('visibilitychange', measureHz);
   for (const [k, q] of Object.entries(QUALITY)){
@@ -1293,12 +1665,21 @@ function showRoom(){
   $('#lobby').hidden = true; $('#room').hidden = false;
   splashMotion();
   $('#codeTxt').textContent = room;
-  $('#codePill').onclick = async () => {
-    const text = location.protocol === 'file:' ? room : location.href;
-    try{ await navigator.clipboard.writeText(text); toast(location.protocol === 'file:' ? 'Código copiado.' : 'Link da sala copiado.'); }
-    catch{ toast('Código da sala: ' + room); }
-  };
+  $('#codePill').onclick = copyInvite;
   $('#shareBtn').onclick = () => localStream ? stopShare() : startShare();
+  $('#emptyShare').onclick = () => { if (!localStream) startShare(); };
+  $('#liveStop').onclick = stopShare;
+  $('#liveBtn').onclick = () => togglePop($('#costPop'), $('#liveBtn'), () => { renderCost(); startCostTimer(); });
+  $('#shareMore').onclick = () => togglePop($('#shareMenu'), $('#shareMore'), syncShareMenu);
+  $('#moreBtn').onclick = () => togglePop($('#moreMenu'), $('#moreBtn'));
+  $('#membersBtn').dataset.popAlign = 'left';
+  $('#membersBtn').onclick = () => togglePop($('#memPop'), $('#membersBtn'), renderMemPop);
+  for (const id of ['#optsBtn', '#diagBtn', '#leaveBtn']) $(id).addEventListener('click', closePop);
+  $('#smTurbo').onchange = () => { store.set('turbo', $('#smTurbo').checked); toast($('#smTurbo').checked ? 'Captura turbo ligada. Vale a partir da próxima transmissão.' : 'Captura turbo desligada. Vale a partir da próxima transmissão.'); };
+  syncShareUi();
+  syncWcoInset();
+  if (navigator.windowControlsOverlay) try{ navigator.windowControlsOverlay.addEventListener('geometrychange', syncWcoInset); }catch{}
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => fitGrid()).observe($('#stage'));
   $('#pipStop').onclick = stopShare;
   $('#pipOverlay').onclick = toggleOverlay;
   syncOverlayBtn();
@@ -1318,7 +1699,8 @@ function showRoom(){
     if (localStream) toast('O novo codec vale a partir da próxima vez que você compartilhar.');
   };
   $('#audioSrc').onchange = onAudioSrcChange;
-  $('#audioSrc').hidden = DESKTOP;   // no app, o som é escolhido no seletor de janelas
+  $('#smAudio').hidden = DESKTOP;      // no app, o som é escolhido no seletor de janelas
+  $('#smAudioApp').hidden = !DESKTOP;
   $('#netClose').onclick = () => { netDismissed = true; hideNetBanner(); };
   $('#netFix').onclick = () => { store.set('openTurn', true); leave(); };
   setStatus('Entrando na sala…', 'warn');
@@ -1560,31 +1942,88 @@ function versionInfo(m){
   return Date.now() - (firstSeen.get(m.id) || Date.now()) > VER_GRACE ? {v: null} : null;   // null = ainda esperando
 }
 
+function memberVer(m){
+  const vi = versionInfo(m), newest = newestVersion();
+  let txt = 'versão: verificando…';
+  if (vi && vi.v) txt = 'Telão ' + vi.v + (vi.d ? ' Desktop' : ' no navegador');
+  else if (vi) txt = 'versão anterior à 1.4';
+  const old = !!(vi && (!vi.v || cmpVer(vi.v, newest) < 0));
+  return {vi, txt: txt + (old ? ' · desatualizado' : ''), old, short: vi && vi.v ? (vi.d ? 'app ' : 'navegador ') + vi.v : (vi ? 'versão antiga' : '')};
+}
+const roomList = () => members.length ? members : [{id: me && me.id, name: myName, sharing: !!localStream}];
+// Barra: rostos de quem está na sala (aro colorido = transmitindo; bolinha amarela = versão antiga).
 function renderMembers(){
   const box = $('#members'); box.textContent = '';
-  const list = members.length ? members : [{id: me && me.id, name: myName, sharing: !!localStream}];
-  const newest = newestVersion();
-  for (const m of list){
+  const list = roomList();
+  const MAX = 6;
+  list.forEach((m, i) => {
     const isMe = me && m.id === me.id;
-    const c = document.createElement('div');
+    const c = document.createElement('span');
     c.className = 'chip' + (m.sharing ? ' sharing' : '') + (isMe ? ' me' : '');
+    if (i >= MAX) c.hidden = true;
     const dot = document.createElement('span'); dot.className = 'live';
-    const n = document.createElement('span'); n.textContent = m.name + (isMe ? ' (você)' : '');
-    c.append(dot, avatarNode(isMe ? '__me' : m.id, m.name, 20), n);
-    const vi = versionInfo(m);
-    let verTxt = 'versão: verificando…';
-    if (vi && vi.v) verTxt = 'Telão ' + vi.v + (vi.d ? ' Desktop' : ' no navegador');
-    else if (vi) verTxt = 'versão anterior à 1.4';
-    const old = vi && (!vi.v || cmpVer(vi.v, newest) < 0);
-    if (old){
+    const n = document.createElement('span'); n.className = 'nm'; n.textContent = m.name + (isMe ? ' (você)' : '');
+    c.append(dot, avatarNode(isMe ? '__me' : m.id, m.name, 28), n);
+    const mv = memberVer(m);
+    if (mv.old){
       c.classList.add('old');
-      const v = document.createElement('span'); v.className = 'ver'; v.textContent = vi.v ? 'v' + vi.v : 'desatualizado';
+      const v = document.createElement('span'); v.className = 'ver'; v.textContent = mv.vi.v ? 'v' + mv.vi.v : 'desatualizado';
       c.appendChild(v);
-      verTxt += ' · desatualizado';
     }
-    c.title = (m.sharing ? 'Transmitindo' : 'Assistindo') + ' · ' + verTxt;
+    c.title = m.name + (isMe ? ' (você)' : '') + ' · ' + (m.sharing ? 'Transmitindo' : 'Assistindo') + ' · ' + mv.txt;
+    box.appendChild(c);
+  });
+  if (list.length > MAX){ const more = document.createElement('span'); more.className = 'chip more'; more.textContent = '+' + (list.length - MAX); box.appendChild(more); }
+  const live = list.filter(m => m.sharing).length;
+  $('#memSum').textContent = list.length + ' na sala' + (live ? ' · ' + live + ' ao vivo' : '');
+  if (openPop && openPop.el.id === 'memPop') renderMemPop();
+  renderEmptyPeople();
+}
+function renderMemPop(){
+  const box = $('#memPop'); box.textContent = '';
+  const h = document.createElement('h4'); h.textContent = 'Na sala ' + room; h.style.margin = '2px 4px 6px';
+  box.appendChild(h);
+  for (const m of roomList()){
+    const isMe = me && m.id === me.id;
+    const mv = memberVer(m);
+    const row = document.createElement('div'); row.className = 'mrow';
+    const nm = document.createElement('span'); nm.className = 'mn';
+    const b = document.createElement('b'); b.textContent = m.name + (isMe ? ' (você)' : '');
+    const sm = document.createElement('small'); sm.textContent = mv.txt; if (mv.old) sm.className = 'old';
+    nm.append(b, sm);
+    const st = document.createElement('span'); st.className = 'mst' + (isMe ? ' me' : '');
+    if (m.sharing){ st.appendChild(document.createElement('i')); st.append('ao vivo'); } else st.textContent = 'assistindo';
+    row.append(avatarNode(isMe ? '__me' : m.id, m.name, 32), nm, st);
+    box.appendChild(row);
+  }
+  const call = document.createElement('button'); call.type = 'button'; call.className = 'mi';
+  call.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Chamar alguém (copia o convite)';
+  call.onclick = () => { closePop(); copyInvite(); };
+  const sep = document.createElement('div'); sep.className = 'sep';
+  box.append(sep, call);
+}
+// Sala vazia: quem está aqui e um botão grande para transmitir.
+function renderEmptyPeople(){
+  const box = $('#emptyPeople'); if (!box) return;
+  box.textContent = '';
+  for (const m of roomList().slice(0, 7)){
+    const isMe = me && m.id === me.id;
+    const mv = memberVer(m);
+    const c = document.createElement('div'); c.className = 'ecard';
+    const b = document.createElement('b'); b.textContent = m.name;
+    if (isMe){ const y = document.createElement('small'); y.textContent = ' (você)'; b.appendChild(y); }
+    const sm = document.createElement('small');
+    const where = isMe ? (DESKTOP ? 'app ' + TELAO_VERSION.replace(/\.0$/, '') : 'navegador') : (mv.vi && mv.vi.v ? (mv.vi.d ? 'app' : 'navegador') : '');
+    const what = m.sharing ? 'transmitindo' : isMe ? (localStream ? 'transmitindo' : 'pronto pra transmitir') : 'na sala';
+    sm.textContent = (where ? where + ' · ' : '') + what;
+    c.append(avatarNode(isMe ? '__me' : m.id, m.name, 56), b, sm);
     box.appendChild(c);
   }
+  const call = document.createElement('button'); call.type = 'button'; call.className = 'ecard call';
+  call.innerHTML = '<span class="ecirc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span><b>Chamar alguém</b><small>copia o convite da sala</small>';
+  call.onclick = copyInvite;
+  box.appendChild(call);
+  $('#emptyShare').hidden = !!localStream;
 }
 
 /* ---------- Fonte de áudio ----------
@@ -2120,7 +2559,7 @@ async function startShare(){
   syncPrivateUi();
   $('#pip').classList.toggle('mini', store.get('pipMini', false));
   restorePip();
-  $('#shareBtn').textContent = 'Parar transmissão'; $('#shareBtn').classList.add('stop');
+  syncShareUi();
   hubSend({t:'state', sharing:true});
   for (const m of members) if (m.id !== me.id) callPeer(m.id);
   updatePip();
@@ -2142,7 +2581,7 @@ function stopShare(){
   outCalls.clear(); failCount.clear();
   relayVia.clear(); relayReqs.clear(); relayTried.clear(); noConnSince.clear(); bwSince = 0;
   $('#pipVideo').srcObject = null; $('#pip').hidden = true;
-  $('#shareBtn').textContent = 'Compartilhar tela'; $('#shareBtn').classList.remove('stop');
+  syncShareUi();
   hubSend({t:'state', sharing:false});
 }
 
@@ -2215,7 +2654,8 @@ function syncPrivateUi(){
   const on = privateOn && !!localStream;
   $('#privBtn').hidden = !localStream;
   $('#privBtn').classList.toggle('on', on);
-  $('#privBtn').textContent = on ? '🔒 Tela privada ligada' : '🔒 Tela privada';
+  $('#privBtn').innerHTML = ICON.lock + (on ? 'Tela privada ligada' : '<span class="sr">Tela privada</span>');
+  $('#privBtn').classList.toggle('ico', !on);
   $('#privBtn').title = on ? 'Seus amigos estão vendo a sua mensagem. Clique para voltar a mostrar o jogo.' : 'Troca a sua transmissão por uma tela com a sua mensagem (o som continua). Bom para digitar senha ou ler mensagem pessoal.';
   $('#pipPriv').classList.toggle('on', on);
   $('#pipPriv').title = $('#privBtn').title;
@@ -2360,8 +2800,12 @@ function initPip(){
 function placePip(x, y){
   const pip = $('#pip');
   const w = pip.offsetWidth, h = pip.offsetHeight;
-  x = Math.max(8, Math.min(innerWidth - w - 8, x));
-  y = Math.max(8, Math.min(innerHeight - h - 8, y));
+  // não cobre a barra de cima nem o chat aberto (no celular o chat fica por cima de tudo)
+  const chat = $('#chat'), bar = $('#bar');
+  const right = chat && !chat.hidden && innerWidth > 760 ? chat.offsetWidth : 0;
+  const top = bar && !$('#room').hidden ? bar.getBoundingClientRect().bottom : 0;
+  x = Math.max(8, Math.min(innerWidth - right - w - 8, x));
+  y = Math.max(top + 8, Math.min(innerHeight - h - 8, y));
   pip.style.left = x + 'px'; pip.style.top = y + 'px';
   pip.style.right = 'auto'; pip.style.bottom = 'auto';
 }
@@ -2372,7 +2816,7 @@ function savePip(){
 function restorePip(){
   const pip = $('#pip');
   const p = store.get('pipPos', null);
-  if (!p) placePip(innerWidth, innerHeight);
+  if (!p) placePip(16, innerHeight);   // padrão: canto de baixo à esquerda (o chat abre à direita)
   else placePip(p.fx * (innerWidth - pip.offsetWidth), p.fy * (innerHeight - pip.offsetHeight));
 }
 
@@ -2383,21 +2827,31 @@ async function updateSendStats(){
   relayStats();
   if (!localStream){ el.textContent = ''; relayTick(false); return; }
   let worst = null, capFps = null, upTotal = 0, bwLimited = false;
+  const viewers = [], now = Date.now();
   for (const [pid, c] of outCalls){
     const pc = c.peerConnection;
     if (!pc || pc.connectionState !== 'connected') continue;
     try{
       const rep = await pc.getStats();
-      const codecs = {}; let out = null;
+      const codecs = {}; let out = null, bytes = 0;
       rep.forEach(r => {
         if (r.type === 'codec') codecs[r.id] = r;
         if (r.type === 'outbound-rtp' && r.kind === 'video') out = r;
+        if (r.type === 'outbound-rtp') bytes += (r.bytesSent || 0) + (r.headerBytesSent || 0);
         if (r.type === 'media-source' && r.kind === 'video' && r.framesPerSecond != null) capFps = r.framesPerSecond;
         if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded' && r.availableOutgoingBitrate) upTotal += r.availableOutgoingBitrate / 1000;
       });
       if (!out) continue;
+      const prev = sendPrev.get(pid);
+      const mbps = prev && now > prev.at && bytes >= prev.bytes ? (bytes - prev.bytes) * 8 / ((now - prev.at) / 1000) / 1e6 : 0;
+      sendPrev.set(pid, {bytes, at: now});
+      const paused = !!pausedBy.get(pid) && !isRelayHub(pid);
+      const vhw = out.powerEfficientEncoder != null ? !!out.powerEfficientEncoder : (out.encoderImplementation ? !SW_ENC.test(out.encoderImplementation) : null);
+      viewers.push({pid, h: out.frameHeight || 0, fps: out.framesPerSecond || 0, mbps, paused, hub: isRelayHub(pid), hw: vhw,
+                    codec: ((codecs[out.codecId] || {}).mimeType || '').replace(/^video\//i, '')});
       if (out.qualityLimitationReason === 'bandwidth' && !pausedBy.get(pid)) bwLimited = true;
       if (out.powerEfficientEncoder != null) noteUpload(0, !!out.powerEfficientEncoder);
+      if (paused) continue;   // quem ocultou a minha tela não conta como "pior" envio
       const fps = out.framesPerSecond || 0;
       if (!worst || fps < worst.fps){
         worst = {fps, h: out.frameHeight, reason: out.qualityLimitationReason, impl: out.encoderImplementation || '',
@@ -2423,7 +2877,12 @@ async function updateSendStats(){
     span.textContent = p; el.appendChild(span);
   });
   el.title = worst ? 'Encoder: ' + (worst.impl || 'desconhecido') + ' · limitação: ' + (worst.reason || 'nenhuma') : '';
+  { const r = $('#pip').getBoundingClientRect(); if (!$('#pip').hidden && !$('#pip').classList.contains('dragging') && r.bottom > innerHeight - 4) restorePip(); }   // cresceu com o texto: continua inteira na tela
   noteUpload(upTotal, worst && worst.impl ? (worst.hw != null ? !!worst.hw : !SW_ENC.test(worst.impl)) : null);
+  for (const pid of [...sendPrev.keys()]) if (!outCalls.has(pid)) sendPrev.delete(pid);
+  sendInfo = {at: now, viewers, capFps, worst, bwLimited, target};
+  updateLive();
+  if (openPop && openPop.el.id === 'costPop') renderCost();
   relayTick(bwLimited);
 }
 // Quem retransmite também mede o próprio upload (é o teste real de quem nunca transmitiu).
@@ -2464,6 +2923,157 @@ function updatePip(){
   for (const [v, r] of relayVia) if (members.some(m => m.id === v)) via.set(r, (via.get(r) || 0) + 1);
   for (const [r, k] of via) txt += ' · ' + k + ' via ' + nameOf(r);
   $('#pipTxt').textContent = txt;
+  updateLive();
+}
+
+/* ---------- "Ao vivo" e custo da transmissão ----------
+   A pílula mostra o essencial e muda de cor sozinha quando algo aperta (um aviso por vez, o mais grave;
+   volta ao normal ~10 s depois de estabilizar). Clicando, abre o custo no PC e quem está assistindo. */
+const sendPrev = new Map();
+let sendInfo = null, liveAlert = null, livePend = null, shareStartedAt = 0, costTimer = null, costMetrics = null, costMetricsAt = 0;
+let LIVE_HOLD = 4000, LIVE_GRACE = 10000;
+const fmtMbps = x => (x >= 10 ? Math.round(x).toString() : x.toFixed(1).replace('.', ','));
+function watchingCount(){
+  let n = 0;
+  for (const [pid, c] of outCalls){
+    if (!c.peerConnection || c.peerConnection.connectionState !== 'connected') continue;
+    if (!(pausedBy.get(pid) && !isRelayHub(pid))) n++;
+  }
+  for (const v of relayVia.keys()) if (members.some(m => m.id === v) && !outCalls.has(v)) n++;
+  return n;
+}
+function liveCondition(){
+  const si = sendInfo;
+  if (!si || !localStream || Date.now() - si.at > 8000) return null;
+  const active = si.viewers.filter(v => !v.paused);
+  const up = active.reduce((a, v) => a + v.mbps, 0);
+  // o esperado é o que entra (o jogo pela turbo, ou a captura), até o limite da qualidade: jogo a 30 fps não é problema
+  const ts = turboActive() && turboShare && turboShare.ses && turboShare.ses.stat;
+  const src = ts && ts.win > 0 ? ts.win : si.capFps;
+  const expect = Math.min(si.target || 60, src > 0 ? src : si.target || 60);
+  if (active.length && si.worst && expect >= 20 && si.worst.fps < expect * 0.6 && !privateOn)
+    return {k: 'bad', lvl: 3, text: 'enviando ' + Math.round(si.worst.fps) + ' de ' + Math.round(expect) + ' fps',
+            why: 'A transmissão está saindo com bem menos quadros do que o jogo faz. Veja abaixo onde está o gargalo (captura, codificação ou internet).'};
+  if (si.bwLimited || (myUp > 300 && up * 1000 > myUp * 0.85))
+    return {k: 'warn', lvl: 2, text: '↑ ' + fmtMbps(up) + ' Mbps, no limite',
+            why: 'Sua internet está no limite. O Telão já baixa a qualidade de quem tem conexão pior; se travar para todo mundo, use 720p.'};
+  const sw = active.filter(v => v.hw === false);
+  if (sw.length)
+    return {k: 'warn', lvl: 1, text: 'codificando no processador',
+            why: sw.map(v => nameOf(v.pid)).join(', ') + (sw.length > 1 ? ' estão recebendo' : ' está recebendo') + ' um vídeo codificado pelo processador (' + (sw[0].codec || '?') + '). Isso pesa no seu jogo.'};
+  return null;
+}
+function updateLive(){
+  if (!localStream){ $('#live').hidden = true; return; }
+  const now = Date.now(), raw = liveCondition();
+  // só avisa o que dura (4 s seguidos) e nada nos primeiros 10 s de transmissão (o envio ainda está subindo)
+  if (raw){ if (!livePend || livePend.text0 !== raw.k) livePend = {text0: raw.k, since: now}; } else livePend = null;
+  const cond = raw && now - livePend.since >= LIVE_HOLD && now - shareStartedAt >= LIVE_GRACE ? raw : null;
+  if (cond && (!liveAlert || cond.lvl >= liveAlert.lvl)) liveAlert = {...cond, last: now};
+  else if (cond && liveAlert && cond.k === liveAlert.k) liveAlert.last = now;
+  if (liveAlert && now - liveAlert.last > 10000 && (!cond || cond.lvl < liveAlert.lvl)) liveAlert = cond ? {...cond, last: now} : null;
+  const n = watchingCount(), q = QUALITY[currentQ()];
+  const si = sendInfo && now - sendInfo.at < 8000 ? sendInfo : null;
+  const up = si ? si.viewers.filter(v => !v.paused).reduce((a, v) => a + v.mbps, 0) : 0;
+  const box = $('#liveTxt'); box.textContent = '';
+  const b = document.createElement('b'); b.textContent = 'Ao vivo'; box.appendChild(b);
+  const rest = [n ? n + ' assistindo' : 'ninguém assistindo'];
+  if (!liveAlert || liveAlert.k !== 'bad') rest.push(q.h + 'p ' + q.fps);
+  if (!liveAlert && up >= 0.05) rest.push('↑ ' + fmtMbps(up) + ' Mbps');
+  box.append(' · ' + rest.join(' · '));
+  if (liveAlert){ box.append(' · '); const w = document.createElement('b'); w.textContent = liveAlert.text; box.appendChild(w); }
+  $('#live').className = liveAlert ? liveAlert.k : '';
+}
+function startCostTimer(){
+  stopCostTimer();
+  const tick = async () => {
+    if (DESKTOP && window.telaoDesktop.metrics){ try{ costMetrics = await window.telaoDesktop.metrics(); costMetricsAt = Date.now(); }catch{} }
+    renderCost();
+  };
+  tick(); costTimer = setInterval(tick, 2000);
+}
+function stopCostTimer(){ clearInterval(costTimer); costTimer = null; }
+function costMeter(label, valueTxt, sub, pct, cls){
+  const m = document.createElement('div'); m.className = 'cm';
+  const l = document.createElement('div'); l.className = 'cl';
+  const a = document.createElement('span'); a.textContent = label;
+  const r = document.createElement('span');
+  const bv = document.createElement('b'); bv.textContent = valueTxt; r.appendChild(bv);
+  if (sub){ r.append(' '); const sm = document.createElement('small'); sm.textContent = sub; r.appendChild(sm); }
+  l.append(a, r); m.appendChild(l);
+  if (pct != null){
+    const bar = document.createElement('div'); bar.className = 'cbar' + (cls ? ' ' + cls : '');
+    const f = document.createElement('span'); f.style.width = Math.max(1, Math.min(100, pct)) + '%'; bar.appendChild(f); m.appendChild(bar);
+  }
+  return m;
+}
+function renderCost(){
+  const box = $('#costPop');
+  if (!localStream){ box.hidden = true; return; }
+  box.textContent = '';
+  const si = sendInfo && Date.now() - sendInfo.at < 8000 ? sendInfo : null;
+  if (liveAlert){ const a = document.createElement('div'); a.className = 'calert' + (liveAlert.k === 'bad' ? ' bad' : ''); a.textContent = liveAlert.why; box.appendChild(a); }
+  const sec1 = document.createElement('div'); sec1.className = 'cm'; sec1.style.gap = '12px';
+  const t = document.createElement('div'); t.className = 'ctitle'; t.textContent = 'Custo no seu PC'; sec1.appendChild(t);
+  // upload
+  const active = si ? si.viewers.filter(v => !v.paused) : [];
+  const up = active.reduce((a, v) => a + v.mbps, 0);
+  const cap = myUp > 300 ? myUp / 1000 : 0;
+  sec1.appendChild(costMeter('Upload', fmtMbps(up) + ' Mbps', cap ? 'de ~' + fmtMbps(cap) + ' que sua internet aguenta' : 'medindo o limite da sua internet…',
+    cap ? up / cap * 100 : null, cap && up / cap > 0.85 ? 'warn' : ''));
+  // processador (só no app)
+  const ts = turboActive() && turboShare && turboShare.ses && turboShare.ses.stat;
+  if (DESKTOP && costMetrics && Date.now() - costMetricsAt < 6000){
+    const cores = costMetrics.cores || 1;
+    const tel = costMetrics.procs.reduce((a, p) => a + (p.cpu || 0), 0);
+    const cap2 = ts && ts.cpu != null ? ts.cpu : 0;
+    const total = (tel + cap2) / cores;
+    const sub = 'Telão ' + Math.round(tel / cores) + '%' + (ts ? ' · captura turbo ' + Math.round(cap2 / cores) + '%' : '');
+    sec1.appendChild(costMeter('Processador', Math.round(total) + '%', sub, total, total > 60 ? 'bad' : total > 35 ? 'warn' : ''));
+  } else if (DESKTOP){
+    sec1.appendChild(costMeter('Processador', '…', 'medindo', null));
+  }
+  // placa de vídeo: quem codifica (o uso em % vem com o Telão Audio novo)
+  const hwN = active.filter(v => v.hw === true).length, swN = active.filter(v => v.hw === false).length;
+  const enc = !active.length ? 'ninguém recebendo agora' : swN && hwN ? hwN + ' pela placa, ' + swN + ' pelo processador' : swN ? 'pelo processador' : hwN ? 'pela placa de vídeo' : 'verificando…';
+  sec1.appendChild(costMeter('Codificação', enc, '', null));
+  const note = document.createElement('small'); note.style.color = 'var(--muted)';
+  note.textContent = DESKTOP ? 'Inclui assistir os amigos. O jogo usa o resto.' : 'No navegador não dá para ver quanto de processador a transmissão usa; no app aparece.';
+  sec1.appendChild(note);
+  box.appendChild(sec1);
+  // quem está assistindo
+  const sec2 = document.createElement('div'); sec2.className = 'csec';
+  const h = document.createElement('h4'); h.textContent = 'Quem está assistindo'; sec2.appendChild(h);
+  const rows = si ? si.viewers.slice() : [];
+  for (const [v, r] of relayVia) if (members.some(m => m.id === v) && !outCalls.has(v)) rows.push({pid: v, via: r});
+  if (!rows.length){ const e = document.createElement('span'); e.className = 'muted'; e.textContent = 'Ninguém conectado ainda.'; sec2.appendChild(e); }
+  for (const v of rows){
+    const row = document.createElement('div'); row.className = 'cv' + (v.paused ? ' paused' : '');
+    const nm = document.createElement('span'); nm.className = 'cvn'; nm.textContent = nameOf(v.pid);
+    const d = document.createElement('small');
+    const mb = document.createElement('b');
+    if (v.via){ d.textContent = 'via ' + nameOf(v.via); mb.textContent = '—'; }
+    else if (v.paused){ d.textContent = 'ocultou sua tela'; mb.textContent = '0'; }
+    else {
+      d.textContent = (v.h ? v.h + 'p ' : '') + (v.fps ? Math.round(v.fps) : '') + (v.codec ? ' · ' + v.codec.replace(/^H26([45])$/i, 'H.26$1') : '') +
+        (v.hw === true ? ' placa' : v.hw === false ? ' processador' : '') + (v.hub ? ' · repassando' : '');
+      mb.textContent = fmtMbps(v.mbps) + ' Mbps';
+    }
+    row.append(avatarNode(v.pid, nameOf(v.pid), 22), nm, d, mb);
+    sec2.appendChild(row);
+  }
+  box.appendChild(sec2);
+  // captura
+  const f = document.createElement('div'); f.className = 'cfoot';
+  const cs = document.createElement('span');
+  const capTxt = ts ? 'Captura turbo · jogo a ' + Math.round(ts.win) + ' fps · enviando ' + Math.round(ts.out)
+    : (fastCapture ? 'Captura modo rápido' : 'Captura normal') + (si && si.capFps != null ? ' · ' + Math.round(si.capFps) + ' fps' : '');
+  cs.textContent = privateOn ? 'Tela privada ligada · seus amigos veem a sua mensagem' : capTxt;
+  const rb = document.createElement('button'); rb.type = 'button'; rb.className = 'ghost'; rb.textContent = 'Relatório completo';
+  rb.onclick = () => { closePop(); openDiag(); };
+  f.append(cs, rb);
+  box.appendChild(f);
+  if (openPop && openPop.el === box) placePop(box, openPop.btn);
 }
 
 /* ---------- Ocultar telas ----------
@@ -2697,21 +3307,24 @@ function buildTile(pid){
   const el = document.createElement('div'); el.className = 'tile'; el.tabIndex = 0;
   el.innerHTML =
     '<video autoplay playsinline></video>' +
-    '<div class="tag"><span class="av-slot"></span><span class="tname"></span></div>' +
+    '<div class="tag"><span class="av-slot"></span><span class="tname"></span><span class="tgame"></span></div>' +
+    '<div class="tq"></div>' +
+    '<div class="tinfo"><span class="stats"></span></div>' +
     '<div class="tmsg">Conectando…</div>' +
     '<div class="clickplay">Clique para assistir</div>' +
     '<div class="fx"></div>' +
     '<div class="reacts"></div>' +
     '<div class="rx-panel" hidden><div class="stk-grid"></div><div class="rx-pfoot"><button type="button" class="ghost add">+ Adicionar figurinha</button>' +
     '<button type="button" class="ghost edit">Personalizar barra</button></div></div>' +
-    '<div class="tbar"><span class="stats"></span><span class="grow"></span>' +
-    '<button class="clip" title="Clipar os últimos 30 segundos">' + ICON.clip + '</button>' +
-    '<button class="mute" title="Mudo">' + ICON.vol + '</button>' +
-    '<input type="range" min="0" max="100" class="vol" title="Volume">' +
+    '<div class="tbar">' +
+    '<button class="clip" title="Clipar os últimos 30 segundos">' + ICON.clip + 'Clipe 30 s</button><span class="grow"></span>' +
+    '<span class="tgrp tvol"><button class="mute" title="Mudo">' + ICON.vol + '</button>' +
+    '<input type="range" min="0" max="100" class="vol" title="Volume"></span>' +
+    '<span class="tgrp">' +
     '<button class="hide" title="Ocultar (para de receber esta tela e alivia o PC)">' + ICON.hide + '</button>' +
     '<button class="float" title="Janela flutuante (sempre por cima)">' + ICON.float + '</button>' +
-    '<button class="focus" title="Destacar">' + ICON.focus + '</button>' +
-    '<button class="fs" title="Tela cheia">' + ICON.fs + '</button></div>';
+    '<button class="focus" title="Destacar (as outras telas encolhem)">' + ICON.focus + '</button>' +
+    '<button class="fs" title="Tela cheia">' + ICON.fs + '</button></span></div>';
   const t = {
     el, call: null,
     video: el.querySelector('video'),
@@ -2720,6 +3333,9 @@ function buildTile(pid){
     reactsEl: el.querySelector('.reacts'),
     rxPanel: el.querySelector('.rx-panel'),
     statsEl: el.querySelector('.stats'),
+    gameEl: el.querySelector('.tgame'),
+    tqEl: el.querySelector('.tq'),
+    volGrp: el.querySelector('.tvol'),
     msgEl: el.querySelector('.tmsg'),
     fxEl: el.querySelector('.fx'),
     clipBtn: el.querySelector('.clip'),
@@ -2753,7 +3369,7 @@ function buildTile(pid){
   if (resObserver) resObserver.observe(el);
   t.syncAudio = () => {
     const has = t.video.srcObject && t.video.srcObject.getAudioTracks().length > 0;
-    t.muteBtn.hidden = !has; t.vol.hidden = !has; syncMute();
+    t.muteBtn.hidden = !has; t.vol.hidden = !has; t.volGrp.hidden = !has; syncMute();
   };
   return t;
 }
@@ -3153,6 +3769,15 @@ function openCropper(img, done){
   };
   box.hidden = false;
 }
+// Nome do jogo ao lado do nome de quem transmite (quando o app reconheceu o jogo na Steam).
+function syncTileGame(pid, t){
+  if (!t.gameEl) return;
+  const who = t.nameEl.textContent;
+  const since = (t.created || Date.now()) - 120000;
+  const g = groupGames().find(x => x.by === who && x.at >= since);
+  const name = g ? g.name : '';
+  if (t.gameEl.textContent !== name) t.gameEl.textContent = name;
+}
 function renderTileAvatars(){
   for (const [pid, t] of tiles){
     if (!t.avEl) continue;
@@ -3502,6 +4127,7 @@ function toggleChat(force){
   if (open){ chatUnread = 0; renderChat(true); setTimeout(() => { const l = $('#chatList'); l.scrollTop = l.scrollHeight; $('#chatIn').focus(); }, 40); }
   syncChatBtn();
   scheduleRes();
+  if (localStream && !$('#pip').hidden) restorePip();
 }
 function initChat(){
   $('#chatBtn').onclick = () => toggleChat();
@@ -3825,6 +4451,7 @@ function syncOpts(){
   $('#optRelay').checked = relayAllowed();
   $('#optH265').checked = h265Auto();
   $('#optPrivMsg').value = privateMsg();
+  renderThemeOpts();
   renderLobbyAvatar();
 }
 function initOpts(){
@@ -4747,6 +5374,8 @@ async function toggleFloat(pid){
     const d = w.document;
     d.title = t.nameEl.textContent + ' — Telão';
     for (const st of document.querySelectorAll('style')) d.head.appendChild(st.cloneNode(true));
+    d.documentElement.dataset.theme = document.documentElement.dataset.theme || '';
+    d.documentElement.style.cssText = document.documentElement.style.cssText;   // cor de destaque escolhida
     d.body.className = 'float-body';
     const holder = document.createElement('div'); holder.className = 'tile wait float-holder';
     const tag = document.createElement('div'); tag.className = 'tag'; tag.textContent = t.nameEl.textContent;
@@ -4899,11 +5528,34 @@ function requestRecall(pid){
 function layout(){
   const visible = [...tiles.keys()].filter(id => !hiddenIds.has(id)).length + waits.size;
   $('#empty').hidden = visible > 0;
-  $('#emptyTitle').textContent = tiles.size ? 'Todas as telas estão ocultas' : 'Ninguém compartilhando ainda';
+  const allHidden = tiles.size > 0;
+  $('#emptyTitle').textContent = allHidden ? 'Todas as telas estão ocultas' : 'Ninguém transmitindo ainda';
+  $('#emptySub').textContent = allHidden ? 'Mostre de novo pela faixa lá em cima. Telas ocultas não gastam a sua internet nem a sua placa de vídeo.'
+    : 'Quem compartilhar a tela aparece aqui na hora. A call de voz continua onde vocês já estão; aqui é só o vídeo.';
+  $('#emptyPeople').hidden = allHidden;
   const floating = floatState && floatState.kind === 'doc' ? floatState.pid : null;
   const focused = !!focusId && tiles.has(focusId) && !hiddenIds.has(focusId) && focusId !== floating && visible > 1;
   $('#stage').classList.toggle('focused', focused);
   for (const [id, t] of tiles) t.el.classList.toggle('is-focus', focused && id === focusId);
+  fitGrid();
+}
+// Maior tamanho de tela (16:9) que faz todas caberem na área, testando de 1 a N colunas.
+// As linhas incompletas ficam centralizadas: 3 telas = 2 em cima e 1 no meio embaixo, sem buraco.
+function fitGrid(){
+  const st = $('#stage');
+  if (!st || st.classList.contains('focused')) return;
+  const n = [...st.children].filter(e => e.classList.contains('tile') && !e.hidden).length;
+  if (!n) return;
+  const gap = 12, pad = 16;   // os mesmos do CSS de #stage
+  const W = st.clientWidth - 2 * pad - 1, H = st.clientHeight - 2 * pad - 1;
+  if (W <= 0 || H <= 0) return;
+  let best = 0;
+  for (let c = 1; c <= n; c++){
+    const r = Math.ceil(n / c);
+    const w = Math.min((W - gap * (c - 1)) / c, (H - gap * (r - 1)) / r * 16 / 9);
+    if (w > best) best = w;
+  }
+  st.style.setProperty('--tw', Math.floor(Math.max(Math.min(W, 200), best)) + 'px');
 }
 
 async function updateStats(){
@@ -4929,11 +5581,24 @@ async function updateStats(){
       const relay = pair && remote[pair.remoteCandidateId] && remote[pair.remoteCandidateId].candidateType === 'relay';
       const parts = [];
       if (v.frameHeight) parts.push(v.frameHeight + 'p');
-      if (v.framesPerSecond) parts.push(Math.round(v.framesPerSecond) + 'fps');
-      if (mbps > 0) parts.push(mbps.toFixed(1) + ' Mbps');
-      if (relay) parts.push('via TURN');
-      if (t.via) parts.push('via ' + nameOf(t.via));
-      t.statsEl.textContent = parts.join(' · ');
+      if (v.framesPerSecond) parts.push(Math.round(v.framesPerSecond) + ' fps');
+      if (mbps > 0) parts.push(mbps.toFixed(1).replace('.', ',') + ' Mbps');
+      const lines = [parts.join(' · ')];
+      const mime = ((codecs[v.codecId] || {}).mimeType || '').replace(/^video\//i, '').toUpperCase();
+      const dec = v.powerEfficientDecoder != null ? (v.powerEfficientDecoder ? 'placa de vídeo' : 'processador') : '';
+      if (mime) lines.push(mime.replace(/^H26([45])$/, 'H.26$1') + (dec ? ' · decodifica: ' + dec : ''));
+      lines.push(t.via ? 'via ' + nameOf(t.via) + ' (retransmissão)' : relay ? 'via servidor TURN' : 'direto');
+      t.statsEl.textContent = '';
+      lines.forEach((l, i) => { if (i) t.statsEl.appendChild(document.createElement('br')); t.statsEl.append(l); });
+      // "liso" x "engasgando": travadas de vídeo (freezes) nos últimos ~10 s
+      const fz = v.freezeCount != null ? v.freezeCount : null;
+      if (fz != null){
+        t.fzHist = (t.fzHist || []).concat([{at: Date.now(), n: fz}]).filter(x => Date.now() - x.at < 11000);
+        const recent = fz - t.fzHist[0].n;
+        const want = recent > 0 ? 'engasgando' : 'liso';
+        if (t.tqEl.textContent !== want){ t.tqEl.textContent = want; t.tqEl.classList.toggle('warn', recent > 0); }
+      }
+      syncTileGame(pid, t);
     }catch{}
   }
 }

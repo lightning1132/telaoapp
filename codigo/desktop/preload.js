@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   screenForWindow: m => ipcRenderer.invoke('telao:screenFor', m),
   steamSearch: term => ipcRenderer.invoke('telao:steamSearch', term),
   metrics: () => ipcRenderer.invoke('telao:metrics'),
+  wco: parseInt(arg('telao-wco'), 10) || 0,
+  titleBar: c => ipcRenderer.invoke('telao:titleBar', c),
   floatWindows: true,
   turbo: !!sharedTexture,
   mainPid: parseInt(arg('telao-main-pid'), 10) || 0,

@@ -59,18 +59,26 @@ function startHelper(){
 }
 function stopHelper(){ if (helper){ try{ helper.kill(); }catch{} helper = null; } }
 
+// Barra do Telão junto com a da janela (Windows): os botões de minimizar/maximizar/fechar continuam sendo os do
+// próprio Windows (com o menu de encaixe do Windows 11), desenhados por cima do canto direito da barra da página.
+// A página que vem com este app e as mais novas sabem disso (shell 10+); TELAO_WCO=0 desliga, TELAO_WCO=1 liga em outro sistema.
+const WCO_H = 52;
+const useWco = () => process.env.TELAO_WCO === '1' || (process.platform === 'win32' && process.env.TELAO_WCO !== '0');
 function createWindow(){
+  const wco = useWco();
   win = new BrowserWindow({
     width: 1280, height: 800, minWidth: 720, minHeight: 480,
     backgroundColor: '#0d0f12',
     title: 'Telão',
     autoHideMenuBar: true,
+    ...(wco ? {titleBarStyle: 'hidden', titleBarOverlay: {color: '#12151a', symbolColor: '#8a93a2', height: WCO_H}} : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       backgroundThrottling: false,
-      additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION, '--telao-main-pid=' + process.pid],
+      additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION, '--telao-main-pid=' + process.pid,
+                            '--telao-wco=' + (wco ? WCO_H : 0)],
     },
   });
   Menu.setApplicationMenu(null);
@@ -262,6 +270,14 @@ app.whenReady().then(() => {
   ipcMain.handle('telao:openClips', () => { try{ fs.mkdirSync(clipsDir(), {recursive: true}); }catch{} return shell.openPath(clipsDir()); });
 
   // ---- diagnóstico de vídeo ----
+  // Cores dos botões do Windows na barra integrada (acompanham o tema escolhido na página).
+  const HEX = /^#[0-9a-f]{6}$/i;
+  ipcMain.handle('telao:titleBar', (e, c) => {
+    if (!win || e.sender !== win.webContents || !useWco() || !c) return false;
+    const color = String(c.color || '').trim(), symbolColor = String(c.symbolColor || '').trim();
+    if (!HEX.test(color) || !HEX.test(symbolColor)) return false;
+    try{ win.setTitleBarOverlay({color, symbolColor, height: WCO_H}); return true; }catch{ return false; }
+  });
   ipcMain.handle('telao:gpu', async () => {
     let info = null;
     try{ info = await app.getGPUInfo('complete'); }
