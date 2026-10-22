@@ -15,6 +15,11 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.15
+- O painel do "Ao vivo" (e a medição de uso real do Diagnóstico) mostra quanto da placa de vídeo o Telão usa,
+  quanto disso é a codificação do vídeo e quanto a placa inteira está ocupada com o jogo. O Telão Audio lê
+  isso dos mesmos contadores do Gerenciador de Tarefas, só enquanto o painel está aberto ou medindo.
+
 NOVIDADES DO APP 1.14
 - Visual novo: a barra do Telão passa a ser a própria barra da janela. Os botões de minimizar, maximizar
   e fechar continuam os do Windows (com o menu de encaixe do Windows 11). Arraste pela barra para mover

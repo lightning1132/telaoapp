@@ -20,6 +20,11 @@ OPÇÕES DE ÁUDIO NO TELÃO
                                    das telas dos amigos que você estiver assistindo no Telão.
 - Sistema inteiro               → tudo, inclusive o Discord (é o que causava o eco).
 
+USO DA PLACA DE VÍDEO (só no Telão Desktop)
+Enquanto o painel do "Ao vivo" está aberto (ou o Diagnóstico está medindo), o Telão Audio lê os contadores
+"GPU Engine" do Windows, os mesmos do Gerenciador de Tarefas, e conta quanto da placa os processos do Telão
+usam. Quando ninguém pede por 8 s, ele para de ler. Não muda nada na placa nem no jogo.
+
 CAPTURA TURBO (só no Telão Desktop)
 - O Telão Desktop também usa este programa para capturar a imagem do jogo pelo Windows (Windows Graphics
   Capture), já reduzida e convertida na placa de vídeo. Só o app do Telão pode pedir isso; sites aprovados

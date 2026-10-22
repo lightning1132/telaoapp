@@ -855,17 +855,19 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.14.0';
+const TELAO_VERSION = '1.15.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 10;      // nível do app desktop mais novo (10: barra integrada à janela)
+const LATEST_SHELL = 11;      // nível do app desktop mais novo (11: uso da placa de vídeo pelo Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.14.0', 'hoje', ['Visual novo: logo, barra da sala mais limpa (qualidade e som no ▾ do Compartilhar; opções, diagnóstico e sair no ⋯) e rostos de quem está na sala',
+  ['1.15.0', 'hoje', ['App: o painel do "Ao vivo" mostra o uso da placa de vídeo pelo Telão (com quanto é codificação) e o da placa inteira, com o jogo',
+                      'Medição de uso real (Diagnóstico) inclui a placa de vídeo: Telão, encoder da placa e PC inteiro, com aviso quando a placa ou o encoder estão no limite']],
+  ['1.14.0', '22/10', ['Visual novo: logo, barra da sala mais limpa (qualidade e som no ▾ do Compartilhar; opções, diagnóstico e sair no ⋯) e rostos de quem está na sala',
                       'No app, a barra do Telão é a própria barra da janela (os botões de minimizar, maximizar e fechar continuam os do Windows)',
                       'Temas: Grafite, Azul-noite, Preto OLED, Café, Claro ou igual ao sistema, e cor de destaque à sua escolha (Opções)',
                       '"Ao vivo" de quem transmite: quantos assistem, upload e, clicando, o custo no PC (processador no app) e o que cada amigo recebe. Fica amarelo ou vermelho sozinho quando algo aperta',
@@ -2139,6 +2141,11 @@ function helperConnect(){
       if (w >= 0){ const x = helper.waiters.splice(w, 1)[0]; clearTimeout(x.timer); x.resolve(m); }
       return;
     }
+    if (m.type === 'gpu'){
+      if (m.ok && !m.wait) gpuLast = {at: Date.now(), mine: +m.mine || 0, enc: +m.enc || 0, dec: +m.dec || 0, sys: +m.sys || 0};
+      else if (!m.ok) gpuLast = {at: Date.now(), none: String(m.error || 'indisponível')};
+      return;
+    }
     if (m.type === 'list'){
       helper.apps = Array.isArray(m.apps) ? m.apps : [];
       helper.discord = !!m.discord;
@@ -2932,6 +2939,13 @@ function updatePip(){
 const sendPrev = new Map();
 let sendInfo = null, liveAlert = null, livePend = null, shareStartedAt = 0, costTimer = null, costMetrics = null, costMetricsAt = 0;
 let LIVE_HOLD = 4000, LIVE_GRACE = 10000;
+/* Uso da placa de vídeo (app 1.15+): o Telão Audio lê os contadores "GPU Engine" do Windows (os mesmos do
+   Gerenciador de Tarefas) enquanto alguém pede; o pedido vai a cada 2 s com o painel aberto ou medindo. */
+const GPU_SHELL = 11;
+let gpuLast = null;
+const gpuAvailable = () => DESKTOP && (window.telaoDesktop.shell || 0) >= GPU_SHELL && helper.ready;
+function askGpu(){ if (gpuAvailable()) helperSend({cmd: 'gpu', pid: String(window.telaoDesktop.mainPid || 0)}); }
+const gpuFresh = () => gpuLast && Date.now() - gpuLast.at < 6000 ? gpuLast : null;
 const fmtMbps = x => (x >= 10 ? Math.round(x).toString() : x.toFixed(1).replace('.', ','));
 function watchingCount(){
   let n = 0;
@@ -2987,6 +3001,7 @@ function updateLive(){
 function startCostTimer(){
   stopCostTimer();
   const tick = async () => {
+    askGpu();
     if (DESKTOP && window.telaoDesktop.metrics){ try{ costMetrics = await window.telaoDesktop.metrics(); costMetricsAt = Date.now(); }catch{} }
     renderCost();
   };
@@ -3033,7 +3048,14 @@ function renderCost(){
   } else if (DESKTOP){
     sec1.appendChild(costMeter('Processador', '…', 'medindo', null));
   }
-  // placa de vídeo: quem codifica (o uso em % vem com o Telão Audio novo)
+  // placa de vídeo: uso do Telão (o motor mais ocupado, como no Gerenciador de Tarefas) e quanto é codificação
+  const g = gpuFresh();
+  if (g && !g.none){
+    const sub = 'codificação ' + Math.round(g.enc) + '%' + (g.dec >= 1 ? ' · decodificação ' + Math.round(g.dec) + '%' : '') + ' · PC inteiro ' + Math.round(g.sys) + '%';
+    sec1.appendChild(costMeter('Placa de vídeo', Math.round(g.mine) + '%', sub, g.mine, g.mine > 50 ? 'bad' : g.mine > 25 ? 'warn' : ''));
+  } else if (gpuAvailable() && !(g && g.none)){
+    sec1.appendChild(costMeter('Placa de vídeo', '…', 'medindo', null));
+  }
   const hwN = active.filter(v => v.hw === true).length, swN = active.filter(v => v.hw === false).length;
   const enc = !active.length ? 'ninguém recebendo agora' : swN && hwN ? hwN + ' pela placa, ' + swN + ' pelo processador' : swN ? 'pelo processador' : hwN ? 'pela placa de vídeo' : 'verificando…';
   sec1.appendChild(costMeter('Codificação', enc, '', null));
@@ -6048,7 +6070,7 @@ function uiFrames(){
 async function runPerf(){
   if (perfRun) return;
   const secs = window.__perfSecs || PERF_SECS;
-  const run = perfRun = {t0: Date.now(), secs, samples: [], conns: new Map(), procs: [], ui: [], turbo: [], ctx: perfContext()};
+  const run = perfRun = {t0: Date.now(), secs, samples: [], conns: new Map(), procs: [], ui: [], turbo: [], gpu: [], ctx: perfContext()};
   syncPerfUi();
   let prev = new Map(), prevT = performance.now();
   if (DESKTOP && window.telaoDesktop.metrics) try{ await window.telaoDesktop.metrics(); }catch{}   // zera a contagem de processador
@@ -6071,6 +6093,8 @@ async function runPerf(){
     }
     prev = cur;
     if (DESKTOP && window.telaoDesktop.metrics) try{ run.procs.push(await window.telaoDesktop.metrics()); }catch{}
+    askGpu();
+    { const g = gpuFresh(); if (g && !g.none && (!run.gpu.length || run.gpu[run.gpu.length - 1].at !== g.at)) run.gpu.push(g); else if (g && g.none) run.gpuNone = g.none; }
     if (turboActive() && turboShare.ses.stat){ const x = turboShare.ses, st = x.stat; run.turbo.push({win: st.win, out: st.out, ms: st.ms, p95: st.p95, cpu: st.cpu, size: x.w + 'x' + x.h, mode: x.mode}); }
     if (!document.hidden) run.ui.push(...(await uiFrames()));
     run.long = perfLong - long0;
@@ -6115,7 +6139,16 @@ function perfSummary(run){
       L.push('  ' + k + ': ' + f0(avg(e.cpu)) + '% · ' + f0(avg(e.mem)) + ' MB');
     const last = run.procs[run.procs.length - 1];
     if (last.memTotal) L.push('  Memória do PC: ' + f1((last.memTotal - last.memFree) / 1073741824) + ' de ' + f1(last.memTotal / 1073741824) + ' GB em uso');
-    L.push('  (uso da placa de vídeo o Windows não informa ao app: veja no Gerenciador de Tarefas → Desempenho → GPU)');
+    if (run.gpu && run.gpu.length){
+      const mine = nums(run.gpu, 'mine'), enc = nums(run.gpu, 'enc'), dec = nums(run.gpu, 'dec'), gs = nums(run.gpu, 'sys');
+      L.push('');
+      L.push('PLACA DE VÍDEO (contadores do Windows, como no Gerenciador de Tarefas)');
+      L.push('  Telão inteiro: média ' + f0(avg(mine)) + '% · pico ' + f0(Math.max(...mine)) + '%');
+      L.push('  codificação (encoder da placa): média ' + f0(avg(enc)) + '% · pico ' + f0(Math.max(...enc)) + '%' + (avg(dec) >= 0.5 ? ' · decodificação: média ' + f0(avg(dec)) + '%' : ''));
+      L.push('  PC inteiro (jogo incluído): média ' + f0(avg(gs)) + '% · pico ' + f0(Math.max(...gs)) + '%');
+      if (avg(gs) > 95) W.push('Placa de vídeo no limite (' + f0(avg(gs)) + '%): o jogo está usando quase tudo. Limitar o FPS do jogo deixa folga para a transmissão não engasgar.');
+      else if (avg(enc) > 80) W.push('O encoder da placa está quase cheio (' + f0(avg(enc)) + '%): muita gente recebendo em formatos diferentes, ou qualidade alta demais para esta placa.');
+    } else L.push('  (uso da placa de vídeo: ' + (run.gpuNone ? run.gpuNone : DESKTOP && (window.telaoDesktop.shell || 0) < GPU_SHELL ? 'precisa do app 1.15' : 'Telão Audio não respondeu') + '; veja no Gerenciador de Tarefas → Desempenho → GPU)');
     if (sys.length && avg(sys) > 90) W.push('PC com o processador no limite (' + f0(avg(sys)) + '%): o jogo e o Telão estão disputando. Baixar a qualidade da transmissão ou limitar o FPS do jogo ajuda.');
     else if (avg(tel) / cores > 35) W.push('O Telão está usando bastante processador (≈' + f0(avg(tel) / cores) + '% do total). Se a codificação estiver no processador, prefira H.264 (placa de vídeo).');
   } else {

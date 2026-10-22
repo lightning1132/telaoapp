@@ -187,6 +187,45 @@ static void frameHeader(uint8_t* p, uint32_t w, uint32_t h, uint32_t seq){
   for (int i = 0; i < 4; i++){ p[4 + i] = (uint8_t)(w >> (8 * i)); p[8 + i] = (uint8_t)(h >> (8 * i)); p[12 + i] = (uint8_t)(seq >> (8 * i)); }
 }
 
+/* ---------- uso da placa de vídeo: partes portáveis ----------
+   O Windows mede o uso de cada "motor" da placa (3D, cópia, codificação, decodificação…) por processo,
+   nos mesmos contadores que o Gerenciador de Tarefas usa ("GPU Engine"). Cada instância se chama
+   pid_<PID>_luid_<placa>_phys_<n>_eng_<n>_engtype_<tipo>. Como o Gerenciador:
+   uso de um conjunto de processos = o motor mais ocupado (somando esses processos nele). */
+struct GpuUse { double mine = 0, enc = 0, dec = 0, sys = 0; int inst = 0; };
+static bool parseGpuInst(const std::string& s, uint32_t* pid, std::string* engine, std::string* type){
+  if (s.compare(0, 4, "pid_") != 0) return false;
+  size_t b = s.find('_', 4);
+  size_t l = s.find("_luid_"), t = s.find("_engtype_");
+  if (b == std::string::npos || l == std::string::npos || t == std::string::npos || t < l || b > l) return false;
+  *pid = (uint32_t)strtoul(s.substr(4, b - 4).c_str(), nullptr, 10);
+  *engine = s.substr(l + 1, t - l - 1);
+  *type = lower(s.substr(t + 9));
+  return true;
+}
+static GpuUse gpuAggregate(const std::vector<std::pair<std::string, double>>& v, const std::vector<uint32_t>& mine){
+  std::vector<std::string> eng; std::vector<std::string> typ; std::vector<double> all, my;
+  GpuUse u;
+  for (auto& it : v){
+    uint32_t pid; std::string e, t;
+    if (!parseGpuInst(it.first, &pid, &e, &t) || !(it.second >= 0)) continue;
+    u.inst++;
+    size_t k = 0;
+    while (k < eng.size() && eng[k] != e) k++;
+    if (k == eng.size()){ eng.push_back(e); typ.push_back(t); all.push_back(0); my.push_back(0); }
+    all[k] += it.second;
+    if (std::find(mine.begin(), mine.end(), pid) != mine.end()) my[k] += it.second;
+  }
+  for (size_t k = 0; k < eng.size(); k++){
+    u.sys = std::max(u.sys, all[k]);
+    u.mine = std::max(u.mine, my[k]);
+    if (typ[k].find("encode") != std::string::npos) u.enc = std::max(u.enc, my[k]);
+    if (typ[k].find("decode") != std::string::npos) u.dec = std::max(u.dec, my[k]);
+  }
+  u.sys = std::min(100.0, u.sys); u.mine = std::min(100.0, u.mine); u.enc = std::min(100.0, u.enc); u.dec = std::min(100.0, u.dec);
+  return u;
+}
+
 #ifdef TELAO_PORTABLE_TEST
 int main(){
   int fails = 0;
@@ -234,6 +273,27 @@ int main(){
     uint8_t hd[16]; frameHeader(hd, 1920, 1080, 258);
     check(hd[0] == 'T' && hd[3] == '1' && hd[4] == 0x80 && hd[5] == 7 && hd[8] == 0x38 && hd[9] == 4 && hd[12] == 2 && hd[13] == 1, "cabeçalho do quadro");
   }
+  {
+    uint32_t pid; std::string e, t;
+    check(parseGpuInst("pid_1234_luid_0x00000000_0x0000D1B2_phys_0_eng_3_engtype_VideoEncode", &pid, &e, &t) && pid == 1234 &&
+          e == "luid_0x00000000_0x0000D1B2_phys_0_eng_3" && t == "videoencode", "placa: lê o nome do contador");
+    check(!parseGpuInst("_Total", &pid, &e, &t) && !parseGpuInst("pid_x", &pid, &e, &t), "placa: ignora nomes estranhos");
+    const char* L = "_luid_0x00000000_0x0000D1B2_phys_0_eng_";
+    auto I = [&](int p, int eng, const char* ty){ return "pid_" + std::to_string(p) + L + std::to_string(eng) + "_engtype_" + ty; };
+    std::vector<std::pair<std::string, double>> v = {
+      {I(10, 0, "3D"), 60}, {I(20, 0, "3D"), 5}, {I(21, 0, "3D"), 2},      // jogo 60%, Telão 7% no 3D
+      {I(20, 3, "VideoEncode"), 9}, {I(21, 3, "VideoEncode"), 1},          // NVENC: Telão 10%
+      {I(22, 4, "VideoDecode"), 4}, {I(10, 1, "Copy"), 3},
+      {"pid_30_luid_0x00000000_0x0000AAAA_phys_0_eng_0_engtype_3D", 30},     // outra placa
+    };
+    GpuUse u = gpuAggregate(v, {20, 21, 22});
+    check(u.mine > 9.9 && u.mine < 10.1, "placa: Telão = motor mais ocupado (codificação 10%)");
+    check(u.enc > 9.9 && u.enc < 10.1 && u.dec > 3.9 && u.dec < 4.1, "placa: codificação e decodificação separadas");
+    check(u.sys > 66.9 && u.sys < 67.1, "placa: PC inteiro = 3D com jogo + Telão (67%)");
+    v.push_back({I(20, 3, "VideoEncode"), 150});
+    check(gpuAggregate(v, {20}).mine == 100, "placa: nunca passa de 100%");
+    check(gpuAggregate({}, {20}).inst == 0, "placa: sem contadores = zero");
+  }
   return fails;
 }
 #else
@@ -252,6 +312,8 @@ int main(){
 #include <audioclient.h>
 #include <audiopolicy.h>
 #include <tlhelp32.h>
+#include <pdh.h>
+#include <pdhmsg.h>
 #include <d3d11.h>
 #include <dxgi1_2.h>
 #include <inspectable.h>
@@ -1145,12 +1207,95 @@ static void startVideo(Conn* c, const std::string& msg){
   LeaveCriticalSection(&gVidLock);
 }
 
+/* ---------- uso da placa de vídeo (contadores do Windows) ----------
+   Só roda enquanto o Telão pede (painel "Ao vivo" aberto): uma linha de trabalho própria lê os contadores
+   "GPU Engine" a cada 1 s e guarda o último resultado; o pedido responde na hora com ele.
+   Se ninguém pedir por 8 s, a linha para e solta tudo. */
+static CRITICAL_SECTION gGpuLock;
+static HANDLE gGpuThread = nullptr;
+static volatile LONGLONG gGpuAsked = 0;
+static DWORD gGpuRoot = 0;
+static std::string gGpuJson;
+static bool gGpuNone = false;   // este Windows não tem os contadores: não tenta de novo
+typedef PDH_STATUS (WINAPI *PFN_PdhOpenQueryW)(LPCWSTR, DWORD_PTR, PDH_HQUERY*);
+typedef PDH_STATUS (WINAPI *PFN_PdhAddEnglishCounterW)(PDH_HQUERY, LPCWSTR, DWORD_PTR, PDH_HCOUNTER*);
+typedef PDH_STATUS (WINAPI *PFN_PdhCollectQueryData)(PDH_HQUERY);
+typedef PDH_STATUS (WINAPI *PFN_PdhGetFormattedCounterArrayW)(PDH_HCOUNTER, DWORD, LPDWORD, LPDWORD, PPDH_FMT_COUNTERVALUE_ITEM_W);
+typedef PDH_STATUS (WINAPI *PFN_PdhCloseQuery)(PDH_HQUERY);
+static void gpuSetJson(const std::string& j){ EnterCriticalSection(&gGpuLock); gGpuJson = j; LeaveCriticalSection(&gGpuLock); }
+static DWORD WINAPI gpuThread(void*){
+  HMODULE pdh = LoadLibraryW(L"pdh.dll");
+  auto open = pdh ? (PFN_PdhOpenQueryW)GetProcAddress(pdh, "PdhOpenQueryW") : nullptr;
+  auto add = pdh ? (PFN_PdhAddEnglishCounterW)GetProcAddress(pdh, "PdhAddEnglishCounterW") : nullptr;
+  auto collect = pdh ? (PFN_PdhCollectQueryData)GetProcAddress(pdh, "PdhCollectQueryData") : nullptr;
+  auto getArr = pdh ? (PFN_PdhGetFormattedCounterArrayW)GetProcAddress(pdh, "PdhGetFormattedCounterArrayW") : nullptr;
+  auto close = pdh ? (PFN_PdhCloseQuery)GetProcAddress(pdh, "PdhCloseQuery") : nullptr;
+  PDH_HQUERY q = nullptr; PDH_HCOUNTER ctr = nullptr;
+  bool ok = open && add && collect && getArr && close && open(nullptr, 0, &q) == ERROR_SUCCESS &&
+            add(q, L"\\GPU Engine(*)\\Utilization Percentage", 0, &ctr) == ERROR_SUCCESS;
+  if (!ok){
+    gpuSetJson("{\"type\":\"gpu\",\"ok\":false,\"error\":\"este Windows não mostra o uso da placa por processo\"}");
+    logf("Uso da placa de vídeo: contadores do Windows indisponíveis");
+  } else {
+    logf("Uso da placa de vídeo: medindo (painel do Telão aberto)");
+    collect(q);
+    std::vector<uint32_t> mine; ULONGLONG treeAt = 0;
+    std::vector<unsigned char> buf;
+    while ((LONGLONG)GetTickCount64() - gGpuAsked < 8000){
+      Sleep(1000);
+      ULONGLONG now = GetTickCount64();
+      if (!treeAt || now - treeAt > 5000){
+        std::vector<ProcInfo> ps;
+        for (auto& p : listProcesses()) ps.push_back({p.pid, p.parent, utf8(p.exe)});
+        mine = gGpuRoot ? processTree(gGpuRoot, ps) : std::vector<uint32_t>();
+        mine.push_back(GetCurrentProcessId());   // a captura turbo roda aqui
+        treeAt = now;
+      }
+      if (collect(q) != ERROR_SUCCESS) continue;
+      DWORD size = 0, count = 0;
+      PDH_STATUS st = getArr(ctr, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, &size, &count, nullptr);
+      if (st != (PDH_STATUS)PDH_MORE_DATA || !size) continue;
+      buf.assign(size, 0);
+      auto items = (PPDH_FMT_COUNTERVALUE_ITEM_W)buf.data();
+      if (getArr(ctr, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, &size, &count, items) != ERROR_SUCCESS) continue;
+      std::vector<std::pair<std::string, double>> v; v.reserve(count);
+      for (DWORD i = 0; i < count; i++)
+        if (items[i].FmtValue.CStatus == PDH_CSTATUS_VALID_DATA || items[i].FmtValue.CStatus == PDH_CSTATUS_NEW_DATA)
+          v.push_back({utf8(items[i].szName ? items[i].szName : L""), items[i].FmtValue.doubleValue});
+      GpuUse u = gpuAggregate(v, mine);
+      char b[200];
+      snprintf(b, sizeof b, "{\"type\":\"gpu\",\"ok\":true,\"mine\":%.1f,\"enc\":%.1f,\"dec\":%.1f,\"sys\":%.1f,\"n\":%d}", u.mine, u.enc, u.dec, u.sys, (int)mine.size());
+      gpuSetJson(b);
+    }
+    logf("Uso da placa de vídeo: parou (painel fechado)");
+  }
+  if (q && close) close(q);
+  if (pdh) FreeLibrary(pdh);
+  EnterCriticalSection(&gGpuLock);
+  CloseHandle(gGpuThread); gGpuThread = nullptr;
+  if (!ok) gGpuNone = true;
+  LeaveCriticalSection(&gGpuLock);
+  return 0;
+}
+static void gpuRequest(Conn* c, const std::string& msg){
+  if (!(c->origin == "null" || c->origin.rfind("file://", 0) == 0)){ wsText(c, "{\"type\":\"gpu\",\"ok\":false,\"error\":\"só no app do Telão\"}"); return; }
+  DWORD pid = (DWORD)strtoul(jsonStr(msg, "pid").c_str(), nullptr, 10);
+  EnterCriticalSection(&gGpuLock);
+  gGpuRoot = gBoostRoot ? gBoostRoot : pid;
+  gGpuAsked = (LONGLONG)GetTickCount64();
+  if (!gGpuThread && !gGpuNone){ gGpuJson.clear(); gGpuThread = CreateThread(nullptr, 0, gpuThread, nullptr, 0, nullptr); }
+  std::string j = gGpuJson.empty() ? "{\"type\":\"gpu\",\"ok\":true,\"wait\":true}" : gGpuJson;
+  LeaveCriticalSection(&gGpuLock);
+  wsText(c, j);
+}
+
 static void handleCommand(Conn* c, const std::string& msg){
   std::string cmd = jsonStr(msg, "cmd");
   if (cmd == "list"){ wsText(c, buildAppList()); return; }
   if (cmd == "stop"){ stopCapture(c); return; }
   if (cmd == "vstart"){ startVideo(c, msg); return; }
   if (cmd == "vstop"){ stopVideo(c); return; }
+  if (cmd == "gpu"){ gpuRequest(c, msg); return; }
   if (cmd == "winrect"){
     // Retângulo da janela (pixels físicos) e do monitor onde ela está: usado pela camada de reações do app.
     unsigned long long hv = strtoull(jsonStr(msg, "hwnd").c_str(), nullptr, 10);
@@ -1298,6 +1443,7 @@ int main(int argc, char** argv){
   if (GetConsoleMode(in, &mode)) SetConsoleMode(in, (mode & ~ENABLE_QUICK_EDIT_MODE) | ENABLE_EXTENDED_FLAGS);
 
   InitializeCriticalSection(&gLogLock);
+  InitializeCriticalSection(&gGpuLock);
   InitializeCriticalSection(&gOriginLock);
   InitializeCriticalSection(&gCapLock);
   InitializeCriticalSection(&gVidLock);

@@ -1,31 +1,27 @@
 {
-  "version": "1.14.0",
+  "version": "1.15.0",
   "minShell": 2,
-  "page": "versoes/telao-1.14.0.html",
-  "sha256": "71fa5a85303012b7b3ba7f83674b43b7973aa1de3251bfbe0a6921629396e7a4",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.14.0",
+  "page": "versoes/telao-1.15.0.html",
+  "sha256": "dbf2cf917d87e444fbdab6fd4830621318cbc475b41e07e26a9998a3cf66d75b",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.15.0",
   "notes": [
-    "Visual novo: logo, barra da sala mais limpa (qualidade e som no ▾ do Compartilhar; opções, diagnóstico e sair no ⋯) e rostos de quem está na sala",
-    "No app, a barra do Telão é a própria barra da janela (os botões de minimizar, maximizar e fechar continuam os do Windows)",
-    "Temas: Grafite, Azul-noite, Preto OLED, Café, Claro ou igual ao sistema, e cor de destaque à sua escolha (Opções)",
-    "\"Ao vivo\" de quem transmite: quantos assistem, upload e, clicando, o custo no PC (processador no app) e o que cada amigo recebe. Fica amarelo ou vermelho sozinho quando algo aperta",
-    "Telas se ajustam para caber sem rolagem e sem buraco; cada uma mostra se está lisa ou engasgando, e os detalhes técnicos ao passar o mouse",
-    "Sala vazia mostra quem está aqui e um botão grande para transmitir; a miniatura de quem transmite não cobre mais o chat"
+    "App: o painel do \"Ao vivo\" mostra o uso da placa de vídeo pelo Telão (com quanto é codificação) e o da placa inteira, com o jogo",
+    "Medição de uso real (Diagnóstico) inclui a placa de vídeo: Telão, encoder da placa e PC inteiro, com aviso quando a placa ou o encoder estão no limite"
   ],
   "app": {
-    "version": "1.14.0",
-    "shell": 10,
+    "version": "1.15.0",
+    "shell": 11,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.14.0/app.asar",
-        "sha256": "92c18910013b2f9af1539c4720f25609ff084a6568be29053610c104bccb53fc",
-        "size": 427243
+        "path": "versoes/app-1.15.0/app.asar",
+        "sha256": "e1e9e0d63b296fee9a6c1488918ba379df63ff56de989d631e3d3d54954d2c3c",
+        "size": 430358
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.14.0/telao-audio.exe",
-        "sha256": "161f8e2d029fb7a8f0db08eb5de50e8d92d5f52829fd17a71994a723aa9d0bae",
-        "size": 627200
+        "path": "versoes/app-1.15.0/telao-audio.exe",
+        "sha256": "8b216f472cf06bb24721d994b7b80890728971168ec24218c49e6ca8c67e751d",
+        "size": 637952
       }
     }
   }
