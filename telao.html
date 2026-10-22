@@ -614,7 +614,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.12.2';
+const TELAO_VERSION = '1.12.3';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -624,7 +624,9 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 9;       // nível do app desktop mais novo (9: captura turbo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.12.2', 'hoje', ['Captura turbo no tamanho certo: se todo mundo assiste em 720p, ela já captura em 720p (codificação mais leve e mais fps)',
+  ['1.12.3', 'hoje', ['iPhone/iPad assistindo: o H.264 vai no perfil High pela placa de vídeo (antes ia em Baseline pelo processador), quando a placa de quem transmite aceita',
+                      'Teste de encoder testa cada perfil do H.264 (Main, High, Baseline); relatórios mostram o perfil combinado com cada pessoa']],
+  ['1.12.2', '22/10', ['Captura turbo no tamanho certo: se todo mundo assiste em 720p, ela já captura em 720p (codificação mais leve e mais fps)',
                       'Se a captura turbo cair, a normal volta na hora (ela fica de reserva, quase parada)',
                       'Medição de uso real mostra a captura turbo: quantos quadros o jogo mostrou e quantos a captura passou adiante']],
   ['1.12.1', '22/10', ['Captura turbo pela placa: corrige o engasgo fixo (a cada ~meio segundo) pra quem assiste',
@@ -1794,17 +1796,26 @@ const stereoSdp = sdp => sdp.replace(/a=fmtp:(\d+) ([^\r\n]*useinbandfec=1[^\r\n
 /* Perfil de H.264: o Chromium só usa a placa de vídeo nos perfis Main/Baseline (o Constrained Baseline
    precisa de uma flag que o Chrome deixa desligada). Main primeiro: com placa sai pela placa; sem placa,
    o OpenH264 assume do mesmo jeito. High fica por último porque nem todo PC consegue receber. */
-function h264Score(fmtp){
+// hi: quem transmite já sabe que a placa dele codifica o perfil High. Aí, para quem não aceita o Main (o iPhone só
+// aceita Constrained Baseline e High), o High vem antes do Baseline: o Baseline, nesta versão do Chromium, sai pelo processador.
+function h264Score(fmtp, hi){
   fmtp = fmtp || '';
-  const id = ((fmtp.match(/profile-level-id=([0-9a-f]{6})/i) || [])[1] || '').toLowerCase();
-  const rank = id.startsWith('4d') ? 3 : id.startsWith('4200') ? 2 : id.startsWith('42e0') ? 1 : 0;
+  const id = h264Profile(fmtp);
+  const rank = id.startsWith('4d') ? 3 : id.startsWith('64') && hi ? 2.5 : id.startsWith('4200') ? 2 : id.startsWith('42e0') ? 1 : 0;
   return (/packetization-mode=1/.test(fmtp) ? 10 : 0) + rank;
 }
+const h264Profile = fmtp => ((String(fmtp || '').match(/profile-level-id=([0-9a-f]{6})/i) || [])[1] || '').toLowerCase();
+const H264_NAMES = [['42e0', 'Constrained Baseline'], ['4200', 'Baseline'], ['4d', 'Main'], ['64', 'High'], ['f4', 'High 4:4:4']];
+const h264Name = fmtp => { const id = h264Profile(fmtp); const n = H264_NAMES.find(([k]) => id.startsWith(k)); return n ? n[1] : id; };
+// Perfis do H.264 que a placa deste PC codifica (teste de encoder no Diagnóstico, ou sozinho na primeira transmissão).
+const CHROME_V = (navigator.userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || '';
+function h264Hw(){ const x = store.get('h264hw', null); return x && x.v === CHROME_V && x.p ? x.p : null; }
+const myHighHw = () => { const p = h264Hw(); return !!(p && p['64'] === 'hw'); };
 
 /* Coloca o codec escolhido na frente da lista de vídeo da negociação.
    Aplicado na oferta (quem transmite) e na resposta (quem assiste, lendo o codec pelo metadata),
    porque é a ordem da resposta que decide o que o encoder usa. */
-function preferCodec(sdp, codec){
+function preferCodec(sdp, codec, hi){
   if (!codec) return sdp;
   const lines = sdp.split('\r\n');
   const m = lines.findIndex(l => l.startsWith('m=video'));
@@ -1822,7 +1833,7 @@ function preferCodec(sdp, codec){
   const head = parts.slice(0, 3), list = parts.slice(3);
   let pref = list.filter(pt => name[pt] === codec);
   if (!pref.length) return sdp;
-  if (codec === 'H264') pref = pref.sort((a, b) => h264Score(fmtp[b]) - h264Score(fmtp[a]));
+  if (codec === 'H264') pref = pref.sort((a, b) => h264Score(fmtp[b], hi) - h264Score(fmtp[a], hi));
   const prefRtx = list.filter(pt => apt[pt] && pref.includes(apt[pt]));
   const rest = list.filter(pt => !pref.includes(pt) && !prefRtx.includes(pt));
   lines[m] = [...head, ...pref, ...prefRtx, ...rest].join(' ');
@@ -1855,7 +1866,7 @@ function startBitrateSdp(sdp){
   });
   return out.join('\r\n');
 }
-const makeSdpTransform = codec => sdp => startBitrateSdp(preferCodec(stereoSdp(sdp), codec));
+const makeSdpTransform = (codec, hi) => sdp => startBitrateSdp(preferCodec(stereoSdp(sdp), codec, hi));
 
 /* ---------- Seletor de janela/tela (só no app desktop) ---------- */
 let pickerTab = 'window';
@@ -2062,6 +2073,7 @@ async function startShare(){
   for (const m of members) if (m.id !== me.id) callPeer(m.id);
   updatePip();
   if (useTurbo) engageTurbo(chosen, s).catch(e => toast('Captura turbo: ' + e.message, 'warn'));
+  setTimeout(() => autoProbeH264().catch(() => {}), 8000);
 }
 
 function stopShare(){
@@ -2171,7 +2183,8 @@ function initPrivate(){
 function callPeer(pid){
   if (!localStream || !me || me.destroyed) return;
   const codec = currentCodec();
-  const call = me.call(pid, outStream(), {metadata: {name: myName, codec}, sdpTransform: makeSdpTransform(codec)});
+  const hi = myHighHw();
+  const call = me.call(pid, outStream(), {metadata: {name: myName, codec, hi}, sdpTransform: makeSdpTransform(codec, hi)});
   if (!call) return;
   outCalls.set(pid, call);
   const pc = call.peerConnection;
@@ -2546,7 +2559,7 @@ function onPullCall(call){
   const old = outCalls.get(pid);
   if (old && old !== call){ outCalls.delete(pid); try{ old.close(); }catch{} }
   relayVia.delete(pid);   // pediu direto: não precisa mais do repasse
-  call.answer(outStream(), {sdpTransform: makeSdpTransform(codec)});
+  call.answer(outStream(), {sdpTransform: makeSdpTransform(codec, myHighHw())});
   outCalls.set(pid, call);
   failCount.delete(pid);
   const pc = call.peerConnection;
@@ -2590,7 +2603,7 @@ function onIncomingCall(call){
     return;
   }
   const sender = call.metadata && CODECS[call.metadata.codec] ? call.metadata.codec : null;
-  call.answer(undefined, {sdpTransform: makeSdpTransform(answerCodec(sender))});
+  call.answer(undefined, {sdpTransform: makeSdpTransform(answerCodec(sender), call.metadata && call.metadata.hi === true)});
   attachIncoming(call, call.peer);
 }
 
@@ -4866,7 +4879,32 @@ const HW_RE = /mediafoundation|nvenc|nvidia|amf|quicksync|qsv|videotoolbox|vaapi
 const SW_RE = /libvpx|openh264|libaom|svt|software|x264/i;
 const VENDORS = {0x10de: 'NVIDIA', 0x1002: 'AMD', 0x1022: 'AMD', 0x8086: 'Intel', 0x5143: 'Qualcomm'};
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-let diagGpu = null, diagResults = [], diagRunning = false, diagLiveTimer = null;
+let diagGpu = null, diagResults = [], diagRunning = false, diagLiveTimer = null, diagExpected = 4;
+// Perfis do H.264 que este navegador oferece para enviar (Main, High, Constrained Baseline, Baseline), na ordem do teste.
+function h264Profiles(){
+  const caps = window.RTCRtpSender && RTCRtpSender.getCapabilities ? RTCRtpSender.getCapabilities('video') : null;
+  const ids = caps ? caps.codecs.filter(c => /h264/i.test(c.mimeType)).map(c => h264Profile(c.sdpFmtpLine)) : [];
+  const out = ['4d', '64', '42e0', '4200'].filter(p => ids.some(id => id.startsWith(p)));
+  return out.length ? out : [''];
+}
+function saveH264Hw(results){
+  const p = {};
+  for (const r of results) if (r.codec === 'H264' && r.prof && (r.status === 'hw' || r.status === 'sw')) p[r.prof] = r.status;
+  if (Object.keys(p).length) store.set('h264hw', {v: CHROME_V, p, at: Date.now()});
+}
+// Primeira transmissão com esta versão do Chromium: descobre sozinho (em segundo plano, com um vídeo pequeno de teste)
+// quais perfis do H.264 saem pela placa. Precisa de uma captura aberta: só assim o Chromium conta quem codifica.
+let h264AutoProbing = false, h264AutoLast = null;
+async function autoProbeH264(){
+  if (!DESKTOP || h264AutoProbing || h264Hw() || currentCodec() !== 'H264' || !localStream) return;
+  h264AutoProbing = true;
+  const src = canvasSource(640, 360), res = [];
+  try{
+    for (const p of h264Profiles().filter(Boolean)){ if (!localStream) break; try{ res.push(await probeCodec('H264', src.track, p)); }catch{} }
+    saveH264Hw(res);   // só guarda se o Chromium revelou quem codificou (com uma captura de verdade aberta)
+    h264AutoLast = res.map(r => r.prof + ':' + r.status).join(' ');
+  }finally{ src.stop(); h264AutoProbing = false; }
+}
 
 function featureLabel(v){
   if (!v) return ['desconhecido', 'dg-off'];
@@ -4940,23 +4978,27 @@ async function probeSource(){
       }
     }catch{}
   }
-  const c = document.createElement('canvas'); c.width = 1280; c.height = 720;
+  return canvasSource(1280, 720);
+}
+function canvasSource(W, H){
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d'); let i = 0;
   const timer = setInterval(() => {
     i++;
-    const grd = g.createLinearGradient(0, 0, 1280, 720);
+    const grd = g.createLinearGradient(0, 0, W, H);
     grd.addColorStop(0, 'hsl(' + (i * 3 % 360) + ',70%,40%)'); grd.addColorStop(1, 'hsl(' + ((i * 3 + 180) % 360) + ',70%,30%)');
-    g.fillStyle = grd; g.fillRect(0, 0, 1280, 720);
-    for (let k = 0; k < 40; k++){ g.fillStyle = 'hsl(' + (k * 37 + i) % 360 + ',80%,60%)'; g.fillRect((k * 97 + i * 9) % 1280, (k * 53 + i * 5) % 720, 60, 60); }
+    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    for (let k = 0; k < 40; k++){ g.fillStyle = 'hsl(' + (k * 37 + i) % 360 + ',80%,60%)'; g.fillRect((k * 97 + i * 9) % W, (k * 53 + i * 5) % H, 60, 60); }
   }, 16);
   const st = c.captureStream(60); const t = st.getVideoTracks()[0]; try{ t.contentHint = 'motion'; }catch{}
   return {track: t, label: 'vídeo de teste', stop(){ clearInterval(timer); t.stop(); }};
 }
 
-async function probeCodec(codec, track){
+async function probeCodec(codec, track, prof){
   const caps = window.RTCRtpSender && RTCRtpSender.getCapabilities ? RTCRtpSender.getCapabilities('video') : null;
-  const mine = caps ? caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/' + codec.toLowerCase()) : [];
-  if (!mine.length) return {codec, status: 'unsupported'};
+  let mine = caps ? caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/' + codec.toLowerCase()) : [];
+  if (prof) mine = mine.filter(c => h264Profile(c.sdpFmtpLine).startsWith(prof));
+  if (!mine.length) return {codec, prof, status: 'unsupported'};
   if (codec === 'H264') mine.sort((a, b) => h264Score(b.sdpFmtpLine) - h264Score(a.sdpFmtpLine));
   const a = new RTCPeerConnection(), b = new RTCPeerConnection();
   try{
@@ -4971,7 +5013,7 @@ async function probeCodec(codec, track){
     await b.setLocalDescription(await b.createAnswer());
     await a.setRemoteDescription({type: 'answer', sdp: boost(b.localDescription.sdp)});
     for (let k = 0; k < 25 && a.connectionState !== 'connected'; k++) await sleep(200);
-    if (a.connectionState !== 'connected') return {codec, status: 'error', note: 'conexão de teste não abriu'};
+    if (a.connectionState !== 'connected') return {codec, prof, status: 'error', note: 'conexão de teste não abriu'};
     try{ const p = tr.sender.getParameters(); p.degradationPreference = 'maintain-framerate'; await tr.sender.setParameters(p); }catch{}
     await sleep(1500);
     const read = async () => {
@@ -4980,13 +5022,13 @@ async function probeCodec(codec, track){
       return o ? {...o, mime: ((cs[o.codecId] || {}).mimeType || '').replace(/^video\//i, '')} : null;
     };
     const s1 = await read(); await sleep(3000); const s2 = await read();
-    if (!s2) return {codec, status: 'error', note: 'sem estatísticas'};
+    if (!s2) return {codec, prof, status: 'error', note: 'sem estatísticas'};
     const df = (s2.framesEncoded || 0) - ((s1 && s1.framesEncoded) || 0);
     const dt = (s2.totalEncodeTime || 0) - ((s1 && s1.totalEncodeTime) || 0);
     const impl = s2.encoderImplementation || '';
     const hw = s2.powerEfficientEncoder != null ? !!s2.powerEfficientEncoder : (HW_RE.test(impl) ? true : SW_RE.test(impl) ? false : null);
-    const prof = codec === 'H264' ? ({'4d': 'Main', '42': 'Baseline', '64': 'High'}[((mine[0].sdpFmtpLine || '').match(/profile-level-id=([0-9a-f]{2})/i) || [])[1]] || '') : '';
-    return {codec, status: hw === true ? 'hw' : hw === false ? 'sw' : 'unknown', impl, used: s2.mime + (prof ? ' ' + prof : ''),
+    const pname = codec === 'H264' ? h264Name(mine[0].sdpFmtpLine) : '';
+    return {codec, prof, status: hw === true ? 'hw' : hw === false ? 'sw' : 'unknown', impl, used: s2.mime + (pname ? ' ' + pname : ''),
             fps: Math.round(s2.framesPerSecond || df / 3), h: s2.frameHeight || 0, encMs: df > 0 ? dt / df * 1000 : null,
             limit: s2.qualityLimitationReason || ''};
   } finally { a.close(); b.close(); }
@@ -5001,12 +5043,15 @@ async function runDiag(){
   try{
     $('#dgRunMsg').textContent = 'Preparando…';
     src = await probeSource();
-    for (const codec of ['H264', 'VP9', 'AV1', 'VP8']){
-      $('#dgRunMsg').textContent = 'Testando ' + codec + ' (com ' + src.label + ')…';
+    const plan = [...h264Profiles().map(p => ['H264', p]), ['VP9'], ['AV1'], ['VP8']];
+    diagExpected = plan.length;
+    for (const [codec, prof] of plan){
+      $('#dgRunMsg').textContent = 'Testando ' + codec + (prof ? ' ' + h264Name('profile-level-id=' + (prof + '000000').slice(0, 6)) : '') + ' (com ' + src.label + ')…';
       let r;
-      try{ r = await probeCodec(codec, src.track); }catch(e){ r = {codec, status: 'error', note: e.message}; }
+      try{ r = await probeCodec(codec, src.track, prof); }catch(e){ r = {codec, prof, status: 'error', note: e.message}; }
       diagResults.push(r); renderDiagTable();
     }
+    saveH264Hw(diagResults);
     $('#dgRunMsg').textContent = 'Teste feito com ' + src.label + '.';
   }catch(e){
     $('#dgRunMsg').textContent = 'Não consegui testar: ' + e.message;
@@ -5027,7 +5072,7 @@ function renderDiagTable(){
     const tr = document.createElement('tr');
     const st = STATUS_TXT[r.status] || [r.status, ''];
     const cells = [
-      [r.codec + (r.used && r.used.toUpperCase() !== r.codec ? ' (' + r.used.replace(/^H264 /, '') + ')' : ''), ''],
+      [r.codec === 'H264' && r.prof ? 'H264 ' + h264Name('profile-level-id=' + (r.prof + '000000').slice(0, 6)) : r.codec + (r.used && r.used.toUpperCase() !== r.codec ? ' (' + r.used.replace(/^H264 /, '') + ')' : ''), ''],
       [st[0] + (r.note ? ' · ' + r.note : ''), st[1]],
       [r.fps ? r.fps + (r.h ? ' · ' + r.h + 'p' : '') : '–', ''],
       [r.encMs != null ? r.encMs.toFixed(1) + ' ms' : '–', ''],
@@ -5041,12 +5086,16 @@ function renderDiagTable(){
 
 function renderAdvice(){
   const box = $('#dgAdvice');
-  const done = diagResults.length === 4 && !diagRunning;
+  const done = diagResults.length === diagExpected && !diagRunning;
   box.hidden = !done; box.textContent = ''; box.className = 'dg-advice';
   if (!done) return;
-  const hwList = diagResults.filter(r => r.status === 'hw').map(r => r.codec);
+  const hwList = [...new Set(diagResults.filter(r => r.status === 'hw').map(r => r.codec))];
   const cur = currentCodec();
   const say = t => { const d = document.createElement('div'); d.textContent = t; box.appendChild(d); };
+  const hp = k => (diagResults.find(r => r.codec === 'H264' && r.prof === k) || {}).status;
+  if (cur === 'H264' && hp('42e0') === 'sw' && (hp('4d') === 'hw' || hp('64') === 'hw')) say(hp('64') === 'hw'
+    ? 'iPhone e iPad (que não aceitam o H.264 Main) passam a receber em High, pela placa de vídeo, em vez do Constrained Baseline pelo processador.'
+    : 'Atenção: quem não aceita o H.264 Main (iPhone, iPad) recebe em Constrained Baseline, que neste PC sai pelo processador.');
   if (hwList.includes(cur)){
     say('Tudo certo: o formato que você usa (' + cur + ') já é codificado pela placa de vídeo.');
   } else if (hwList.length){
@@ -5084,7 +5133,8 @@ async function renderLive(){
       const who = (members.find(m => m.id === pid) || {}).name || 'alguém';
       const impl = o.encoderImplementation || '?';
       const hw = o.powerEfficientEncoder != null ? o.powerEfficientEncoder : (HW_RE.test(impl) ? true : SW_RE.test(impl) ? false : null);
-      rows.push(who + ': ' + ((cs[o.codecId] || {}).mimeType || '').replace(/^video\//i, '') + ' ' + (o.frameHeight || '?') + 'p ' +
+      const cd = cs[o.codecId] || {}, mime = (cd.mimeType || '').replace(/^video\//i, '');
+      rows.push(who + ': ' + mime + (/h264/i.test(mime) ? ' ' + h264Name(cd.sdpFmtpLine) : '') + ' ' + (o.frameHeight || '?') + 'p ' +
         Math.round(o.framesPerSecond || 0) + 'fps · ' + (hw === true ? 'placa de vídeo' : hw === false ? 'processador' : 'não revelado') +
         (pausedBy.get(pid) ? ' · pausado (ocultou)' : '') + (o.qualityLimitationReason && o.qualityLimitationReason !== 'none' ? ' · gargalo: ' + o.qualityLimitationReason : '') +
         ' · ' + impl);
@@ -5109,9 +5159,9 @@ function diagReport(){
     if (diagGpu.features) L.push('flags do app: ' + diagGpu.features);
     L.push('desempenho minimizado: ' + (helper.ready ? helper.boost : 'helper desconectado'));
   }
-  L.push('Formato escolhido: ' + currentCodec() + ' · qualidade: ' + currentQ());
+  L.push('Formato escolhido: ' + currentCodec() + ' · qualidade: ' + currentQ() + ' · H.264 pela placa neste PC: ' + (h264Hw() ? JSON.stringify(h264Hw()) : 'ainda não testado') + (myHighHw() ? ' (oferece High a quem não aceita Main)' : '') + (h264AutoLast ? ' · teste automático: ' + h264AutoLast : ''));
   for (const r of diagResults)
-    L.push(r.codec + ': ' + r.status + (r.used ? ' (saiu ' + r.used + ')' : '') + (r.fps ? ' ' + r.fps + 'fps' : '') + (r.h ? ' ' + r.h + 'p' : '') +
+    L.push(r.codec + (r.prof ? ' ' + r.prof : '') + ': ' + r.status + (r.used ? ' (saiu ' + r.used + ')' : '') + (r.fps ? ' ' + r.fps + 'fps' : '') + (r.h ? ' ' + r.h + 'p' : '') +
            (r.encMs != null ? ' ' + r.encMs.toFixed(1) + 'ms/quadro' : '') + (r.limit ? ' limite=' + r.limit : '') + ' encoder=' + (r.impl || '-') + (r.note ? ' (' + r.note + ')' : ''));
   if (!diagResults.length) L.push('(teste de encoder não executado)');
   for (const el of $('#dgLive').children) L.push('Ao vivo — ' + el.textContent);
@@ -5205,7 +5255,8 @@ function perfDelta(kind, cur, prev, dt){
     const et = dl(o, p, 'totalEncodeTime');
     if (et != null && fr > 0) s.encMs = et / fr * 1000;
     s.impl = o.encoderImplementation || ''; s.hw = o.powerEfficientEncoder;
-    s.codec = ((cur.codec[o.codecId] || {}).mimeType || '').replace(/^video\//i, '');
+    const cd = cur.codec[o.codecId] || {};
+    s.codec = (cd.mimeType || '').replace(/^video\//i, '') + (/h264/i.test(cd.mimeType || '') ? ' ' + h264Name(cd.sdpFmtpLine) : '');
     const qd = o.qualityLimitationDurations, qp = p && p.qualityLimitationDurations;
     if (qd && qp) for (const k of ['cpu', 'bandwidth', 'other']) s['lim_' + k] = Math.max(0, (qd[k] || 0) - (qp[k] || 0)) / dt;
     else s['lim_' + (o.qualityLimitationReason || 'none')] = 1;

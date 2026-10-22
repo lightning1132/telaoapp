@@ -1,26 +1,25 @@
 {
-  "version": "1.12.2",
+  "version": "1.12.3",
   "minShell": 2,
-  "page": "versoes/telao-1.12.2.html",
-  "sha256": "c62717b0dfb6284f9cd5770cfbe9d131c82ff785b40224eb9b4af81231b9871e",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.2",
+  "page": "versoes/telao-1.12.3.html",
+  "sha256": "54a5ac4b173f692963b261dc513c85441415eb4ea406c32c5e4a70c41e887c81",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.3",
   "notes": [
-    "Captura turbo no tamanho certo: se todo mundo assiste em 720p, ela já captura em 720p (codificação mais leve e mais fps)",
-    "Se a captura turbo cair, a normal volta na hora (ela fica de reserva, quase parada)",
-    "Medição de uso real mostra a captura turbo: quantos quadros o jogo mostrou e quantos a captura passou adiante"
+    "iPhone/iPad assistindo: o H.264 vai no perfil High pela placa de vídeo (antes ia em Baseline pelo processador), quando a placa de quem transmite aceita",
+    "Teste de encoder testa cada perfil do H.264 (Main, High, Baseline); relatórios mostram o perfil combinado com cada pessoa"
   ],
   "app": {
-    "version": "1.12.2",
+    "version": "1.12.3",
     "shell": 9,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.12.2/app.asar",
-        "sha256": "e87254ae8a63743e85719d9456e234f2a49804b266bd351cfce6993c1e44fec3",
-        "size": 361312
+        "path": "versoes/app-1.12.3/app.asar",
+        "sha256": "c5ee7c5f12a20c51b2a9bec02088b52ef7b70a2733f8d7b254b9f8d4954abae6",
+        "size": 365818
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.12.2/telao-audio.exe",
+        "path": "versoes/app-1.12.3/telao-audio.exe",
         "sha256": "161f8e2d029fb7a8f0db08eb5de50e8d92d5f52829fd17a71994a723aa9d0bae",
         "size": 627200
       }
