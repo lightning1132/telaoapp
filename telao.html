@@ -507,6 +507,26 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 .modal{position:fixed;inset:0;z-index:22;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px}
 .modal[hidden]{display:none}
 .op-card{width:min(640px,100%)}
+.away-card{width:min(420px,100%)}
+.away-body{display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 24px;text-align:center}
+.away-body b{font-size:20px}
+.away-body p{margin:0;font-size:14px}
+.away-body .primary{padding:10px 22px;font-size:15px}
+.away-ico{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);color:var(--muted)}
+.away-ico svg{width:26px;height:26px}
+#awayAsk,#awayBox{z-index:40}
+.chip.away .av,.ecard.away .av{filter:grayscale(1);opacity:.45}
+.chip.away{border-color:var(--line)!important}
+.mrow.away .av{filter:grayscale(1);opacity:.5}
+.mrow .mst.aw{color:var(--muted)}
+.macts{display:flex;flex-wrap:wrap;gap:6px;padding:0 4px 8px 46px}
+.macts[hidden]{display:none}
+.mrow-wrap{display:flex;flex-direction:column}
+.mrow .mmore{width:28px;height:28px;display:grid;place-items:center;flex:none;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--muted)}
+.mrow .mmore:hover{border-color:var(--line);color:var(--text)}
+.macts .ghost{padding:5px 10px;font-size:12px}
+.macts .ghost.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 50%,transparent)}
+.macts .ghost.danger.confirm{background:var(--danger);color:var(--danger-ink)}
 .op-sub{font-size:13px;color:var(--text);margin:10px 0 8px}
 .thm-row{display:flex;flex-wrap:wrap;gap:8px}
 .thm{display:flex;flex-direction:column;gap:6px;width:88px;padding:6px;background:transparent;border:2px solid var(--line);border-radius:10px;color:var(--text);font-size:12px;text-align:left}
@@ -680,6 +700,28 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 
 <div id="costPop" class="pop" hidden role="dialog" aria-label="Custo da transmissão"></div>
 
+<div id="awayAsk" class="modal" hidden>
+  <div class="pk-card away-card" role="alertdialog" aria-labelledby="awayAskT">
+    <div class="away-body">
+      <b id="awayAskT">Ainda está aí?</b>
+      <p class="muted">Ninguém mexe no PC há um tempo. Em <span id="awayAskLeft">2:00</span> o Telão te marca como ausente e para de receber as transmissões (quem transmite deixa de gastar internet e placa de vídeo com você).</p>
+      <button type="button" class="primary" id="awayAskOk">Estou aqui</button>
+    </div>
+  </div>
+</div>
+
+<div id="awayBox" class="modal" hidden>
+  <div class="pk-card away-card" role="dialog" aria-labelledby="awayT">
+    <div class="away-body">
+      <span class="away-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></span>
+      <b id="awayT">Você está ausente</b>
+      <p id="awayTxt" class="muted"></p>
+      <p class="muted">Enquanto isso você não recebe vídeo e ninguém gasta internet com você. É só mexer no PC ou clicar abaixo para voltar.</p>
+      <button type="button" class="primary" id="awayBack">Voltar para a sala</button>
+    </div>
+  </div>
+</div>
+
 <div id="pip" hidden>
   <video id="pipVideo" autoplay playsinline muted></video>
   <div class="fx" id="pipFx"></div>
@@ -803,6 +845,11 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
         <label class="chk"><input type="checkbox" id="optH265"> H.265 automático</label>
         <p class="muted dg-p" style="margin-top:6px">Quando quem transmite e quem assiste têm placa de vídeo que codifica e decodifica H.265, o vídeo vai em H.265: mesma imagem com uns 20–30% menos internet (ou imagem melhor na mesma internet). Precisa estar ligado dos dois lados. Se a tela não aparecer, volta sozinho para o H.264.</p>
       </section>
+      <section id="optPerfSec" hidden>
+        <h3>Desempenho</h3>
+        <label class="chk"><input type="checkbox" id="optGpuPrio"> Prioridade do Telão na placa de vídeo <span class="muted">(experimental)</span></label>
+        <p class="muted dg-p" style="margin-top:6px">Com o jogo usando a placa quase toda, a captura e a codificação ficam na fila atrás dele e a transmissão engasga. Ligado, o Telão pede ao Windows prioridade na placa enquanto você transmite (o jogo pode perder poucos FPS). Se o Windows recusar, nada muda; o resultado aparece na medição de uso real.</p>
+      </section>
       <section>
         <h3>Retransmissão</h3>
         <label class="chk"><input type="checkbox" id="optRelay"> Permitir que eu retransmita para amigos</label>
@@ -855,17 +902,22 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.15.2';
+const TELAO_VERSION = '1.16.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 11;      // nível do app desktop mais novo (11: uso da placa de vídeo pelo Telão Audio)
+const LATEST_SHELL = 12;      // nível do app desktop mais novo (12: ausência pelo PC, memória e prioridade na placa)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.15.2', 'hoje', ['App: o ícone do Telão passa a ir também para o Telao.exe (atalho, Explorer, barra de tarefas), sem baixar o app inteiro. Acontece sozinho na primeira vez que você fechar o Telão depois desta atualização']],
+  ['1.16.0', 'hoje', ['Ausente: quem não responde ao "Ainda está aí?" (45 min sem mexer no PC), bloqueia a tela ou é marcado por alguém para de receber vídeo, e ninguém gasta internet ou placa com ele. Volta ao mexer',
+                      'Tirar da sala: em "quem está na sala", qualquer um pode marcar alguém como ausente ou tirar da sala (a pessoa pode entrar de novo)',
+                      'Custo da transmissão e medição de uso real mostram a memória (do PC e do Telão) e a memória da placa de vídeo, com aviso quando estão quase cheias',
+                      'App: prioridade do Telão na placa de vídeo enquanto transmite (experimental, em Opções), para a transmissão não engasgar com jogo pesado',
+                      'Aviso da captura turbo aponta a causa certa (placa de vídeo, processador ou preparo lento)']],
+  ['1.15.2', '22/10', ['App: o ícone do Telão passa a ir também para o Telao.exe (atalho, Explorer, barra de tarefas), sem baixar o app inteiro. Acontece sozinho na primeira vez que você fechar o Telão depois desta atualização']],
   ['1.15.1', '22/10', ['App: ícone do Telão na barra de tarefas e nas janelas (no lugar do ícone do Electron)']],
   ['1.15.0', '22/10', ['App: o painel do "Ao vivo" mostra o uso da placa de vídeo pelo Telão (com quanto é codificação) e o da placa inteira, com o jogo',
                       'Medição de uso real (Diagnóstico) inclui a placa de vídeo: Telão, encoder da placa e PC inteiro, com aviso quando a placa ou o encoder estão no limite']],
@@ -1179,6 +1231,7 @@ function closePop(){
   const {el, btn} = openPop; openPop = null;
   el.hidden = true; if (btn) btn.setAttribute('aria-expanded', 'false');
   if (el.id === 'costPop') stopCostTimer();
+  if (el.id === 'memPop') memActsOpen = memKickConfirm = null;
 }
 function placePop(el, btn){
   const r = btn.getBoundingClientRect();
@@ -1416,7 +1469,9 @@ function initLobby(){
   $('#autoJoin').onchange = () => { store.set('autoJoin', $('#autoJoin').checked); if (!$('#autoJoin').checked) cancelAutoJoin(); };
   $('#autoCancel').onclick = cancelAutoJoin;
   for (const el of [$('#name'), $('#code')]) el.addEventListener('input', cancelAutoJoin);
-  if (!openTurn) maybeAutoJoin(!!fromHash);
+  const kicked = kickedNote();
+  if (kicked){ store.set('kickedNote', null); if (kicked.room) $('#code').value = cleanCode(kicked.room); toast(kicked.by + ' tirou você da sala ' + kicked.room + '. Dá pra entrar de novo quando quiser.', 'warn', 9000); }
+  else if (!openTurn) maybeAutoJoin(!!fromHash);
   $('#joinBtn').onclick = join;
   for (const el of [$('#name'), $('#code')]) el.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
 }
@@ -1592,7 +1647,7 @@ function renderRecent(){
 function cancelAutoJoin(){ clearTimeout(autoTimer); autoTimer = null; $('#autoMsg').hidden = true; }
 function maybeAutoJoin(fromHash){
   const fav = store.get('favRoom', '');
-  if (fromHash || !fav || !store.get('autoJoin', false) || !store.get('name', '')) return;
+  if (fromHash || !fav || !store.get('autoJoin', false) || !store.get('name', '') || kickedNote()) return;
   $('#code').value = fav;
   let left = 3;
   const tick = () => {
@@ -1672,6 +1727,8 @@ function showRoom(){
   $('#codePill').onclick = copyInvite;
   $('#shareBtn').onclick = () => localStream ? stopShare() : startShare();
   $('#emptyShare').onclick = () => { if (!localStream) startShare(); };
+  $('#awayAskOk').onclick = closeAwayAsk;
+  $('#awayBack').onclick = comeBack;
   $('#liveStop').onclick = stopShare;
   $('#liveBtn').onclick = () => togglePop($('#costPop'), $('#liveBtn'), () => { renderCost(); startCostTimer(); });
   $('#shareMore').onclick = () => togglePop($('#shareMenu'), $('#shareMore'), syncShareMenu);
@@ -1893,9 +1950,12 @@ function onList(list){
   }
   renderHiddenBar();
   syncWaits();
+  const here = new Set(members.map(m => m.id));
+  for (const id of [...kickedIds]) if (!here.has(id)) kickedIds.delete(id);
+  for (const id of [...peerAway.keys()]) if (!here.has(id)) peerAway.delete(id);
   if (localStream){
     for (const m of members){
-      if (m.id === me.id || outCalls.has(m.id) || relayVia.has(m.id)) continue;
+      if (m.id === me.id || outCalls.has(m.id) || relayVia.has(m.id) || kickedIds.has(m.id)) continue;
       if ((failCount.get(m.id) || 0) >= MAX_FAILS) continue;
       callPeer(m.id);
     }
@@ -1912,7 +1972,7 @@ const VER_GRACE = 8000;
 function announceTo(pid){
   if (announced.has(pid)) return;
   announced.add(pid);
-  hubSend({t:'relay', to: pid, data: {k:'hi', v: TELAO_VERSION, d: DESKTOP, av: myAvatar || ''}});
+  hubSend({t:'relay', to: pid, data: {k:'hi', v: TELAO_VERSION, d: DESKTOP, av: myAvatar || '', aw: amAway}});
   sendStickersTo(pid);
   sendGamesTo(pid);
 }
@@ -1963,7 +2023,7 @@ function renderMembers(){
   list.forEach((m, i) => {
     const isMe = me && m.id === me.id;
     const c = document.createElement('span');
-    c.className = 'chip' + (m.sharing ? ' sharing' : '') + (isMe ? ' me' : '');
+    c.className = 'chip' + (m.sharing ? ' sharing' : '') + (isMe ? ' me' : '') + (isAway(m.id) ? ' away' : '');
     if (i >= MAX) c.hidden = true;
     const dot = document.createElement('span'); dot.className = 'live';
     const n = document.createElement('span'); n.className = 'nm'; n.textContent = m.name + (isMe ? ' (você)' : '');
@@ -1974,15 +2034,16 @@ function renderMembers(){
       const v = document.createElement('span'); v.className = 'ver'; v.textContent = mv.vi.v ? 'v' + mv.vi.v : 'desatualizado';
       c.appendChild(v);
     }
-    c.title = m.name + (isMe ? ' (você)' : '') + ' · ' + (m.sharing ? 'Transmitindo' : 'Assistindo') + ' · ' + mv.txt;
+    c.title = m.name + (isMe ? ' (você)' : '') + ' · ' + (isAway(m.id) ? 'Ausente' : m.sharing ? 'Transmitindo' : 'Assistindo') + ' · ' + mv.txt;
     box.appendChild(c);
   });
   if (list.length > MAX){ const more = document.createElement('span'); more.className = 'chip more'; more.textContent = '+' + (list.length - MAX); box.appendChild(more); }
-  const live = list.filter(m => m.sharing).length;
-  $('#memSum').textContent = list.length + ' na sala' + (live ? ' · ' + live + ' ao vivo' : '');
+  const live = list.filter(m => m.sharing).length, away = list.filter(m => isAway(m.id)).length;
+  $('#memSum').textContent = list.length + ' na sala' + (live ? ' · ' + live + ' ao vivo' : '') + (away ? ' · ' + away + (away === 1 ? ' ausente' : ' ausentes') : '');
   if (openPop && openPop.el.id === 'memPop') renderMemPop();
   renderEmptyPeople();
 }
+let memActsOpen = null, memKickConfirm = null;
 function renderMemPop(){
   const box = $('#memPop'); box.textContent = '';
   const h = document.createElement('h4'); h.textContent = 'Na sala ' + room; h.style.margin = '2px 4px 6px';
@@ -1996,9 +2057,34 @@ function renderMemPop(){
     const sm = document.createElement('small'); sm.textContent = mv.txt; if (mv.old) sm.className = 'old';
     nm.append(b, sm);
     const st = document.createElement('span'); st.className = 'mst' + (isMe ? ' me' : '');
-    if (m.sharing){ st.appendChild(document.createElement('i')); st.append('ao vivo'); } else st.textContent = 'assistindo';
+    if (isAway(m.id)){ st.classList.add('aw'); st.textContent = 'ausente'; }
+    else if (m.sharing){ st.appendChild(document.createElement('i')); st.append('ao vivo'); } else st.textContent = 'assistindo';
+    if (isAway(m.id)) row.classList.add('away');
     row.append(avatarNode(isMe ? '__me' : m.id, m.name, 32), nm, st);
-    box.appendChild(row);
+    const wrap = document.createElement('div'); wrap.className = 'mrow-wrap'; wrap.appendChild(row);
+    if (!isMe && me && m.id){
+      const more = document.createElement('button'); more.type = 'button'; more.className = 'mmore'; more.title = 'Ausente / tirar da sala';
+      more.setAttribute('aria-label', 'Ações para ' + m.name);
+      more.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+      row.appendChild(more);
+      const acts = document.createElement('div'); acts.className = 'macts'; acts.hidden = memActsOpen !== m.id;
+      const aw = document.createElement('button'); aw.type = 'button'; aw.className = 'ghost';
+      aw.textContent = isAway(m.id) ? 'Já está ausente' : 'Marcar como ausente'; aw.disabled = isAway(m.id);
+      aw.title = 'Para de receber vídeo de todo mundo até mexer no PC de novo';
+      aw.onclick = () => { memActsOpen = null; markAway(m.id); renderMemPop(); };
+      const kk = document.createElement('button'); kk.type = 'button'; kk.className = 'ghost danger';
+      const conf = memKickConfirm === m.id;
+      kk.textContent = conf ? 'Confirmar: tirar ' + m.name : 'Tirar da sala'; kk.classList.toggle('confirm', conf);
+      kk.title = 'Volta para a tela de entrada (pode entrar de novo)';
+      kk.onclick = () => {
+        if (!conf){ memKickConfirm = m.id; renderMemPop(); return; }
+        memActsOpen = memKickConfirm = null; kickMember(m.id); closePop();
+      };
+      acts.append(aw, kk);
+      more.onclick = () => { memActsOpen = memActsOpen === m.id ? null : m.id; memKickConfirm = null; renderMemPop(); };
+      wrap.appendChild(acts);
+    }
+    box.appendChild(wrap);
   }
   const call = document.createElement('button'); call.type = 'button'; call.className = 'mi';
   call.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Chamar alguém (copia o convite)';
@@ -2018,7 +2104,8 @@ function renderEmptyPeople(){
     if (isMe){ const y = document.createElement('small'); y.textContent = ' (você)'; b.appendChild(y); }
     const sm = document.createElement('small');
     const where = isMe ? (DESKTOP ? 'app ' + TELAO_VERSION.replace(/\.0$/, '') : 'navegador') : (mv.vi && mv.vi.v ? (mv.vi.d ? 'app' : 'navegador') : '');
-    const what = m.sharing ? 'transmitindo' : isMe ? (localStream ? 'transmitindo' : 'pronto pra transmitir') : 'na sala';
+    const what = isAway(m.id) ? 'ausente' : m.sharing ? 'transmitindo' : isMe ? (localStream ? 'transmitindo' : 'pronto pra transmitir') : 'na sala';
+    if (isAway(m.id)) c.classList.add('away');
     sm.textContent = (where ? where + ' · ' : '') + what;
     c.append(avatarNode(isMe ? '__me' : m.id, m.name, 56), b, sm);
     box.appendChild(c);
@@ -2134,7 +2221,7 @@ function helperConnect(){
   try{ ws = new WebSocket(HELPER_URL); }catch{ return helperRetry(); }
   ws.binaryType = 'arraybuffer';
   helper.ws = ws;
-  ws.onopen = () => { helper.ready = true; helperSend({cmd: 'list'}); };
+  ws.onopen = () => { helper.ready = true; helperSend({cmd: 'list'}); if (localStream) syncGpuPrio(); };
   ws.onmessage = ev => {
     if (typeof ev.data !== 'string'){ if (helper.onAudio) helper.onAudio(ev.data); return; }
     let m; try{ m = JSON.parse(ev.data); }catch{ return; }
@@ -2144,10 +2231,12 @@ function helperConnect(){
       return;
     }
     if (m.type === 'gpu'){
-      if (m.ok && !m.wait) gpuLast = {at: Date.now(), mine: +m.mine || 0, enc: +m.enc || 0, dec: +m.dec || 0, sys: +m.sys || 0};
+      if (m.ok && !m.wait) gpuLast = {at: Date.now(), mine: +m.mine || 0, enc: +m.enc || 0, dec: +m.dec || 0, sys: +m.sys || 0,
+        ...(m.vused != null ? {vmine: +m.vmine || 0, vused: +m.vused || 0, vtotal: +m.vtotal || 0} : {})};
       else if (!m.ok) gpuLast = {at: Date.now(), none: String(m.error || 'indisponível')};
       return;
     }
+    if (m.type === 'gprio'){ gprioLast = m.on ? {ok: +m.ok || 0, fail: +m.fail || 0, status: String(m.status || ''), at: Date.now()} : null; return; }
     if (m.type === 'list'){
       helper.apps = Array.isArray(m.apps) ? m.apps : [];
       helper.discord = !!m.discord;
@@ -2569,6 +2658,7 @@ async function startShare(){
   $('#pip').classList.toggle('mini', store.get('pipMini', false));
   restorePip();
   syncShareUi();
+  syncGpuPrio();
   hubSend({t:'state', sharing:true});
   for (const m of members) if (m.id !== me.id) callPeer(m.id);
   updatePip();
@@ -2591,6 +2681,7 @@ function stopShare(){
   relayVia.clear(); relayReqs.clear(); relayTried.clear(); noConnSince.clear(); bwSince = 0;
   $('#pipVideo').srcObject = null; $('#pip').hidden = true;
   syncShareUi();
+  syncGpuPrio();
   hubSend({t:'state', sharing:false});
 }
 
@@ -2943,8 +3034,11 @@ let sendInfo = null, liveAlert = null, livePend = null, shareStartedAt = 0, cost
 let LIVE_HOLD = 4000, LIVE_GRACE = 10000;
 /* Uso da placa de vídeo (app 1.15+): o Telão Audio lê os contadores "GPU Engine" do Windows (os mesmos do
    Gerenciador de Tarefas) enquanto alguém pede; o pedido vai a cada 2 s com o painel aberto ou medindo. */
-const GPU_SHELL = 11;
-let gpuLast = null;
+const GPU_SHELL = 11, PRIO_SHELL = 12;
+let gpuLast = null, gprioLast = null;
+// Prioridade na placa (app 1.16+, experimental, liga em Opções): pedida ao começar a transmitir e devolvida ao parar.
+const gprioWanted = () => DESKTOP && (window.telaoDesktop.shell || 0) >= PRIO_SHELL && store.get('gpuPrio', true);
+function syncGpuPrio(){ if (DESKTOP && (window.telaoDesktop.shell || 0) >= PRIO_SHELL && helper.ready) helperSend({cmd: 'gprio', on: localStream && gprioWanted() ? '1' : '0'}); }
 const gpuAvailable = () => DESKTOP && (window.telaoDesktop.shell || 0) >= GPU_SHELL && helper.ready;
 function askGpu(){ if (gpuAvailable()) helperSend({cmd: 'gpu', pid: String(window.telaoDesktop.mainPid || 0)}); }
 const gpuFresh = () => gpuLast && Date.now() - gpuLast.at < 6000 ? gpuLast : null;
@@ -3058,6 +3152,18 @@ function renderCost(){
   } else if (gpuAvailable() && !(g && g.none)){
     sec1.appendChild(costMeter('Placa de vídeo', '…', 'medindo', null));
   }
+  // memória: do PC (RAM) e da placa (VRAM)
+  const fmtGB = mb => (mb / 1024).toFixed(1).replace('.', ',');
+  if (DESKTOP && costMetrics && costMetrics.memTotal && Date.now() - costMetricsAt < 6000){
+    const used = (costMetrics.memTotal - costMetrics.memFree) / 1048576, total = costMetrics.memTotal / 1048576;
+    const tel = costMetrics.procs.reduce((a, p) => a + (p.priv || 0), 0);
+    const pctU = used / total * 100;
+    sec1.appendChild(costMeter('Memória (RAM)', fmtGB(used) + ' de ' + fmtGB(total) + ' GB', tel ? 'Telão ' + (tel >= 1024 ? fmtGB(tel) + ' GB' : Math.round(tel) + ' MB') : '', pctU, pctU > 90 ? 'bad' : pctU > 80 ? 'warn' : ''));
+  }
+  if (g && !g.none && g.vused){
+    const pctV = g.vtotal ? g.vused / g.vtotal * 100 : null;
+    sec1.appendChild(costMeter('Memória da placa', fmtGB(g.vused) + (g.vtotal ? ' de ' + fmtGB(g.vtotal) : '') + ' GB', 'Telão ' + Math.round(g.vmine) + ' MB', pctV, pctV != null && pctV > 95 ? 'bad' : pctV != null && pctV > 85 ? 'warn' : ''));
+  }
   const hwN = active.filter(v => v.hw === true).length, swN = active.filter(v => v.hw === false).length;
   const enc = !active.length ? 'ninguém recebendo agora' : swN && hwN ? hwN + ' pela placa, ' + swN + ' pelo processador' : swN ? 'pelo processador' : hwN ? 'pela placa de vídeo' : 'verificando…';
   sec1.appendChild(costMeter('Codificação', enc, '', null));
@@ -3098,6 +3204,129 @@ function renderCost(){
   f.append(cs, rb);
   box.appendChild(f);
   if (openPop && openPop.el === box) placePop(box, openPop.btn);
+}
+
+/* ---------- Ausente e tirar da sala ----------
+   Ausente: a pessoa para de receber o vídeo de todo mundo (quem transmite deixa de codificar e de enviar
+   para ela) e aparece apagada na sala. Acontece quando ela mesma não responde ao "Ainda está aí?"
+   (45 min sem mexer no PC), quando bloqueia a tela, ou quando alguém a marca. Volta ao mexer.
+   Tirar da sala: a pessoa volta para a tela de entrada (pode entrar de novo quando quiser). */
+let amAway = false, awayWhy = '', awayAsk = null, lastInput = Date.now();
+let AWAY_ASK_MS = 45 * 60000, AWAY_GRACE_MS = 120000;
+const peerAway = new Map();    // id → {by}  (quem está ausente)
+const kickedIds = new Set();   // tirados da sala que ainda aparecem (versão antiga): não envio vídeo para eles
+function roomBroadcast(data, except){ for (const m of members) if (me && m.id !== me.id && m.id !== except) hubSend({t: 'relay', to: m.id, data}); }
+const isAway = id => (me && id === me.id) ? amAway : peerAway.has(id);
+function goAway(why, by){
+  if (amAway) return;
+  amAway = true; awayWhy = why === 'forced' ? (by || 'Alguém') + ' marcou você como ausente.' : why === 'locked' ? 'A tela do PC foi bloqueada.' : 'Ninguém mexeu no PC por um tempo.';
+  closeAwayAsk();
+  if (localStream) stopShare();
+  for (const [pid, t] of tiles){ try{ t.video.pause(); }catch{} sendPause(pid, true); }
+  for (const s of new Set([...relayOut.values()].map(e => e.s))) relayStopFor(s, true);
+  roomBroadcast({k: 'away', on: true});
+  $('#awayTxt').textContent = awayWhy;
+  $('#awayBox').hidden = false;
+  renderMembers();
+  syncClipBuffers();
+}
+function comeBack(){
+  if (!amAway) return;
+  amAway = false; lastInput = Date.now();
+  $('#awayBox').hidden = true;
+  for (const [pid, t] of tiles){
+    if (hiddenIds.has(pid)) continue;
+    sendPause(pid, false);
+    t.video.play().then(() => t.el.classList.remove('needs-click')).catch(() => t.el.classList.add('needs-click'));
+  }
+  roomBroadcast({k: 'away', on: false});
+  resendPauses();
+  renderMembers();
+  syncClipBuffers();
+}
+function openAwayAsk(){
+  awayAsk = {at: Date.now()};
+  $('#awayAsk').hidden = false;
+  const tick = () => {
+    if (!awayAsk) return;
+    const left = Math.max(0, Math.ceil((AWAY_GRACE_MS - (Date.now() - awayAsk.at)) / 1000));
+    $('#awayAskLeft').textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+    awayAsk.timer = setTimeout(tick, 1000);
+  };
+  tick();
+}
+function closeAwayAsk(){ if (awayAsk) clearTimeout(awayAsk.timer); awayAsk = null; $('#awayAsk').hidden = true; }
+function onUserInput(){
+  lastInput = Date.now();
+  if (awayAsk) closeAwayAsk();
+  if (amAway && !$('#room').hidden) comeBack();
+}
+for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart']) window.addEventListener(ev, onUserInput, {passive: true, capture: true});
+window.addEventListener('pointermove', () => { if (Date.now() - lastInput > 1000) onUserInput(); }, {passive: true, capture: true});
+async function awayTick(){
+  if (!me || $('#room').hidden) return;
+  let idle = (Date.now() - lastInput) / 1000, locked = false;
+  if (DESKTOP && window.telaoDesktop.idle){ try{ const r = await window.telaoDesktop.idle(); if (r){ idle = Math.min(idle, +r.idle || 0); locked = !!r.locked; } }catch{} }
+  if (amAway){ if (DESKTOP && idle < 5 && !locked) comeBack(); return; }   // no app: mexeu no PC (em qualquer programa) → voltou
+  if (locked){ goAway('locked'); return; }
+  if (awayAsk){
+    if (idle < 5) closeAwayAsk();
+    else if (Date.now() - awayAsk.at >= AWAY_GRACE_MS) goAway('auto');
+    return;
+  }
+  if (!DESKTOP && localStream) return;   // no navegador, transmitindo: dá pra estar jogando em outra janela sem mexer na página
+  if (idle * 1000 >= AWAY_ASK_MS) openAwayAsk();
+}
+setInterval(() => awayTick().catch(() => {}), 5000);
+if (DESKTOP && window.telaoDesktop.onPower) window.telaoDesktop.onPower(ev => { if ((ev === 'lock-screen' || ev === 'suspend') && me && !$('#room').hidden) goAway('locked'); });
+
+// Mensagens da sala
+function onAwayMsg(from, d){
+  const who = d.who && typeof d.who === 'string' ? d.who : from;
+  if (me && who === me.id) return;
+  if (d.on) peerAway.set(who, {by: d.by ? String(d.by).slice(0, 24) : ''});
+  else if (who === from) peerAway.delete(who);   // só a própria pessoa diz que voltou
+  else return;
+  // quem transmite: para de mandar para quem está ausente (vale também para versões que não sabem ficar ausentes)
+  if (d.on) pausedBy.set(who, true); else pausedBy.delete(who);
+  const c = outCalls.get(who);
+  if (c) applyQuality(c.peerConnection, who);
+  renderMembers(); updatePip();
+}
+function markAway(pid){
+  if (!me || pid === me.id || peerAway.has(pid)) return;
+  hubSend({t: 'relay', to: pid, data: {k: 'setaway', by: myName}});
+  roomBroadcast({k: 'away', on: true, who: pid, by: myName}, pid);
+  onAwayMsg(me.id, {who: pid, on: true, by: myName});
+  toast(nameOf(pid) + ' foi marcado como ausente: ninguém gasta mais internet com ele até ele voltar.');
+}
+function kickMember(pid){
+  if (!me || pid === me.id) return;
+  const name = nameOf(pid);
+  hubSend({t: 'relay', to: pid, data: {k: 'kick', by: myName}});
+  roomBroadcast({k: 'kicked', who: pid, by: myName}, pid);
+  onKickNote(me.id, {who: pid, by: myName});
+}
+function onKickNote(from, d){
+  const who = String(d.who || '');
+  if (!who || (me && who === me.id)) return;
+  const by = from === (me && me.id) ? 'Você' : String(d.by || nameOf(from)).slice(0, 24);
+  toast(by + ' tirou ' + nameOf(who) + ' da sala.');
+  kickedIds.add(who);
+  const c = outCalls.get(who);
+  if (c){ outCalls.delete(who); try{ c.close(); }catch{} }
+  relayVia.delete(who);
+  updatePip();
+}
+function onKicked(from, d){
+  const by = String(d.by || nameOf(from)).slice(0, 24);
+  store.set('kickedNote', {by, room, at: Date.now()});
+  leave();
+}
+// Na entrada: avisa e não entra sozinho logo depois de ser tirado.
+function kickedNote(){
+  const n = store.get('kickedNote', null);
+  return n && Date.now() - (+n.at || 0) < 10 * 60000 ? n : null;
 }
 
 /* ---------- Ocultar telas ----------
@@ -3152,9 +3381,14 @@ function onRelay(from, data){
   if (data.k === 'bul'){ onBulletin(from, data); return; }
   if (data.k === 'game' || data.k === 'games' || data.k === 'gamename'){ onGameMsg(from, data); return; }
   if (data.k === 'rly-req'){ onRelayReq(from, data); return; }
+  if (data.k === 'away'){ onAwayMsg(from, data); return; }
+  if (data.k === 'setaway'){ if (!amAway) goAway('forced', String(data.by || nameOf(from)).slice(0, 24)); return; }
+  if (data.k === 'kick'){ onKicked(from, data); return; }
+  if (data.k === 'kicked'){ onKickNote(from, data); return; }
   if (/^rly-(ok|no|fail|stop|lost)$/.test(data.k)){ onRelayMsgForStreamer(from, data); return; }
   if (data.k === 'hi'){
     peerVer.set(from, {v: String(data.v || '').slice(0, 20), d: !!data.d});
+    if (data.aw === true && !peerAway.has(from)) onAwayMsg(from, {on: true});
     const av = validHash(data.av) ? data.av : '';
     if (av !== (peerAvatar.get(from) || '')){ if (av) peerAvatar.set(from, av); else peerAvatar.delete(from); }
     if (av) wantBlob(av, from);
@@ -3244,7 +3478,7 @@ function answerCodec(senderCodec){
    Usado quando a conexão que quem transmite abre até quem assiste não fecha, mas a contrária fecha. */
 function onPullCall(call){
   const pid = call.peer;
-  if (!localStream){ try{ call.close(); }catch{} return; }
+  if (!localStream || kickedIds.has(pid)){ try{ call.close(); }catch{} return; }
   const avoid = Array.isArray(call.metadata && call.metadata.avoid) ? call.metadata.avoid : [];
   const pref = currentCodec();
   let codec = !avoid.includes(pref) ? pref : (['VP9', 'VP8', 'H264'].find(c => !avoid.includes(c)) || pref);
@@ -3424,6 +3658,8 @@ function addTile(pid, call, stream, via){
     t.el.hidden = true; t.video.pause();
     sendPause(pid, true);
     renderHiddenBar();
+  } else if (amAway){
+    t.video.pause(); sendPause(pid, true);   // ausente: não recebe nada até voltar
   } else {
     t.video.play().then(() => t.el.classList.remove('needs-click')).catch(() => t.el.classList.add('needs-click'));
   }
@@ -4474,6 +4710,8 @@ function renderRelayBar(){
 function syncOpts(){
   $('#optRelay').checked = relayAllowed();
   $('#optH265').checked = h265Auto();
+  $('#optPerfSec').hidden = !(DESKTOP && (window.telaoDesktop.shell || 0) >= PRIO_SHELL);
+  $('#optGpuPrio').checked = !!store.get('gpuPrio', true);
   $('#optPrivMsg').value = privateMsg();
   renderThemeOpts();
   renderLobbyAvatar();
@@ -4488,6 +4726,7 @@ function initOpts(){
     sendBulletin();
   };
   $('#optH265').onchange = () => { store.set('h265auto', $('#optH265').checked); h265PrefCache = null; toast('Vale a partir da próxima conexão (comece a transmitir de novo, ou recarregue quem assiste).'); };
+  $('#optGpuPrio').onchange = () => { store.set('gpuPrio', $('#optGpuPrio').checked); if (localStream) syncGpuPrio(); };
   $('#optPrivMsg').oninput = () => { store.set('privateMsg', $('#optPrivMsg').value.slice(0, 80)); if (privateOn) drawPrivate(); };
   $('#optRx').onclick = () => { $('#opts').hidden = true; openRxEdit(); };
 }
@@ -5318,7 +5557,7 @@ function syncClipBuffers(restart, restartPid){
   const on = !!store.get('clips', false);
   $('#clipsBtn').hidden = !on;
   for (const [pid, t] of tiles){
-    const want = on && !t.el.hidden && t.video.srcObject;
+    const want = on && !t.el.hidden && t.video.srcObject && !amAway;
     if (!want){ if (t.clipBuf) stopClipBuffer(t); continue; }
     if (!t.clipBuf || (restart && pid === restartPid)) startClipBuffer(t);
   }
@@ -6140,7 +6379,13 @@ function perfSummary(run){
     for (const [k, e] of [...byLabel].sort((a, b) => avg(b[1].cpu) - avg(a[1].cpu))) if (avg(e.cpu) >= 0.5 || avg(e.mem) > 60)
       L.push('  ' + k + ': ' + f0(avg(e.cpu)) + '% · ' + f0(avg(e.mem)) + ' MB');
     const last = run.procs[run.procs.length - 1];
-    if (last.memTotal) L.push('  Memória do PC: ' + f1((last.memTotal - last.memFree) / 1073741824) + ' de ' + f1(last.memTotal / 1073741824) + ' GB em uso');
+    const privs = run.procs.map(sn => sn.procs.reduce((a, p) => a + (p.priv || 0), 0)).filter(x => x > 0);
+    if (privs.length) L.push('  Memória do Telão (própria, sem contar a compartilhada): média ' + f0(avg(privs)) + ' MB · pico ' + f0(Math.max(...privs)) + ' MB');
+    if (last.memTotal){
+      const usedPct = (last.memTotal - last.memFree) / last.memTotal;
+      L.push('  Memória do PC: ' + f1((last.memTotal - last.memFree) / 1073741824) + ' de ' + f1(last.memTotal / 1073741824) + ' GB em uso (' + f0(usedPct * 100) + '%)');
+      if (usedPct > 0.9) W.push('Memória do PC quase cheia (' + f0(usedPct * 100) + '%): o Windows passa a usar o disco no lugar dela e tudo engasga, o jogo e a transmissão. Fechar o que não precisa (navegador com muitas abas, launchers) é o que mais ajuda.');
+    }
     if (run.gpu && run.gpu.length){
       const mine = nums(run.gpu, 'mine'), enc = nums(run.gpu, 'enc'), dec = nums(run.gpu, 'dec'), gs = nums(run.gpu, 'sys');
       L.push('');
@@ -6148,6 +6393,10 @@ function perfSummary(run){
       L.push('  Telão inteiro: média ' + f0(avg(mine)) + '% · pico ' + f0(Math.max(...mine)) + '%');
       L.push('  codificação (encoder da placa): média ' + f0(avg(enc)) + '% · pico ' + f0(Math.max(...enc)) + '%' + (avg(dec) >= 0.5 ? ' · decodificação: média ' + f0(avg(dec)) + '%' : ''));
       L.push('  PC inteiro (jogo incluído): média ' + f0(avg(gs)) + '% · pico ' + f0(Math.max(...gs)) + '%');
+      const vm = nums(run.gpu, 'vmine'), vu = nums(run.gpu, 'vused'), vt = nums(run.gpu, 'vtotal');
+      if (vm.length) L.push('  Memória da placa: Telão ' + f0(avg(vm)) + ' MB · placa inteira ' + f1(avg(vu) / 1024) + (vt.length && avg(vt) > 0 ? ' de ' + f1(avg(vt) / 1024) + ' GB' : ' GB') + ' em uso');
+      if (vt.length && avg(vt) > 0 && avg(vu) / avg(vt) > 0.95) W.push('Memória da placa de vídeo quase cheia (' + f0(avg(vu) / avg(vt) * 100) + '%): o jogo está usando quase toda. Baixar a qualidade das texturas do jogo deixa espaço e evita engasgos.');
+      if (gprioLast) L.push('  Prioridade do Telão na placa: ' + (gprioLast.ok ? 'alta (' + gprioLast.ok + ' processos)' : 'o Windows recusou (precisa de administrador?)'));
       if (avg(gs) > 95) W.push('Placa de vídeo no limite (' + f0(avg(gs)) + '%): o jogo está usando quase tudo. Limitar o FPS do jogo deixa folga para a transmissão não engasgar.');
       else if (avg(enc) > 80) W.push('O encoder da placa está quase cheio (' + f0(avg(enc)) + '%): muita gente recebendo em formatos diferentes, ou qualidade alta demais para esta placa.');
     } else L.push('  (uso da placa de vídeo: ' + (run.gpuNone ? run.gpuNone : DESKTOP && (window.telaoDesktop.shell || 0) < GPU_SHELL ? 'precisa do app 1.15' : 'Telão Audio não respondeu') + '; veja no Gerenciador de Tarefas → Desempenho → GPU)');
@@ -6168,7 +6417,15 @@ function perfSummary(run){
     L.push('  o Windows entregou: ' + f0(avg(win)) + ' quadros/s (mín ' + f0(Math.min(...win)) + ') · é o ritmo do próprio jogo na tela');
     L.push('  a captura passou adiante: ' + f0(avg(out)) + ' quadros/s (mín ' + f0(Math.min(...out)) + ') · preparo ' + f1(avg(nums(T, 'ms'))) + ' ms por quadro (95% abaixo de ' + f1(pct(nums(T, 'p95'), 0.95)) + ' ms) · Telão Audio ' + f0(avg(nums(T, 'cpu'))) + '% de um núcleo');
     if (avg(win) < target * 0.9){ turboSaid = true; W.push('O próprio jogo mostrou só ' + f0(avg(win)) + ' quadros/s na tela (meta: ' + target + '): a captura não tem como passar disso. Limitar o jogo num FPS que ele sustente, ou aliviar o processador, deixa a transmissão mais estável.'); }
-    else if (avg(out) < Math.min(target, avg(win)) * 0.9){ turboSaid = true; W.push('A captura turbo passou adiante só ' + f0(avg(out)) + ' de ' + f0(Math.min(target, avg(win))) + ' quadros/s: o Telão Audio não está dando conta (processador ocupado?).'); }
+    else if (avg(out) < Math.min(target, avg(win)) * 0.9){
+      turboSaid = true;
+      const gsys = run.gpu && run.gpu.length ? avg(nums(run.gpu, 'sys')) : null, sysCpu = run.procs.length ? avg(nums(run.procs, 'sysCpu')) : null;
+      const why = gsys != null && gsys > 85 ? 'a placa de vídeo está quase toda com o jogo (' + f0(gsys) + '%) e a captura fica na fila atrás dele. Limitar o FPS do jogo um pouco abaixo do que ele aguenta (ex.: travar em 60) deixa folga'
+        : sysCpu != null && sysCpu > 85 ? 'o processador está quase todo ocupado (' + f0(sysCpu) + '%)'
+        : avg(nums(T, 'ms')) > 6 ? 'o preparo de cada quadro está lento (' + f1(avg(nums(T, 'ms'))) + ' ms): a placa de vídeo provavelmente está ocupada com o jogo'
+        : 'o Telão Audio não está dando conta';
+      W.push('A captura turbo passou adiante só ' + f0(avg(out)) + ' de ' + f0(Math.min(target, avg(win))) + ' quadros/s: ' + why + '.');
+    }
   }
   // conexões
   for (const [, e] of run.conns){

@@ -226,6 +226,25 @@ static GpuUse gpuAggregate(const std::vector<std::pair<std::string, double>>& v,
   return u;
 }
 
+/* Memória da placa (VRAM), contadores "GPU Process Memory" (pid_<PID>_luid_<placa>_phys_<n>) e
+   "GPU Adapter Memory" (luid_<placa>_phys_<n>), em bytes. A placa "do jogo" é a que tem mais memória em uso. */
+struct VramUse { double mine = 0, used = 0; std::string luid; };
+static std::string luidOf(const std::string& s){
+  size_t l = s.find("luid_"), p = s.find("_phys_");
+  return l == std::string::npos || p == std::string::npos || p < l ? std::string() : lower(s.substr(l + 5, p - l - 5));
+}
+static VramUse vramAggregate(const std::vector<std::pair<std::string, double>>& procs, const std::vector<std::pair<std::string, double>>& adapters,
+                             const std::vector<uint32_t>& mine){
+  VramUse u;
+  for (auto& a : adapters){ std::string l = luidOf(a.first); if (!l.empty() && a.second > u.used){ u.used = a.second; u.luid = l; } }
+  for (auto& p : procs){
+    if (p.first.compare(0, 4, "pid_") != 0 || !(p.second > 0)) continue;
+    uint32_t pid = (uint32_t)strtoul(p.first.c_str() + 4, nullptr, 10);
+    if (std::find(mine.begin(), mine.end(), pid) != mine.end()) u.mine += p.second;
+  }
+  return u;
+}
+
 /* ---------- ícone do Telao.exe: partes portáveis ----------
    Arquivo .ico → imagens; e o diretório de grupo (RT_GROUP_ICON) que o Windows guarda dentro do exe,
    que aponta para cada imagem pelo número do recurso (RT_ICON). */
@@ -327,6 +346,16 @@ int main(){
     v.push_back({I(20, 3, "VideoEncode"), 150});
     check(gpuAggregate(v, {20}).mine == 100, "placa: nunca passa de 100%");
     check(gpuAggregate({}, {20}).inst == 0, "placa: sem contadores = zero");
+  }
+  {
+    std::vector<std::pair<std::string, double>> pr = {
+      {"pid_20_luid_0x00000000_0x0000D1B2_phys_0", 300e6}, {"pid_21_luid_0x00000000_0x0000D1B2_phys_0", 100e6},
+      {"pid_10_luid_0x00000000_0x0000D1B2_phys_0", 6e9}, {"pid_20_luid_0x00000000_0x0000AAAA_phys_0", 50e6}, {"_Total", 1}};
+    std::vector<std::pair<std::string, double>> ad = {{"luid_0x00000000_0x0000AAAA_phys_0", 1e9}, {"luid_0x00000000_0x0000D1B2_phys_0", 7.2e9}};
+    VramUse v = vramAggregate(pr, ad, {20, 21});
+    check(v.mine > 449e6 && v.mine < 451e6, "vram: Telão soma os processos dele (450 MB)");
+    check(v.used > 7.1e9 && v.luid == "0x00000000_0x0000d1b2", "vram: placa do jogo = a mais usada");
+    check(luidOf("garbage").empty(), "vram: nome estranho não quebra");
   }
   {
     // .ico com 2 imagens (16 e 256 px; 256 vira 0 no arquivo)
@@ -1279,9 +1308,25 @@ static DWORD WINAPI gpuThread(void*){
   auto collect = pdh ? (PFN_PdhCollectQueryData)GetProcAddress(pdh, "PdhCollectQueryData") : nullptr;
   auto getArr = pdh ? (PFN_PdhGetFormattedCounterArrayW)GetProcAddress(pdh, "PdhGetFormattedCounterArrayW") : nullptr;
   auto close = pdh ? (PFN_PdhCloseQuery)GetProcAddress(pdh, "PdhCloseQuery") : nullptr;
-  PDH_HQUERY q = nullptr; PDH_HCOUNTER ctr = nullptr;
+  PDH_HQUERY q = nullptr; PDH_HCOUNTER ctr = nullptr, cProcMem = nullptr, cAdMem = nullptr;
   bool ok = open && add && collect && getArr && close && open(nullptr, 0, &q) == ERROR_SUCCESS &&
             add(q, L"\\GPU Engine(*)\\Utilization Percentage", 0, &ctr) == ERROR_SUCCESS;
+  bool vram = ok && add(q, L"\\GPU Process Memory(*)\\Dedicated Usage", 0, &cProcMem) == ERROR_SUCCESS &&
+              add(q, L"\\GPU Adapter Memory(*)\\Dedicated Usage", 0, &cAdMem) == ERROR_SUCCESS;
+  // tamanho da memória de cada placa (para "X de Y GB")
+  std::vector<std::pair<std::string, double>> vramTotal;
+  if (videoApis()){
+    IDXGIFactory1* fac = nullptr;
+    if (SUCCEEDED(pCreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&fac))){
+      IDXGIAdapter1* a = nullptr;
+      for (UINT i = 0; fac->EnumAdapters1(i, &a) != DXGI_ERROR_NOT_FOUND; i++){
+        DXGI_ADAPTER_DESC1 d{};
+        if (SUCCEEDED(a->GetDesc1(&d))){ char k[40]; snprintf(k, sizeof k, "0x%08lx_0x%08lx", (unsigned long)d.AdapterLuid.HighPart, (unsigned long)d.AdapterLuid.LowPart); vramTotal.push_back({k, (double)d.DedicatedVideoMemory}); }
+        a->Release();
+      }
+      fac->Release();
+    }
+  }
   if (!ok){
     gpuSetJson("{\"type\":\"gpu\",\"ok\":false,\"error\":\"este Windows não mostra o uso da placa por processo\"}");
     logf("Uso da placa de vídeo: contadores do Windows indisponíveis");
@@ -1301,19 +1346,31 @@ static DWORD WINAPI gpuThread(void*){
         treeAt = now;
       }
       if (collect(q) != ERROR_SUCCESS) continue;
-      DWORD size = 0, count = 0;
-      PDH_STATUS st = getArr(ctr, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, &size, &count, nullptr);
-      if (st != (PDH_STATUS)PDH_MORE_DATA || !size) continue;
-      buf.assign(size, 0);
-      auto items = (PPDH_FMT_COUNTERVALUE_ITEM_W)buf.data();
-      if (getArr(ctr, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, &size, &count, items) != ERROR_SUCCESS) continue;
-      std::vector<std::pair<std::string, double>> v; v.reserve(count);
-      for (DWORD i = 0; i < count; i++)
-        if (items[i].FmtValue.CStatus == PDH_CSTATUS_VALID_DATA || items[i].FmtValue.CStatus == PDH_CSTATUS_NEW_DATA)
-          v.push_back({utf8(items[i].szName ? items[i].szName : L""), items[i].FmtValue.doubleValue});
+      auto read = [&](PDH_HCOUNTER c, std::vector<std::pair<std::string, double>>* v) -> bool {
+        DWORD size = 0, count = 0;
+        v->clear();
+        if (!c || getArr(c, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, &size, &count, nullptr) != (PDH_STATUS)PDH_MORE_DATA || !size) return false;
+        buf.assign(size, 0);
+        auto items = (PPDH_FMT_COUNTERVALUE_ITEM_W)buf.data();
+        if (getArr(c, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, &size, &count, items) != ERROR_SUCCESS) return false;
+        v->reserve(count);
+        for (DWORD i = 0; i < count; i++)
+          if (items[i].FmtValue.CStatus == PDH_CSTATUS_VALID_DATA || items[i].FmtValue.CStatus == PDH_CSTATUS_NEW_DATA)
+            v->push_back({utf8(items[i].szName ? items[i].szName : L""), items[i].FmtValue.doubleValue});
+        return true;
+      };
+      std::vector<std::pair<std::string, double>> v, pm, am;
+      if (!read(ctr, &v)) continue;
       GpuUse u = gpuAggregate(v, mine);
-      char b[200];
-      snprintf(b, sizeof b, "{\"type\":\"gpu\",\"ok\":true,\"mine\":%.1f,\"enc\":%.1f,\"dec\":%.1f,\"sys\":%.1f,\"n\":%d}", u.mine, u.enc, u.dec, u.sys, (int)mine.size());
+      char b[320];
+      int n = snprintf(b, sizeof b, "{\"type\":\"gpu\",\"ok\":true,\"mine\":%.1f,\"enc\":%.1f,\"dec\":%.1f,\"sys\":%.1f,\"n\":%d", u.mine, u.enc, u.dec, u.sys, (int)mine.size());
+      if (vram && read(cProcMem, &pm) && read(cAdMem, &am)){
+        VramUse vr = vramAggregate(pm, am, mine);
+        double total = 0;
+        for (auto& t : vramTotal) if (t.first == vr.luid) total = t.second;
+        n += snprintf(b + n, sizeof b - n, ",\"vmine\":%.0f,\"vused\":%.0f,\"vtotal\":%.0f", vr.mine / 1048576, vr.used / 1048576, total / 1048576);
+      }
+      snprintf(b + n, sizeof b - n, "}");
       gpuSetJson(b);
     }
     logf("Uso da placa de vídeo: parou (painel fechado)");
@@ -1338,6 +1395,44 @@ static void gpuRequest(Conn* c, const std::string& msg){
   wsText(c, j);
 }
 
+/* ---------- prioridade do Telão na placa de vídeo ----------
+   Com o jogo usando a placa quase toda, a captura e a codificação ficam na fila atrás dele (é o mesmo problema
+   do OBS). Enquanto a pessoa transmite, o Telão pede ao Windows prioridade "alta" na placa para os processos
+   dele; ao parar, volta ao normal. O Windows pode recusar sem permissão de administrador: aí nada muda. */
+typedef LONG (APIENTRY *PFN_SetGpuPrio)(HANDLE, int);
+static volatile LONG gGprioOn = 0;
+static Conn* gGprioOwner = nullptr;
+static int gGprioOk = 0, gGprioFail = 0; static LONG gGprioStatus = 0;
+static void applyGpuPrio(bool on){
+  static PFN_SetGpuPrio fn = (PFN_SetGpuPrio)GetProcAddress(LoadLibraryW(L"gdi32.dll"), "D3DKMTSetProcessSchedulingPriorityClass");
+  int ok = 0, fail = 0; LONG last = 0;
+  if (fn){
+    std::vector<ProcInfo> ps;
+    for (auto& p : listProcesses()) ps.push_back({p.pid, p.parent, utf8(p.exe)});
+    std::vector<uint32_t> pids = gBoostRoot ? processTree(gBoostRoot, ps) : std::vector<uint32_t>();
+    pids.push_back(GetCurrentProcessId());
+    for (uint32_t pid : pids){
+      HANDLE h = pid == GetCurrentProcessId() ? GetCurrentProcess() : OpenProcess(PROCESS_SET_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+      if (!h){ fail++; continue; }
+      LONG st = fn(h, on ? 4 /*HIGH*/ : 2 /*NORMAL*/);
+      if (st == 0) ok++; else { fail++; last = st; }
+      if (h != GetCurrentProcess()) CloseHandle(h);
+    }
+  } else fail = 1;
+  gGprioOk = ok; gGprioFail = fail; gGprioStatus = last;
+}
+static void gprioRequest(Conn* c, const std::string& msg){
+  if (!(c->origin == "null" || c->origin.rfind("file://", 0) == 0)) return;
+  bool on = jsonStr(msg, "on") == "1";
+  InterlockedExchange(&gGprioOn, on ? 1 : 0);
+  gGprioOwner = on ? c : nullptr;
+  applyGpuPrio(on);
+  char b[160];
+  snprintf(b, sizeof b, "{\"type\":\"gprio\",\"on\":%s,\"ok\":%d,\"fail\":%d,\"status\":\"0x%08lx\"}", on ? "true" : "false", gGprioOk, gGprioFail, (unsigned long)gGprioStatus);
+  wsText(c, b);
+  if (on || gGprioOk) logf("Prioridade na placa de vídeo: %s (%d processos ok, %d recusados)", on ? "alta" : "normal", gGprioOk, gGprioFail);
+}
+
 static void handleCommand(Conn* c, const std::string& msg){
   std::string cmd = jsonStr(msg, "cmd");
   if (cmd == "list"){ wsText(c, buildAppList()); return; }
@@ -1345,6 +1440,7 @@ static void handleCommand(Conn* c, const std::string& msg){
   if (cmd == "vstart"){ startVideo(c, msg); return; }
   if (cmd == "vstop"){ stopVideo(c); return; }
   if (cmd == "gpu"){ gpuRequest(c, msg); return; }
+  if (cmd == "gprio"){ gprioRequest(c, msg); return; }
   if (cmd == "winrect"){
     // Retângulo da janela (pixels físicos) e do monitor onde ela está: usado pela camada de reações do app.
     unsigned long long hv = strtoull(jsonStr(msg, "hwnd").c_str(), nullptr, 10);
@@ -1435,6 +1531,7 @@ static DWORD WINAPI connThread(void* arg){
   InterlockedExchange(&c->alive, 0);
   stopCapture(c);
   stopVideo(c);
+  if (gGprioOwner == c){ gGprioOwner = nullptr; InterlockedExchange(&gGprioOn, 0); applyGpuPrio(false); }
   closesocket(c->s);
   DeleteCriticalSection(&c->sendLock);
   delete c;
@@ -1471,6 +1568,7 @@ static DWORD WINAPI boostThread(void*){
     size_t n = 0;
     for (uint32_t pid : processTree(gBoostRoot, ps)) if (unthrottle(pid)) n++;
     InterlockedExchange(&gBoostCount, (LONG)n);
+    if (gGprioOn) applyGpuPrio(true);   // processos novos do Telão (ex.: a parte de vídeo reiniciou) também
     if (n != lastCount){ logf("Modo desempenho aplicado a %u processos do Telão", (unsigned)n); lastCount = n; }
     Sleep(3000);
   }

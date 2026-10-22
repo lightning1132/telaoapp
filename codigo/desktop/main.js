@@ -3,7 +3,7 @@
 //   - seletor de janela/tela próprio (a página pede a lista e escolhe; o getDisplayMedia usa a escolha)
 //   - Telão Audio embutido, iniciado escondido junto com o app
 //   - sem economia de energia em segundo plano, para a transmissão não engasgar com o app minimizado
-const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, screen, net} = require('electron');
+const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, screen, net, powerMonitor} = require('electron');
 const sharedTexture = (() => { try{ return require('electron').sharedTexture || null; }catch{ return null; } })();
 const path = require('path');
 const fs = require('fs');
@@ -199,13 +199,19 @@ app.whenReady().then(() => {
     }
     const names = {Browser: 'processo principal', GPU: 'vídeo e composição (placa)', Utility: 'serviços (rede, áudio)', Zygote: 'auxiliar', Sandbox_helper: 'auxiliar'};
     const procs = app.getAppMetrics().map(m => ({label: labels.get(m.pid) || (m.type === 'Utility' && m.serviceName ? 'serviço: ' + String(m.serviceName).replace(/^.*\./, '') : names[m.type] || m.type),
-      cpu: Math.round(m.cpu.percentCPUUsage * 10) / 10, mem: Math.round(m.memory.workingSetSize / 1024)}));
+      cpu: Math.round(m.cpu.percentCPUUsage * 10) / 10, mem: Math.round(m.memory.workingSetSize / 1024),
+      priv: m.memory.privateBytes != null ? Math.round(m.memory.privateBytes / 1024) : null}));
     const t = cpuTimes();
     let sysCpu = null;
     if (cpuPrev && t.all > cpuPrev.all) sysCpu = Math.round((t.busy - cpuPrev.busy) / (t.all - cpuPrev.all) * 1000) / 10;
     cpuPrev = t;
     return {procs, sysCpu, cores: os.cpus().length, memTotal: os.totalmem(), memFree: os.freemem()};
   });
+  // Ausência: há quanto tempo ninguém mexe no PC (mouse/teclado em qualquer programa), e tela bloqueada / PC dormindo.
+  ipcMain.handle('telao:idle', () => { try{ return {idle: powerMonitor.getSystemIdleTime(), locked: powerMonitor.getSystemIdleState(60) === 'locked'}; }catch{ return null; } });
+  for (const ev of ['lock-screen', 'unlock-screen', 'suspend', 'resume']){
+    powerMonitor.on(ev, () => { if (win && !win.isDestroyed()) win.webContents.send('telao:power', ev); });
+  }
   // Fundo da entrada: procura um jogo pelo nome na loja da Steam (no navegador a Steam bloqueia essa consulta).
   ipcMain.handle('telao:steamSearch', async (_e, term) => {
     term = String(term || '').replace(/\s+/g, ' ').trim().slice(0, 80);

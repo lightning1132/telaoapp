@@ -15,6 +15,14 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.16
+- Ausente: depois de 45 min sem mexer no PC aparece "Ainda está aí?"; sem resposta em 2 min (ou com a tela
+  bloqueada), você para de receber vídeo e ninguém gasta internet ou placa com você. Mexeu, voltou.
+  Em "quem está na sala" dá para marcar alguém como ausente ou tirar da sala.
+- O painel do "Ao vivo" e a medição mostram a memória do PC e a da placa de vídeo.
+- Prioridade do Telão na placa de vídeo enquanto você transmite (Opções → Desempenho, experimental): ajuda
+  quando o jogo usa a placa quase toda. Se o Windows recusar (pode exigir administrador), nada muda.
+
 NOVIDADES DO APP 1.15.2
 - Ícone do Telão no Telao.exe: na primeira vez que você fechar o Telão depois desta atualização, o Telão Audio
   grava o ícone novo dentro do Telao.exe (numa cópia, conferida antes de trocar; o original fica como

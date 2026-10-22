@@ -20,6 +20,12 @@ OPÇÕES DE ÁUDIO NO TELÃO
                                    das telas dos amigos que você estiver assistindo no Telão.
 - Sistema inteiro               → tudo, inclusive o Discord (é o que causava o eco).
 
+PRIORIDADE NA PLACA DE VÍDEO (só no Telão Desktop, experimental)
+Enquanto você transmite, o Telão pede ao Windows prioridade "alta" na placa de vídeo para os processos dele
+(D3DKMTSetProcessSchedulingPriorityClass), para a captura e a codificação não ficarem na fila atrás de um
+jogo que usa a placa quase toda. Ao parar de transmitir (ou se o Telão fechar), volta ao normal. Se o Windows
+recusar, nada muda. Liga e desliga em Opções → Desempenho.
+
 ÍCONE DO TELAO.EXE (só no Telão Desktop)
 Uma vez, quando o Telão fecha, ele pede ao Telão Audio para gravar o ícone do Telão dentro do Telao.exe
 (telao-audio.exe --patch-icon). O trabalho é feito numa cópia, conferida antes de trocar; o original fica

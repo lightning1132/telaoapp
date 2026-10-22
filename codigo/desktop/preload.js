@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   metrics: () => ipcRenderer.invoke('telao:metrics'),
   wco: parseInt(arg('telao-wco'), 10) || 0,
   titleBar: c => ipcRenderer.invoke('telao:titleBar', c),
+  idle: () => ipcRenderer.invoke('telao:idle'),
+  onPower: cb => ipcRenderer.on('telao:power', (_e, ev) => cb(String(ev))),
   floatWindows: true,
   turbo: !!sharedTexture,
   mainPid: parseInt(arg('telao-main-pid'), 10) || 0,

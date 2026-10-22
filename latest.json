@@ -1,26 +1,30 @@
 {
-  "version": "1.15.2",
+  "version": "1.16.0",
   "minShell": 2,
-  "page": "versoes/telao-1.15.2.html",
-  "sha256": "957eef1ad5667fd0e54a2f986323ffa952f57f81eec042e8d5c3425addb85896",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.15.2",
+  "page": "versoes/telao-1.16.0.html",
+  "sha256": "90c2bee0ce7529d3e0f419f0fb165808f1cfcea8dd97e8571bdad7614099fa81",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.0",
   "notes": [
-    "App: o ícone do Telão passa a ir também para o Telao.exe (atalho, Explorer, barra de tarefas), sem baixar o app inteiro. Acontece sozinho na primeira vez que você fechar o Telão depois desta atualização"
+    "Ausente: quem não responde ao \"Ainda está aí?\" (45 min sem mexer no PC), bloqueia a tela ou é marcado por alguém para de receber vídeo, e ninguém gasta internet ou placa com ele. Volta ao mexer",
+    "Tirar da sala: em \"quem está na sala\", qualquer um pode marcar alguém como ausente ou tirar da sala (a pessoa pode entrar de novo)",
+    "Custo da transmissão e medição de uso real mostram a memória (do PC e do Telão) e a memória da placa de vídeo, com aviso quando estão quase cheias",
+    "App: prioridade do Telão na placa de vídeo enquanto transmite (experimental, em Opções), para a transmissão não engasgar com jogo pesado",
+    "Aviso da captura turbo aponta a causa certa (placa de vídeo, processador ou preparo lento)"
   ],
   "app": {
-    "version": "1.15.2",
-    "shell": 11,
+    "version": "1.16.0",
+    "shell": 12,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.15.2/app.asar",
-        "sha256": "3bc4704e0ca2c37cd556376e61ea20e9f2e8d7e9f2712b456c2bde5951a8769b",
-        "size": 462839
+        "path": "versoes/app-1.16.0/app.asar",
+        "sha256": "8f490b8d47fdf017c97624386428612fe4ce196a4444d44c74ac50966e254f11",
+        "size": 481036
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.15.2/telao-audio.exe",
-        "sha256": "461d508fb06de7b01e97dfa0724a785ac8dde4e72c6cd98e9edcc7a4be925661",
-        "size": 650752
+        "path": "versoes/app-1.16.0/telao-audio.exe",
+        "sha256": "50c7d93140e4c901a2acce5d27abfee5b69ae925df410fc55a8e56c024bc22ea",
+        "size": 657920
       }
     }
   }
