@@ -614,7 +614,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.12.3';
+const TELAO_VERSION = '1.12.4';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -624,7 +624,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 9;       // nível do app desktop mais novo (9: captura turbo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.12.3', 'hoje', ['iPhone/iPad assistindo: o H.264 vai no perfil High pela placa de vídeo (antes ia em Baseline pelo processador), quando a placa de quem transmite aceita',
+  ['1.12.4', 'hoje', ['iPhone/iPad: agora o H.264 High chega de verdade (a conexão de quem transmite passa a ser "só envio", e assim o High entra na negociação)']],
+  ['1.12.3', '22/10', ['iPhone/iPad assistindo: o H.264 vai no perfil High pela placa de vídeo (antes ia em Baseline pelo processador), quando a placa de quem transmite aceita',
                       'Teste de encoder testa cada perfil do H.264 (Main, High, Baseline); relatórios mostram o perfil combinado com cada pessoa']],
   ['1.12.2', '22/10', ['Captura turbo no tamanho certo: se todo mundo assiste em 720p, ela já captura em 720p (codificação mais leve e mais fps)',
                       'Se a captura turbo cair, a normal volta na hora (ela fica de reserva, quase parada)',
@@ -1866,6 +1867,22 @@ function startBitrateSdp(sdp){
   });
   return out.join('\r\n');
 }
+/* Quem transmite só envia: a conexão é aberta como "só envio". Aberta como envio-e-recebimento (o padrão do PeerJS),
+   o Chromium só oferece os formatos que ele também sabe receber, e o H.264 High (que a placa codifica, mas o Chromium não
+   lista para receber) ficava de fora: o iPhone acabava no Baseline, pelo processador. */
+function sendOnly(fn){
+  const P = RTCPeerConnection.prototype, orig = P.addTrack;
+  P.addTrack = function(track, ...streams){ return this.addTransceiver(track, {direction: 'sendonly', streams}).sender; };
+  try{ return fn(); } finally{ P.addTrack = orig; }
+}
+// Ordem dos perfis do H.264 combinada numa conexão (para o relatório): ex. "64,42e0"
+function h264Order(sdp){
+  const pts = {}, out = [];
+  for (const l of String(sdp || '').split('\r\n')){ let m; if ((m = l.match(/^a=rtpmap:(\d+) H264\//i))) pts[m[1]] = ''; if ((m = l.match(/^a=fmtp:(\d+) .*profile-level-id=([0-9a-f]{6})/i)) && m[1] in pts) pts[m[1]] = m[2].toLowerCase(); }
+  const mline = String(sdp || '').split('\r\n').find(l => l.startsWith('m=video'));
+  if (mline) for (const pt of mline.split(' ').slice(3)) if (pt in pts && pts[pt] && !out.includes(pts[pt].slice(0, 4))) out.push(pts[pt].slice(0, 4));
+  return out.join(',');
+}
 const makeSdpTransform = (codec, hi) => sdp => startBitrateSdp(preferCodec(stereoSdp(sdp), codec, hi));
 
 /* ---------- Seletor de janela/tela (só no app desktop) ---------- */
@@ -2184,7 +2201,7 @@ function callPeer(pid){
   if (!localStream || !me || me.destroyed) return;
   const codec = currentCodec();
   const hi = myHighHw();
-  const call = me.call(pid, outStream(), {metadata: {name: myName, codec, hi}, sdpTransform: makeSdpTransform(codec, hi)});
+  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi}, sdpTransform: makeSdpTransform(codec, hi)}));
   if (!call) return;
   outCalls.set(pid, call);
   const pc = call.peerConnection;
@@ -3664,7 +3681,7 @@ function relayStartTo(s, v, codec){
   const src = t.video.srcObject;
   const stream = new MediaStream([...src.getVideoTracks(), ...src.getAudioTracks()]);
   let call = null;
-  try{ call = me.call(v, stream, {metadata: {name: nameOf(s), codec, relayOf: s, relayName: myName}, sdpTransform: makeSdpTransform(codec)}); }catch{}
+  try{ call = sendOnly(() => me.call(v, stream, {metadata: {name: nameOf(s), codec, relayOf: s, relayName: myName}, sdpTransform: makeSdpTransform(codec)})); }catch{}
   if (!call){ hubSend({t: 'relay', to: s, data: {k: 'rly-fail', vs: [v]}}); return; }
   const ent = {s, v, call, ok: false, want: null, paused: false};
   relayOut.set(key, ent);
@@ -5134,7 +5151,9 @@ async function renderLive(){
       const impl = o.encoderImplementation || '?';
       const hw = o.powerEfficientEncoder != null ? o.powerEfficientEncoder : (HW_RE.test(impl) ? true : SW_RE.test(impl) ? false : null);
       const cd = cs[o.codecId] || {}, mime = (cd.mimeType || '').replace(/^video\//i, '');
-      rows.push(who + ': ' + mime + (/h264/i.test(mime) ? ' ' + h264Name(cd.sdpFmtpLine) : '') + ' ' + (o.frameHeight || '?') + 'p ' +
+      const neg = /h264/i.test(mime) ? ' (H.264 oferecido: ' + h264Order(pc.localDescription && pc.localDescription.type === 'offer' ? pc.localDescription.sdp : pc.remoteDescription && pc.remoteDescription.sdp) +
+        ' · combinado: ' + h264Order(pc.localDescription && pc.localDescription.type === 'answer' ? pc.localDescription.sdp : pc.remoteDescription && pc.remoteDescription.sdp) + ')' : '';
+      rows.push(who + ': ' + mime + (/h264/i.test(mime) ? ' ' + h264Name(cd.sdpFmtpLine) : '') + neg + ' ' + (o.frameHeight || '?') + 'p ' +
         Math.round(o.framesPerSecond || 0) + 'fps · ' + (hw === true ? 'placa de vídeo' : hw === false ? 'processador' : 'não revelado') +
         (pausedBy.get(pid) ? ' · pausado (ocultou)' : '') + (o.qualityLimitationReason && o.qualityLimitationReason !== 'none' ? ' · gargalo: ' + o.qualityLimitationReason : '') +
         ' · ' + impl);
