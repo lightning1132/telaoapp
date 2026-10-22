@@ -3499,7 +3499,8 @@ function relayTick(bwLimited){
   // 1) internet de quem transmite no limite
   if (bwLimited || window.__relayForceBw) bwSince = bwSince || now; else bwSince = 0;
   const direct = directViewers();
-  if (bwSince && now - bwSince >= RELAY_BW_HOLD && direct.length >= 2 && !relayReqs.size && now > relayCooldown){
+  const hold = window.__relayBwHold || RELAY_BW_HOLD;   // (__relayBwHold: só nos testes)
+  if (bwSince && now - bwSince >= hold && direct.length >= 2 && !relayReqs.size && now > relayCooldown){
     const r = pickRelay([], null);
     if (r && direct.includes(r)){ startRelay(r, direct.filter(v => v !== r), 'internet de quem transmite no limite'); bwSince = now; }
   }
@@ -3530,7 +3531,7 @@ function onRelayMsgForStreamer(from, d){
   } else if (d.k === 'rly-stop'){
     relayReqs.delete(from);
     relayFallback(from, vs.length ? vs : [...relayVia].filter(([, r]) => r === from).map(([v]) => v), 'parou de retransmitir', 10 * 60000);
-    if (bwSince === 0) bwSince = Date.now() - RELAY_BW_HOLD + 6000;   // se a rede ainda estiver no limite, tenta outro logo
+    if (bwSince === 0) bwSince = Date.now() - (window.__relayBwHold || RELAY_BW_HOLD) + 6000;   // se a rede ainda estiver no limite, tenta outro logo
   } else if (d.k === 'rly-lost'){
     // espectador perdeu o vídeo que vinha pelo retransmissor: volta a mandar direto
     const r = relayVia.get(from);
