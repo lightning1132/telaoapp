@@ -614,7 +614,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.12.1';
+const TELAO_VERSION = '1.12.2';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -624,7 +624,10 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 9;       // nível do app desktop mais novo (9: captura turbo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.12.1', 'hoje', ['Captura turbo pela placa: corrige o engasgo fixo (a cada ~meio segundo) pra quem assiste',
+  ['1.12.2', 'hoje', ['Captura turbo no tamanho certo: se todo mundo assiste em 720p, ela já captura em 720p (codificação mais leve e mais fps)',
+                      'Se a captura turbo cair, a normal volta na hora (ela fica de reserva, quase parada)',
+                      'Medição de uso real mostra a captura turbo: quantos quadros o jogo mostrou e quantos a captura passou adiante']],
+  ['1.12.1', '22/10', ['Captura turbo pela placa: corrige o engasgo fixo (a cada ~meio segundo) pra quem assiste',
                       'Teste da captura turbo agora mede também o ritmo do lado de quem recebe (acusa engasgo)']],
   ['1.12.0', '22/10', ['Captura turbo (experimental): o Telão Audio pega a imagem do jogo direto do Windows e prepara na placa de vídeo, sem passar pelo motor de captura do Chromium. Liga no seletor de tela',
                       'Diagnóstico → "Testar captura turbo": compara a captura normal com a turbo na janela do seu jogo (sem transmitir nada)']],
@@ -3972,7 +3975,7 @@ async function engageTurbo(chosen, stream){
   const tgt = await turboTarget(chosen);
   if (!tgt){ toast('A captura turbo não achou o alvo escolhido. Seguindo com a captura normal.', 'warn', 7000); return; }
   let ses;
-  const q = QUALITY[currentQ()];
+  const q = turboWantBox() || QUALITY[currentQ()];
   try{ ses = await startTurboAny(tgt, q); }
   catch(e){ if (localStream === stream) toast('A captura turbo não iniciou (' + e.message + '). Seguindo com a captura normal.', 'warn', 9000); return; }
   if (localStream !== stream){ ses.stop(); return; }
@@ -3992,21 +3995,41 @@ async function engageTurbo(chosen, stream){
 function attachTurbo(ses, stream, chosen, tgt){
   const prev = turboShare;
   const olds = stream.getVideoTracks();
+  let standby = prev ? prev.standby : null;
   try{ ses.track.contentHint = 'motion'; }catch{}
   stream.addTrack(ses.track);
-  for (const t of olds){ t.removeEventListener('ended', stopShare); stream.removeTrack(t); try{ t.stop(); }catch{} }
-  turboShare = {ses, stream, chosen, tgt};
+  for (const t of olds){
+    t.removeEventListener('ended', stopShare); stream.removeTrack(t);
+    if (!standby && !(t instanceof MediaStreamTrackGenerator) && t.readyState === 'live'){
+      // A captura normal fica de reserva, quase parada (1 quadro/s, minúscula): se a turbo cair, ela volta na hora,
+      // e enquanto há uma captura aberta o Chromium continua dizendo qual codificador está em uso.
+      standby = t;
+      t.applyConstraints({width: {max: 320}, height: {max: 180}, frameRate: {max: 1}}).catch(() => {});
+    } else try{ t.stop(); }catch{}
+  }
+  turboShare = {ses, stream, chosen, tgt, standby, pending: null, retuning: false};
   ses.onEnd = reason => turboLost(ses, reason);
   if (prev && prev.ses !== ses) prev.ses.stop();
   swapOutgoingVideo();
+  turboAdaptTimer();
 }
 async function turboLost(ses, reason){
   if (!turboShare || turboShare.ses !== ses) return;
-  const {stream, chosen} = turboShare;
+  const {stream, chosen, standby} = turboShare;
   turboShare = null;
-  if (localStream !== stream) return;
-  if (/janela fechou/.test(reason || '')){ toast('A janela do jogo fechou: transmissão encerrada.', 'warn', 6000); stopShare(); return; }
+  if (localStream !== stream){ if (standby) try{ standby.stop(); }catch{} return; }
+  if (/janela fechou/.test(reason || '')){ if (standby) try{ standby.stop(); }catch{} toast('A janela do jogo fechou: transmissão encerrada.', 'warn', 6000); stopShare(); return; }
   toast('A captura turbo parou (' + reason + '). Voltando para a captura normal…', 'warn', 8000);
+  if (standby && standby.readyState === 'live'){
+    const q = QUALITY[currentQ()];
+    try{ await standby.applyConstraints({width: {ideal: q.w, max: q.w}, height: {ideal: q.h, max: q.h}, frameRate: {ideal: q.fps, max: q.fps}}); }catch{}
+    if (localStream !== stream){ try{ standby.stop(); }catch{} return; }
+    for (const t of stream.getVideoTracks()){ stream.removeTrack(t); try{ t.stop(); }catch{} }
+    stream.addTrack(standby);
+    standby.addEventListener('ended', stopShare);
+    swapOutgoingVideo();
+    return;
+  }
   await normalCaptureAgain(stream, chosen);
 }
 async function normalCaptureAgain(stream, chosen){
@@ -4026,19 +4049,61 @@ async function normalCaptureAgain(stream, chosen){
     stopShare();
   }
 }
-// Qualidade mudou no meio: abre uma captura turbo nova no tamanho/ritmo novo e troca sem cortar.
-async function retuneTurbo(){
-  const t = turboShare;
-  if (!t) return;
+/* Tamanho sob medida: a turbo captura no maior tamanho que alguém está assistindo de verdade (até o da qualidade
+   escolhida). Se todo mundo assiste em 720p, ela já entrega 720p pronta da placa e o Telão não precisa reduzir nada
+   antes de codificar (reduzir a imagem da placa é o que deixava a codificação lenta). */
+function turboWantBox(){
   const q = QUALITY[currentQ()];
-  if (t.ses.boxW === q.w && t.ses.boxH === q.h && t.ses.fps === q.fps) return;
-  try{
-    const ns = await startTurbo(Object.assign({}, t.tgt, {w: q.w, h: q.h, fps: q.fps, mode: t.ses.mode}));
-    if (turboShare !== t || localStream !== t.stream){ ns.stop(); return; }
-    attachTurbo(ns, t.stream, t.chosen, t.tgt);
-  }catch(e){ toast('Não consegui mudar a qualidade da captura turbo (' + e.message + ').', 'warn', 7000); }
+  let h = 0, fps = 0, n = 0;
+  for (const [pid, c] of outCalls){
+    const pc = c.peerConnection;
+    if (!pc || pc.connectionState !== 'connected') continue;
+    const hub = isRelayHub(pid);
+    if (pausedBy.get(pid) && !hub) continue;
+    n++;
+    const w = hub ? 0 : wantH.get(pid);   // quem repassa para outros recebe sempre o tamanho cheio
+    h = Math.max(h, !w || w >= q.h ? q.h : w);
+    fps = Math.max(fps, planFor(q, q.h, w, wantHz.get(pid)).fps);
+  }
+  if (!n) return null;
+  return {w: Math.round(q.w * h / q.h / 2) * 2, h, fps: fps || q.fps};
 }
-function stopTurboShare(){ const t = turboShare; turboShare = null; if (t) t.ses.stop(); }
+let turboAdaptIv = null;
+function turboAdaptTimer(){
+  clearInterval(turboAdaptIv);
+  turboAdaptIv = setInterval(() => {
+    const t = turboShare;
+    if (!t || !turboActive()){ if (!t){ clearInterval(turboAdaptIv); turboAdaptIv = null; } return; }
+    if (window.__turboAdaptOff || t.retuning) return;
+    const b = turboWantBox();
+    if (!b || (b.w === t.ses.boxW && b.h === t.ses.boxH && b.fps === t.ses.fps)){ t.pending = null; return; }
+    const key = b.w + 'x' + b.h + '@' + b.fps, now = Date.now();
+    if (!t.pending || t.pending.key !== key){ t.pending = {key, since: now}; return; }
+    // subir (alguém pôs em tela cheia) vale rápido; descer espera mais, para não ficar reabrindo a captura à toa
+    const up = b.h > t.ses.boxH || b.fps > t.ses.fps, waitMs = (window.__turboAdaptMs || 1) * (up ? 1500 : 5000);
+    if (now - t.pending.since >= waitMs){ t.pending = null; retuneTurbo(b); }
+  }, 1000);
+}
+// Abre uma captura turbo nova no tamanho/ritmo novo e troca sem cortar (qualidade mudou ou quem assiste mudou).
+async function retuneTurbo(box){
+  const t = turboShare;
+  if (!t || t.retuning) return;
+  const b = box || turboWantBox() || QUALITY[currentQ()];
+  if (t.ses.boxW === b.w && t.ses.boxH === b.h && t.ses.fps === b.fps) return;
+  t.retuning = true;
+  try{
+    const ns = await startTurbo(Object.assign({}, t.tgt, {w: b.w, h: b.h, fps: b.fps, mode: t.ses.mode}));
+    if (turboShare !== t || localStream !== t.stream){ ns.stop(); return; }
+    turboNote('turbo: tamanho ' + t.ses.w + 'x' + t.ses.h + '@' + t.ses.fps + ' → ' + ns.w + 'x' + ns.h + '@' + ns.fps);
+    attachTurbo(ns, t.stream, t.chosen, t.tgt);
+  }catch(e){ toast('Não consegui ajustar a captura turbo (' + e.message + ').', 'warn', 7000); }
+  finally{ t.retuning = false; }
+}
+function stopTurboShare(){
+  const t = turboShare; turboShare = null;
+  clearInterval(turboAdaptIv); turboAdaptIv = null;
+  if (t){ t.ses.stop(); if (t.standby) try{ t.standby.stop(); }catch{} }
+}
 const turboActive = () => !!(turboShare && localStream && localStream.getVideoTracks()[0] === turboShare.ses.track);
 
 /* Teste no Diagnóstico: captura normal × turbo (placa) × turbo (memória) na janela do jogo, cada uma codificada
@@ -4150,8 +4215,8 @@ async function runTurboTest(){
       normalStream = await navigator.mediaDevices.getDisplayMedia({video: {width: {ideal: q.w, max: q.w}, height: {ideal: q.h, max: q.h}, frameRate: {ideal: q.fps, max: q.fps}}, audio: false, selfBrowserSurface: 'exclude'});
       const t = normalStream.getVideoTracks()[0]; try{ t.contentHint = 'motion'; }catch{}
       rows.push(Object.assign({key: 'normal'}, await measureCapture(t, q, 8)));
+      t.applyConstraints({width: {max: 320}, height: {max: 180}, frameRate: {max: 1}}).catch(() => {});   // fica aberta, quase parada (como na transmissão)
     }catch(e){ rows.push({key: 'normal', error: e.message}); }
-    if (normalStream){ normalStream.getTracks().forEach(t => t.stop()); normalStream = null; }
     renderTurboTest();
     for (const mode of ['gpu', 'mem']){
       msg('Medindo a captura turbo ' + TURBO_MODE_TXT[mode] + '…');
@@ -5187,7 +5252,7 @@ function uiFrames(){
 async function runPerf(){
   if (perfRun) return;
   const secs = window.__perfSecs || PERF_SECS;
-  const run = perfRun = {t0: Date.now(), secs, samples: [], conns: new Map(), procs: [], ui: [], ctx: perfContext()};
+  const run = perfRun = {t0: Date.now(), secs, samples: [], conns: new Map(), procs: [], ui: [], turbo: [], ctx: perfContext()};
   syncPerfUi();
   let prev = new Map(), prevT = performance.now();
   if (DESKTOP && window.telaoDesktop.metrics) try{ await window.telaoDesktop.metrics(); }catch{}   // zera a contagem de processador
@@ -5210,6 +5275,7 @@ async function runPerf(){
     }
     prev = cur;
     if (DESKTOP && window.telaoDesktop.metrics) try{ run.procs.push(await window.telaoDesktop.metrics()); }catch{}
+    if (turboActive() && turboShare.ses.stat){ const x = turboShare.ses, st = x.stat; run.turbo.push({win: st.win, out: st.out, ms: st.ms, p95: st.p95, cpu: st.cpu, size: x.w + 'x' + x.h, mode: x.mode}); }
     if (!document.hidden) run.ui.push(...(await uiFrames()));
     run.long = perfLong - long0;
     syncPerfUi();
@@ -5260,8 +5326,20 @@ function perfSummary(run){
     L.push('');
     L.push('PROCESSADOR E MEMÓRIA: só o app desktop consegue medir (no navegador fica de fora).');
   }
-  // conexões
+  // captura turbo: o lado do Telão Audio (quanto o Windows entregou = ritmo do próprio jogo na tela)
   const target = c.target;
+  let turboSaid = false;
+  if (run.turbo && run.turbo.length){
+    const T = run.turbo, win = nums(T, 'win'), out = nums(T, 'out');
+    const sizes = [...new Set(T.map(x => x.size))];
+    L.push('');
+    L.push('CAPTURA TURBO (' + (TURBO_MODE_TXT[T[T.length - 1].mode] || '') + ' · ' + sizes.join(' → ') + ')');
+    L.push('  o Windows entregou: ' + f0(avg(win)) + ' quadros/s (mín ' + f0(Math.min(...win)) + ') · é o ritmo do próprio jogo na tela');
+    L.push('  a captura passou adiante: ' + f0(avg(out)) + ' quadros/s (mín ' + f0(Math.min(...out)) + ') · preparo ' + f1(avg(nums(T, 'ms'))) + ' ms por quadro (95% abaixo de ' + f1(pct(nums(T, 'p95'), 0.95)) + ' ms) · Telão Audio ' + f0(avg(nums(T, 'cpu'))) + '% de um núcleo');
+    if (avg(win) < target * 0.9){ turboSaid = true; W.push('O próprio jogo mostrou só ' + f0(avg(win)) + ' quadros/s na tela (meta: ' + target + '): a captura não tem como passar disso. Limitar o jogo num FPS que ele sustente, ou aliviar o processador, deixa a transmissão mais estável.'); }
+    else if (avg(out) < Math.min(target, avg(win)) * 0.9){ turboSaid = true; W.push('A captura turbo passou adiante só ' + f0(avg(out)) + ' de ' + f0(Math.min(target, avg(win))) + ' quadros/s: o Telão Audio não está dando conta (processador ocupado?).'); }
+  }
+  // conexões
   for (const [, e] of run.conns){
     const live = e.samples.filter(s => !s.off);
     const all = live.length ? live : e.samples;
@@ -5280,7 +5358,7 @@ function perfSummary(run){
       if (enc.length) L.push('  codificação: ' + f1(avg(enc)) + ' ms por quadro (95% abaixo de ' + f1(pct(enc, 0.95)) + ' ms)');
       L.push('  limitado pelo processador ' + pc1(limCpu) + ' do tempo · pela rede ' + pc1(limBw) +
         ' · perda ' + pc1(avg(nums(live, 'loss'))) + ' · reenvio ' + pc1(avg(nums(live, 'retx'))) + ' · atraso ' + f0(avg(nums(live, 'rtt'))) + ' ms');
-      if (e.kind === 'out' && cap.length && avg(cap) < target * 0.8) W.push('Captura da tela abaixo do esperado (' + f0(avg(cap)) + ' de ' + target + ' fps). ' + (c.turbo ? 'A captura turbo já está ligada: confira se o próprio jogo está abaixo disso.'
+      if (e.kind === 'out' && cap.length && avg(cap) < target * 0.8 && !turboSaid) W.push('Captura da tela abaixo do esperado (' + f0(avg(cap)) + ' de ' + target + ' fps). ' + (c.turbo ? 'A captura turbo já está ligada: confira se o próprio jogo está abaixo disso.'
         : turboAvailable() ? 'Experimente a "Captura turbo" no seletor de tela (dá pra comparar antes em Diagnóstico → Testar captura turbo); também acontece se o próprio jogo estiver abaixo disso.'
         : 'No Windows 10, experimente o "Modo rápido" no seletor; também acontece se o próprio jogo estiver abaixo disso.'));
       if (limCpu > 0.2) W.push('Envio para ' + e.who + ' limitado pelo processador em ' + pc1(limCpu) + ' do tempo. Use H.264 (placa de vídeo) ou uma qualidade menor.');

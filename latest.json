@@ -1,25 +1,26 @@
 {
-  "version": "1.12.1",
+  "version": "1.12.2",
   "minShell": 2,
-  "page": "versoes/telao-1.12.1.html",
-  "sha256": "9969e86019e95eb473791d680024372fee365d3fca270d46694a71b852a0245f",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.1",
+  "page": "versoes/telao-1.12.2.html",
+  "sha256": "c62717b0dfb6284f9cd5770cfbe9d131c82ff785b40224eb9b4af81231b9871e",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.2",
   "notes": [
-    "Captura turbo pela placa: corrige o engasgo fixo (a cada ~meio segundo) pra quem assiste",
-    "Teste da captura turbo agora mede também o ritmo do lado de quem recebe (acusa engasgo)"
+    "Captura turbo no tamanho certo: se todo mundo assiste em 720p, ela já captura em 720p (codificação mais leve e mais fps)",
+    "Se a captura turbo cair, a normal volta na hora (ela fica de reserva, quase parada)",
+    "Medição de uso real mostra a captura turbo: quantos quadros o jogo mostrou e quantos a captura passou adiante"
   ],
   "app": {
-    "version": "1.12.1",
+    "version": "1.12.2",
     "shell": 9,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.12.1/app.asar",
-        "sha256": "b2b5c02a4661091cd9f2ce5247fe260df0c30c5d93946087df127ac53bd0e8ef",
-        "size": 355814
+        "path": "versoes/app-1.12.2/app.asar",
+        "sha256": "e87254ae8a63743e85719d9456e234f2a49804b266bd351cfce6993c1e44fec3",
+        "size": 361312
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.12.1/telao-audio.exe",
+        "path": "versoes/app-1.12.2/telao-audio.exe",
         "sha256": "161f8e2d029fb7a8f0db08eb5de50e8d92d5f52829fd17a71994a723aa9d0bae",
         "size": 627200
       }
