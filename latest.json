@@ -1,24 +1,24 @@
 {
-  "version": "1.12.4",
+  "version": "1.12.5",
   "minShell": 2,
-  "page": "versoes/telao-1.12.4.html",
-  "sha256": "7ca94a778b727c8fb4f8e6fd0d621eae782e5441eec675b8e7642468dccf9229",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.4",
+  "page": "versoes/telao-1.12.5.html",
+  "sha256": "3f9e391b2ad79cc036b67be4d2f1f8004b93d1a088c4dd1b47b4d94daa61cd11",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.5",
   "notes": [
-    "iPhone/iPad: agora o H.264 High chega de verdade (a conexão de quem transmite passa a ser \"só envio\", e assim o High entra na negociação)"
+    "iPhone/iPad: o vídeo vai em H.264 \"Constrained High\" (o High que o iPhone aceita), pela placa de vídeo, quando o teste confirma que funciona neste PC"
   ],
   "app": {
-    "version": "1.12.4",
+    "version": "1.12.5",
     "shell": 9,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.12.4/app.asar",
-        "sha256": "8d750042c44cfb60ce35e84cf3b3218f8940919691b82fcfd500f2ae64c07bbb",
-        "size": 367670
+        "path": "versoes/app-1.12.5/app.asar",
+        "sha256": "f3336a75b3ddef3da08ba0cc6e86a0800f81eb29e3177f2ad92df6cb125e42f4",
+        "size": 368867
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.12.4/telao-audio.exe",
+        "path": "versoes/app-1.12.5/telao-audio.exe",
         "sha256": "161f8e2d029fb7a8f0db08eb5de50e8d92d5f52829fd17a71994a723aa9d0bae",
         "size": 627200
       }

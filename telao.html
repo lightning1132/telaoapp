@@ -614,7 +614,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.12.4';
+const TELAO_VERSION = '1.12.5';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -624,7 +624,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 9;       // nível do app desktop mais novo (9: captura turbo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.12.4', 'hoje', ['iPhone/iPad: agora o H.264 High chega de verdade (a conexão de quem transmite passa a ser "só envio", e assim o High entra na negociação)']],
+  ['1.12.5', 'hoje', ['iPhone/iPad: o vídeo vai em H.264 "Constrained High" (o High que o iPhone aceita), pela placa de vídeo, quando o teste confirma que funciona neste PC']],
+  ['1.12.4', '22/10', ['iPhone/iPad: agora o H.264 High chega de verdade (a conexão de quem transmite passa a ser "só envio", e assim o High entra na negociação)']],
   ['1.12.3', '22/10', ['iPhone/iPad assistindo: o H.264 vai no perfil High pela placa de vídeo (antes ia em Baseline pelo processador), quando a placa de quem transmite aceita',
                       'Teste de encoder testa cada perfil do H.264 (Main, High, Baseline); relatórios mostram o perfil combinado com cada pessoa']],
   ['1.12.2', '22/10', ['Captura turbo no tamanho certo: se todo mundo assiste em 720p, ela já captura em 720p (codificação mais leve e mais fps)',
@@ -1806,12 +1807,16 @@ function h264Score(fmtp, hi){
   return (/packetization-mode=1/.test(fmtp) ? 10 : 0) + rank;
 }
 const h264Profile = fmtp => ((String(fmtp || '').match(/profile-level-id=([0-9a-f]{6})/i) || [])[1] || '').toLowerCase();
-const H264_NAMES = [['42e0', 'Constrained Baseline'], ['4200', 'Baseline'], ['4d', 'Main'], ['64', 'High'], ['f4', 'High 4:4:4']];
+const H264_NAMES = [['42e0', 'Constrained Baseline'], ['4200', 'Baseline'], ['4d', 'Main'], ['640c', 'Constrained High'], ['64', 'High'], ['f4', 'High 4:4:4']];
+/* O iPhone aceita "Constrained High" (High sem quadros B), não o "High" que o Chromium oferece: para o WebRTC são perfis
+   diferentes e a negociação não casa. Como a codificação em tempo real nunca usa quadros B, o que a placa produz no High
+   já é Constrained High; basta oferecer com esse nome. Só é usado se o teste confirmar que funciona pela placa neste PC. */
+const toConstrainedHigh = sdp => sdp.replace(/profile-level-id=6400([0-9a-f]{2})/gi, 'profile-level-id=640c$1');
 const h264Name = fmtp => { const id = h264Profile(fmtp); const n = H264_NAMES.find(([k]) => id.startsWith(k)); return n ? n[1] : id; };
 // Perfis do H.264 que a placa deste PC codifica (teste de encoder no Diagnóstico, ou sozinho na primeira transmissão).
 const CHROME_V = (navigator.userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || '';
 function h264Hw(){ const x = store.get('h264hw', null); return x && x.v === CHROME_V && x.p ? x.p : null; }
-const myHighHw = () => { const p = h264Hw(); return !!(p && p['64'] === 'hw'); };
+const myHighHw = () => { const p = h264Hw(); return !!(p && p['640c'] === 'hw'); };
 
 /* Coloca o codec escolhido na frente da lista de vídeo da negociação.
    Aplicado na oferta (quem transmite) e na resposta (quem assiste, lendo o codec pelo metadata),
@@ -1883,7 +1888,7 @@ function h264Order(sdp){
   if (mline) for (const pt of mline.split(' ').slice(3)) if (pt in pts && pts[pt] && !out.includes(pts[pt].slice(0, 4))) out.push(pts[pt].slice(0, 4));
   return out.join(',');
 }
-const makeSdpTransform = (codec, hi) => sdp => startBitrateSdp(preferCodec(stereoSdp(sdp), codec, hi));
+const makeSdpTransform = (codec, hi, ch) => sdp => { const x = startBitrateSdp(preferCodec(stereoSdp(sdp), codec, hi)); return ch ? toConstrainedHigh(x) : x; };
 
 /* ---------- Seletor de janela/tela (só no app desktop) ---------- */
 let pickerTab = 'window';
@@ -2201,7 +2206,7 @@ function callPeer(pid){
   if (!localStream || !me || me.destroyed) return;
   const codec = currentCodec();
   const hi = myHighHw();
-  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi}, sdpTransform: makeSdpTransform(codec, hi)}));
+  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
   if (!call) return;
   outCalls.set(pid, call);
   const pc = call.peerConnection;
@@ -4901,7 +4906,7 @@ let diagGpu = null, diagResults = [], diagRunning = false, diagLiveTimer = null,
 function h264Profiles(){
   const caps = window.RTCRtpSender && RTCRtpSender.getCapabilities ? RTCRtpSender.getCapabilities('video') : null;
   const ids = caps ? caps.codecs.filter(c => /h264/i.test(c.mimeType)).map(c => h264Profile(c.sdpFmtpLine)) : [];
-  const out = ['4d', '64', '42e0', '4200'].filter(p => ids.some(id => id.startsWith(p)));
+  const out = ['4d', '64', '640c', '42e0', '4200'].filter(p => ids.some(id => id.startsWith(p === '640c' ? '64' : p)));
   return out.length ? out : [''];
 }
 function saveH264Hw(results){
@@ -4913,7 +4918,8 @@ function saveH264Hw(results){
 // quais perfis do H.264 saem pela placa. Precisa de uma captura aberta: só assim o Chromium conta quem codifica.
 let h264AutoProbing = false, h264AutoLast = null;
 async function autoProbeH264(){
-  if (!DESKTOP || h264AutoProbing || h264Hw() || currentCodec() !== 'H264' || !localStream) return;
+  const known = h264Hw();
+  if (!DESKTOP || h264AutoProbing || (known && !(known['64'] === 'hw' && !('640c' in known))) || currentCodec() !== 'H264' || !localStream) return;
   h264AutoProbing = true;
   const src = canvasSource(640, 360), res = [];
   try{
@@ -5014,7 +5020,8 @@ function canvasSource(W, H){
 async function probeCodec(codec, track, prof){
   const caps = window.RTCRtpSender && RTCRtpSender.getCapabilities ? RTCRtpSender.getCapabilities('video') : null;
   let mine = caps ? caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/' + codec.toLowerCase()) : [];
-  if (prof) mine = mine.filter(c => h264Profile(c.sdpFmtpLine).startsWith(prof));
+  const ch = prof === '640c';   // Constrained High: o High oferecido com o nome que o iPhone aceita (simula o lado de quem transmite)
+  if (prof) mine = mine.filter(c => h264Profile(c.sdpFmtpLine).startsWith(ch ? '64' : prof));
   if (!mine.length) return {codec, prof, status: 'unsupported'};
   if (codec === 'H264') mine.sort((a, b) => h264Score(b.sdpFmtpLine) - h264Score(a.sdpFmtpLine));
   const a = new RTCPeerConnection(), b = new RTCPeerConnection();
@@ -5025,10 +5032,12 @@ async function probeCodec(codec, track, prof){
     try{ tr.setCodecPreferences([...mine, ...caps.codecs.filter(c => /rtx|red|ulpfec|flexfec/i.test(c.mimeType))]); }catch{}
     // Conexão de teste já começa com banda alta: mede o encoder em resolução real, não a subida de banda.
     const boost = sdp => startBitrateSdp(sdp).replace(/x-google-start-bitrate=\d+/g, 'x-google-start-bitrate=4000;x-google-min-bitrate=3000');
-    await a.setLocalDescription(await a.createOffer());
-    await b.setRemoteDescription({type: 'offer', sdp: boost(a.localDescription.sdp)});
+    const offer = await a.createOffer(), plain = offer.sdp;
+    if (ch) offer.sdp = toConstrainedHigh(offer.sdp);
+    await a.setLocalDescription(offer);
+    await b.setRemoteDescription({type: 'offer', sdp: boost(plain)});
     await b.setLocalDescription(await b.createAnswer());
-    await a.setRemoteDescription({type: 'answer', sdp: boost(b.localDescription.sdp)});
+    await a.setRemoteDescription({type: 'answer', sdp: (ch ? toConstrainedHigh : (x => x))(boost(b.localDescription.sdp))});
     for (let k = 0; k < 25 && a.connectionState !== 'connected'; k++) await sleep(200);
     if (a.connectionState !== 'connected') return {codec, prof, status: 'error', note: 'conexão de teste não abriu'};
     try{ const p = tr.sender.getParameters(); p.degradationPreference = 'maintain-framerate'; await tr.sender.setParameters(p); }catch{}
@@ -5044,7 +5053,7 @@ async function probeCodec(codec, track, prof){
     const dt = (s2.totalEncodeTime || 0) - ((s1 && s1.totalEncodeTime) || 0);
     const impl = s2.encoderImplementation || '';
     const hw = s2.powerEfficientEncoder != null ? !!s2.powerEfficientEncoder : (HW_RE.test(impl) ? true : SW_RE.test(impl) ? false : null);
-    const pname = codec === 'H264' ? h264Name(mine[0].sdpFmtpLine) : '';
+    const pname = codec === 'H264' ? (ch ? 'Constrained High' : h264Name(mine[0].sdpFmtpLine)) : '';
     return {codec, prof, status: hw === true ? 'hw' : hw === false ? 'sw' : 'unknown', impl, used: s2.mime + (pname ? ' ' + pname : ''),
             fps: Math.round(s2.framesPerSecond || df / 3), h: s2.frameHeight || 0, encMs: df > 0 ? dt / df * 1000 : null,
             limit: s2.qualityLimitationReason || ''};
@@ -5110,8 +5119,8 @@ function renderAdvice(){
   const cur = currentCodec();
   const say = t => { const d = document.createElement('div'); d.textContent = t; box.appendChild(d); };
   const hp = k => (diagResults.find(r => r.codec === 'H264' && r.prof === k) || {}).status;
-  if (cur === 'H264' && hp('42e0') === 'sw' && (hp('4d') === 'hw' || hp('64') === 'hw')) say(hp('64') === 'hw'
-    ? 'iPhone e iPad (que não aceitam o H.264 Main) passam a receber em High, pela placa de vídeo, em vez do Constrained Baseline pelo processador.'
+  if (cur === 'H264' && hp('42e0') === 'sw' && (hp('4d') === 'hw' || hp('64') === 'hw')) say(hp('640c') === 'hw'
+    ? 'iPhone e iPad (que não aceitam o H.264 Main) passam a receber em Constrained High, pela placa de vídeo, em vez do Constrained Baseline pelo processador.'
     : 'Atenção: quem não aceita o H.264 Main (iPhone, iPad) recebe em Constrained Baseline, que neste PC sai pelo processador.');
   if (hwList.includes(cur)){
     say('Tudo certo: o formato que você usa (' + cur + ') já é codificado pela placa de vídeo.');
