@@ -614,7 +614,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.12.0';
+const TELAO_VERSION = '1.12.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -624,7 +624,9 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 9;       // nível do app desktop mais novo (9: captura turbo)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.12.0', 'hoje', ['Captura turbo (experimental): o Telão Audio pega a imagem do jogo direto do Windows e prepara na placa de vídeo, sem passar pelo motor de captura do Chromium. Liga no seletor de tela',
+  ['1.12.1', 'hoje', ['Captura turbo pela placa: corrige o engasgo fixo (a cada ~meio segundo) pra quem assiste',
+                      'Teste da captura turbo agora mede também o ritmo do lado de quem recebe (acusa engasgo)']],
+  ['1.12.0', '22/10', ['Captura turbo (experimental): o Telão Audio pega a imagem do jogo direto do Windows e prepara na placa de vídeo, sem passar pelo motor de captura do Chromium. Liga no seletor de tela',
                       'Diagnóstico → "Testar captura turbo": compara a captura normal com a turbo na janela do seu jogo (sem transmitir nada)']],
   ['1.11.0', '22/10', ['Diagnóstico → "Medir uso real (60 s)": quanto o Telão gasta do PC e como estão imagem e rede de cada transmissão, com avisos',
                       'Fundo da entrada: o sorteio não fica mais sem imagem quando uma das listas de jogos acaba',
@@ -3806,6 +3808,8 @@ const turboOn = () => !!store.get('turbo', false);
 const turboModes = () => store.get('turboMode', 'gpu') === 'mem' ? ['mem', 'gpu'] : ['gpu', 'mem'];
 const TURBO_MODE_TXT = {gpu: 'pela placa', mem: 'pela memória'};
 const turboSessions = new Map();   // geração → sessão
+// Horário do quadro (o WebRTC usa para o ritmo de quem assiste). Teste: __turboBadTs = horário parado, o defeito da 1.12.0.
+const turboTs = () => window.__turboBadTs ? 1000 : Math.round(performance.now() * 1000);
 let turboGen = 0, turboPortP = null, turboShare = null, turboLast = null, turboTest = null;
 const turboLog = [];
 const turboNote = t => { turboLog.push(new Date().toLocaleTimeString('pt-BR') + ' ' + t); if (turboLog.length > 30) turboLog.shift(); };
@@ -3870,7 +3874,8 @@ function startTurbo(o){
       if (gpu) try{ window.telaoDesktop.turboRelease(gen); }catch{}
       try{ gtr.stop(); }catch{}
     };
-    const info = () => ({mode: s.mode, w: s.w, h: s.h, sw: s.sw, sh: s.sh, fmt: s.fmt, adapter: s.adapter, border: s.border, minUpdate: s.minUpdate, stat: s.stat, frames: s.frames, dropped: s.dropped});
+    const info = () => ({mode: s.mode, w: s.w, h: s.h, sw: s.sw, sh: s.sh, fmt: s.fmt, adapter: s.adapter, border: s.border, minUpdate: s.minUpdate, stat: s.stat, frames: s.frames, dropped: s.dropped,
+                         noCopy: s.noCopy || null});
     const end = reason => {   // parou sozinha (janela fechou, Telão Audio fechou...)
       if (s.ended) return;
       s.ended = true; cleanup();
@@ -3884,8 +3889,21 @@ function startTurbo(o){
     s.push = f => {
       if (s.ended){ try{ f.close(); }catch{} return; }
       if (s.writing >= 2){ try{ f.close(); }catch{} s.dropped++; return; }   // o codificador está atrasado: descarta em vez de acumular atraso
-      let vf = f;
-      try{ vf = new VideoFrame(f, {timestamp: Math.round(performance.now() * 1000)}); f.close(); }catch{ vf = f; }
+      let vf = null;
+      if (s.mode === 'gpu' && !s.noCopy){
+        // O quadro que vem da placa carrega o horário de quando a imagem foi importada (sempre o mesmo), e com isso o
+        // WebRTC passa a mandar em rajadas: engasgo fixo a cada ~0,5 s pra quem assiste. Copiar para um quadro novo
+        // (cópia dentro da própria placa) dá a ele o horário certo.
+        try{
+          const W = f.displayWidth, Hh = f.displayHeight;
+          if (!s.cv || s.cv.width !== W || s.cv.height !== Hh){ s.cv = new OffscreenCanvas(W, Hh); s.cg = s.cv.getContext('2d', {alpha: false}); }
+          s.cg.drawImage(f, 0, 0);
+          vf = new VideoFrame(s.cv, {timestamp: turboTs()});
+        }catch(e){ s.noCopy = String(e && e.message || e); turboNote('cópia do quadro da placa falhou: ' + s.noCopy); }
+      }
+      // (trocar só o horário de um quadro já pronto não adianta: o WebRTC continua vendo o horário original)
+      if (vf) try{ f.close(); }catch{}
+      else vf = f;
       s.writing++; s.frames++; s.lastAt = performance.now();
       writer.write(vf).then(() => { s.writing--; }, () => { s.writing--; try{ vf.close(); }catch{} });
       if (!s.started){ s.started = true; clearTimeout(timer); turboNote('turbo ' + s.mode + ' ok: ' + s.sw + 'x' + s.sh + ' → ' + s.w + 'x' + s.h + ' ' + s.fmt + (s.adapter ? ' · ' + s.adapter : '')); resolve(s); }
@@ -3906,7 +3924,7 @@ function startTurbo(o){
         const w = dv.getUint32(4, true), h = dv.getUint32(8, true), n = w * h * 3 / 2;
         if (!w || !h || b.byteLength < 16 + n) return;
         let f;
-        try{ f = new VideoFrame(new Uint8Array(b, 16, n), {format: 'NV12', codedWidth: w, codedHeight: h, timestamp: Math.round(performance.now() * 1000),
+        try{ f = new VideoFrame(new Uint8Array(b, 16, n), {format: 'NV12', codedWidth: w, codedHeight: h, timestamp: turboTs(),
                                 colorSpace: {primaries: 'bt709', transfer: 'bt709', matrix: 'bt709', fullRange: false}}); }
         catch(e){ return fail(new Error('quadro inválido (' + e.message + ')')); }
         s.push(f);
@@ -4045,6 +4063,13 @@ async function measureCapture(track, q, secs, ses){
   try{
     a.onicecandidate = e => { if (e.candidate) b.addIceCandidate(e.candidate).catch(() => {}); };
     b.onicecandidate = e => { if (e.candidate) a.addIceCandidate(e.candidate).catch(() => {}); };
+    // ritmo do lado de quem recebe: horário de cada quadro que chega (é o que define se a imagem anda lisa ou em rajadas)
+    const rx = {ts: [], on: false};
+    b.ontrack = e => {
+      if (e.track.kind !== 'video' || typeof MediaStreamTrackProcessor !== 'function') return;
+      const rd = new MediaStreamTrackProcessor({track: e.track}).readable.getReader();
+      (async () => { for (;;){ const {value, done} = await rd.read(); if (done) break; if (rx.on) rx.ts.push(value.timestamp); value.close(); } })().catch(() => {});
+    };
     const tr = a.addTransceiver(track, {direction: 'sendonly', sendEncodings: [{maxBitrate: q.kbps * 1000, maxFramerate: q.fps}]});
     const codec = currentCodec();
     const caps = window.RTCRtpSender && RTCRtpSender.getCapabilities ? RTCRtpSender.getCapabilities('video') : null;
@@ -4070,8 +4095,10 @@ async function measureCapture(track, q, secs, ses){
     const hasMetrics = !!window.telaoDesktop.metrics;
     if (hasMetrics) try{ await window.telaoDesktop.metrics(); }catch{}
     const s1 = await read();
+    rx.on = true;
     const stats = [];
     for (let k = 0; k < secs; k++){ await sleep(1000); if (ses && ses.stat) stats.push(ses.stat); }
+    rx.on = false;
     const s2 = await read();
     let m = null; if (hasMetrics) try{ m = await window.telaoDesktop.metrics(); }catch{}
     if (!s2.o) return {error: 'sem estatísticas'};
@@ -4086,9 +4113,18 @@ async function measureCapture(track, q, secs, ses){
     const hs = stats.length ? stats.reduce((x, st) => ({win: x.win + st.win, out: x.out + st.out, ms: x.ms + st.ms, cpu: x.cpu + (st.cpu || 0)}), {win: 0, out: 0, ms: 0, cpu: 0}) : null;
     if (hs) for (const k in hs) hs[k] /= stats.length;
     return {srcFps, outFps: enc / dt, encMs: enc > 0 ? d('totalEncodeTime') / enc * 1000 : null, impl, hw, mime: s2.mime, h: s2.o.frameHeight || 0, w: s2.o.frameWidth || 0,
-            limit: s2.o.qualityLimitationReason || '', limDur: lim, cpu, sysCpu: m ? m.sysCpu : null, helper: hs, luma};
+            limit: s2.o.qualityLimitationReason || '', limDur: lim, cpu, sysCpu: m ? m.sysCpu : null, helper: hs, luma, rx: rxRhythm(rx.ts, dt)};
   } finally { a.close(); b.close(); }
 }
+// Intervalos entre os quadros recebidos: travadas (saltos > 200 ms, como o engasgo da 1.12.0) e irregularidade.
+function rxRhythm(ts, secs){
+  if (ts.length < 10) return ts.length ? {fps: ts.length / secs, jumps: 0, dev: null} : null;
+  const d = ts.slice(1).map((x, i) => (x - ts[i]) / 1000).filter(x => x > -1000);
+  const med = [...d].sort((a, b) => a - b)[Math.floor(d.length / 2)];
+  const dev = d.map(x => Math.abs(x - med)).sort((a, b) => a - b);
+  return {fps: ts.length / secs, jumps: d.filter(x => x > 200).length, med, dev: dev[Math.min(dev.length - 1, Math.floor(dev.length * 0.95))]};
+}
+const rxBad = r => !!(r && r.rx && r.rx.jumps >= 2);
 const turboRowName = k => ({normal: 'Normal (Chromium)', gpu: 'Turbo pela placa', mem: 'Turbo pela memória'})[k] || k;
 async function runTurboTest(){
   if (!turboAvailable() || turboTest && turboTest.running) return;
@@ -4153,9 +4189,10 @@ function renderTurboTest(){
       r.h ? r.w + 'x' + r.h : '', r.mime ? r.mime + (r.hw === true ? ' na placa' : r.hw === false ? ' no processador' : '') : '',
       r.encMs != null ? r.encMs.toFixed(1) + ' ms/quadro' : '', r.limit && r.limit !== 'none' ? 'gargalo: ' + r.limit : '',
       r.cpu != null ? 'Telão ' + Math.round(r.cpu + (r.helper ? r.helper.cpu : 0)) + '% de um núcleo' : '',
-      r.helper ? 'Windows entregou ' + Math.round(r.helper.win) : '', lumaBlack(r.luma) ? 'IMAGEM PRETA?' : ''].filter(Boolean).join(' · ');
+      r.helper ? 'Windows entregou ' + Math.round(r.helper.win) : '', lumaBlack(r.luma) ? 'IMAGEM PRETA?' : '',
+      r.rx ? (rxBad(r) ? 'ENGASGA: ' + r.rx.jumps + ' travadas pra quem recebe' : 'ritmo liso pra quem recebe') : ''].filter(Boolean).join(' · ');
     const cells = [[turboRowName(r.key), ''], [r.error ? '–' : r.srcFps != null ? Math.round(r.srcFps) + ' fps' : '?', ''],
-                   [r.error ? '–' : Math.round(r.outFps) + ' fps', ''], [det, r.error || lumaBlack(r.luma) ? 'dg-bad' : '']];
+                   [r.error ? '–' : Math.round(r.outFps) + ' fps', ''], [det, r.error || lumaBlack(r.luma) || rxBad(r) ? 'dg-bad' : '']];
     for (const [t, c] of cells){ const td = document.createElement('td'); td.textContent = t; if (c) td.className = c; tr.appendChild(td); }
     tb.appendChild(tr);
   }
@@ -4165,7 +4202,7 @@ function renderTurboTest(){
   if (box.hidden) return;
   const say = t => { const d = document.createElement('div'); d.textContent = t; box.appendChild(d); };
   const norm = rows.find(r => r.key === 'normal' && !r.error);
-  const good = rows.filter(r => r.key !== 'normal' && !r.error && !lumaBlack(r.luma)).sort((x, y) => y.outFps - x.outFps);
+  const good = rows.filter(r => r.key !== 'normal' && !r.error && !lumaBlack(r.luma) && !rxBad(r)).sort((x, y) => y.outFps - x.outFps);
   if (!good.length){
     box.classList.add('warn');
     say('A captura turbo não funcionou neste PC. Copie o relatório e me mande: ele diz em que passo parou.');
@@ -4189,6 +4226,7 @@ function turboReport(){
   if (!DESKTOP) return L;
   L.push('Captura turbo: ' + (turboAvailable() ? (turboOn() ? 'ligada' : 'desligada') + ' · modo preferido ' + store.get('turboMode', 'gpu') : 'indisponível (app nível ' + (window.telaoDesktop.shell || 0) + ')') +
          (turboActive() ? ' · EM USO ' + turboShare.ses.mode + ' ' + turboShare.ses.w + 'x' + turboShare.ses.h + (turboShare.ses.stat ? ' (Windows ' + turboShare.ses.stat.win + ' / saída ' + turboShare.ses.stat.out + ' fps, ' + turboShare.ses.stat.ms + ' ms, Telão Audio ' + turboShare.ses.stat.cpu + '%)' : '') : ''));
+  if (turboActive()) L.push('Turbo em uso: cópia do quadro da placa ' + (turboShare.ses.mode !== 'gpu' ? '-' : turboShare.ses.noCopy ? 'FALHOU (' + turboShare.ses.noCopy + ')' : 'ok') + ' · descartados ' + turboShare.ses.dropped);
   if (turboLast) L.push('Última captura turbo: ' + JSON.stringify(turboLast));
   if (turboTest && turboTest.rows.length){
     L.push('Teste da captura turbo (' + new Date(turboTest.at).toLocaleTimeString('pt-BR') + ', ' + turboTest.q + ', "' + (turboTest.target || '?') + '"):');
@@ -4199,7 +4237,8 @@ function turboReport(){
              ' · Telão ' + (r.cpu != null ? Math.round(r.cpu) + '%' : '?') + ' · PC ' + (r.sysCpu != null ? r.sysCpu + '%' : '?') +
              (r.helper ? ' · Telão Audio: Windows ' + r.helper.win.toFixed(1) + ' saída ' + r.helper.out.toFixed(1) + ' ' + r.helper.ms.toFixed(2) + 'ms ' + r.helper.cpu.toFixed(1) + '%' : '') +
              (r.size ? ' · ' + r.size + ' ' + r.fmt + ' borda=' + r.border + ' intervalo=' + r.minUpdate + ' descartados=' + r.dropped + ' · ' + r.adapter : '') +
-             (r.luma ? ' · luz ' + Math.round(r.luma.mean) + '±' + Math.round(r.luma.sd) : ''));
+             (r.luma ? ' · luz ' + Math.round(r.luma.mean) + '±' + Math.round(r.luma.sd) : '') +
+             (r.rx ? ' · recebe ' + Math.round(r.rx.fps) + ' fps, travadas ' + r.rx.jumps + (r.rx.dev != null ? ', irregularidade ' + r.rx.dev.toFixed(1) + 'ms' : '') : ''));
     }
   }
   for (const t of turboLog.slice(-10)) L.push('  ' + t);

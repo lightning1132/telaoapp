@@ -1,25 +1,25 @@
 {
-  "version": "1.12.0",
+  "version": "1.12.1",
   "minShell": 2,
-  "page": "versoes/telao-1.12.0.html",
-  "sha256": "7e9920e26dae7e13aad5e47da877ea7ab146e7012ad563868f7792844707ed40",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.0",
+  "page": "versoes/telao-1.12.1.html",
+  "sha256": "9969e86019e95eb473791d680024372fee365d3fca270d46694a71b852a0245f",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.12.1",
   "notes": [
-    "Captura turbo (experimental): o Telão Audio pega a imagem do jogo direto do Windows e prepara na placa de vídeo, sem passar pelo motor de captura do Chromium. Liga no seletor de tela",
-    "Diagnóstico → \"Testar captura turbo\": compara a captura normal com a turbo na janela do seu jogo (sem transmitir nada)"
+    "Captura turbo pela placa: corrige o engasgo fixo (a cada ~meio segundo) pra quem assiste",
+    "Teste da captura turbo agora mede também o ritmo do lado de quem recebe (acusa engasgo)"
   ],
   "app": {
-    "version": "1.12.0",
+    "version": "1.12.1",
     "shell": 9,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.12.0/app.asar",
-        "sha256": "9e7ad3345d023d1e486fa7e9ce31fea24225327d2a4d8a34fb1428fc261e0ec0",
-        "size": 352680
+        "path": "versoes/app-1.12.1/app.asar",
+        "sha256": "b2b5c02a4661091cd9f2ce5247fe260df0c30c5d93946087df127ac53bd0e8ef",
+        "size": 355814
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.12.0/telao-audio.exe",
+        "path": "versoes/app-1.12.1/telao-audio.exe",
         "sha256": "161f8e2d029fb7a8f0db08eb5de50e8d92d5f52829fd17a71994a723aa9d0bae",
         "size": 627200
       }
