@@ -1038,7 +1038,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.18.4';
+const TELAO_VERSION = '1.18.5';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1048,7 +1048,9 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.18.4', 'hoje', ['Motor de vídeo, quem assiste: imagem com borrões e blocos coloridos ao abrir menus/mapa. Quadros grandes chegavam ao Telão Audio em pedaços e só o primeiro era usado; agora são juntados',
+  ['1.18.5', 'hoje', ['Transmitindo pelo motor: quem assiste no navegador (ou sem o motor) via engasgos e atraso. Cada quadro agora leva o horário em que o jogo foi capturado (antes, o de quando a página o repassava, e qualquer demora virava rajada)',
+                      'Motor: a taxa do vídeo acompanha o que a internet de quem assiste aguenta naquele momento, como o caminho normal faz (antes podia mandar mais do que cabia e o atraso ia crescendo)']],
+  ['1.18.4', '23/10', ['Motor de vídeo, quem assiste: imagem com borrões e blocos coloridos ao abrir menus/mapa. Quadros grandes chegavam ao Telão Audio em pedaços e só o primeiro era usado; agora são juntados',
                       'Motor: quadro completo a cada 4 s (antes 10 s) e, se algum quadro se perder no caminho, a tela espera o próximo completo em vez de mostrar sujeira',
                       'Saindo do motor (por exemplo, ligando os clipes), se a imagem não voltar em 4 s, a tela é reconectada sozinha (antes podia ficar preta)']],
   ['1.18.3', '23/10', ['Motor de vídeo, quem assiste: o decodificador do Windows não abria ("não entrega NV12") porque precisava saber um tamanho de vídeo antes do primeiro quadro. Agora parte de 1080p e se ajusta no primeiro quadro completo; se ainda não sair imagem, o relatório diz por quê']],
@@ -5552,7 +5554,7 @@ function onEnc(buf){
     if (st.q.length >= 6 || (st.q.length && t - st.q[0].at > 600)){ st.q.length = 0; st.needKey = true; st.resets++; }
     if (st.needKey){ if (!key){ askKey(sid, false); continue; } st.needKey = false; }
     st.q.push({d: buf.slice(24), at: t});
-    postMessage({t: 'dummy', vid});
+    postMessage({t: 'dummy', vid, ts: Number(dv.getBigUint64(16, true))});
   }
 }
 // quem assiste: manda o quadro para o Telão Audio e entrega ao Chromium um quadro completo minúsculo
@@ -5666,7 +5668,7 @@ async function engineFlags(){
   }catch{}
 }
 function engineMsg(d){
-  if (d.t === 'dummy') return engineDummy(d.vid);
+  if (d.t === 'dummy') return engineDummy(d.vid, d.ts);
   if (d.t === 'h') return engineHelper(d.m || {});
   if (d.t === 'open'){ engine.open = true; engineCmd({cmd: 'vcaps'}); return; }
   if (d.t === 'close'){
@@ -5797,7 +5799,8 @@ function engineDesire(pid, c, q, E){
   }
   let h = Math.min(q.h, ENGINE_STEPS.find(x => x >= Math.round(q.h / plan.scale)) || q.h);
   const hLow = Math.min(h, cap < 1500 ? 480 : cap < 3000 ? 720 : q.h);
-  return {base: codec + '|' + profile, codec, profile, h, hLow, fps: plan.fps, kbps: plan.kbps, cap, low: st.low};
+  const follow = bw ? Math.max(500, Math.round(bw * 0.9 / 100) * 100) : Infinity;   // a taxa segue o que a internet aguenta agora (como o WebRTC faz)
+  return {base: codec + '|' + profile, codec, profile, h, hLow, fps: plan.fps, kbps: plan.kbps, cap, follow, low: st.low};
 }
 function engineShareSync(){
   const E = engine.share;
@@ -5819,7 +5822,7 @@ function engineShareSync(){
     const split = d.group.endsWith('|L');
     if (!g) groups.set(d.group, g = {group: d.group, codec: d.codec, profile: d.profile, low: split, h: 0, fps: 0, kbps: 0, cap: Infinity, pids: []});
     g.h = Math.max(g.h, split ? d.hLow : d.h); g.fps = Math.max(g.fps, d.fps); g.kbps = Math.max(g.kbps, d.kbps);
-    if (d.low) g.cap = Math.min(g.cap, d.cap);
+    g.cap = Math.min(g.cap, d.low ? d.cap : Infinity, d.follow);
     g.pids.push(pid);
   }
   for (const g of groups.values()){ g.kbps = Math.min(g.kbps, g.cap); g.w = Math.round(q.w * g.h / q.h / 2) * 2; }
@@ -5909,10 +5912,18 @@ async function engineLink(pid, ses){
   applyQuality(c.peerConnection, pid);
 }
 // Quadro do vídeo de mentira: um por quadro que chegou do Telão Audio (o Chromium codifica e o desvio troca o conteúdo).
-function engineDummy(vid){
+function engineDummy(vid, cts){
   const L = engine.byVid.get(vid);
   if (!L || !L.writer) return;
-  const ts = Math.max(L.ts + 1000, Math.round(performance.now() * 1000)); L.ts = ts;
+  // horário do quadro = o da captura no Telão Audio (o ritmo de verdade do jogo). Com o horário de quando a página escreveu,
+  // qualquer atraso dela virava rajada e quem assiste via engasgo.
+  const now = Math.round(performance.now() * 1000);
+  let ts = now;
+  if (cts > 0){
+    if (L.base == null || Math.abs(cts + L.base - now) > 500000) L.base = now - cts;   // relógio novo ou desvio grande: realinha
+    ts = cts + L.base;
+  }
+  ts = Math.max(L.ts + 1000, ts); L.ts = ts;
   const D = ENGINE_DUMMY[L.codec] || ENGINE_DUMMY.h264;
   let f; try{ f = new VideoFrame(D.b, {format: 'I420', codedWidth: D.w, codedHeight: D.h, timestamp: ts}); }catch{ return; }
   L.inflight++;
