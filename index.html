@@ -1010,7 +1010,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.17.1';
+const TELAO_VERSION = '1.17.2';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1020,7 +1020,10 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 13;      // nível do app desktop mais novo (13: camada por cima do jogo desenhada pelo Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.17.1', 'hoje', ['Relatório: na conexão com a sala, diz se cada caminho é IPv4, IPv6 ou endereço local escondido (o iPhone esconde o dele) e, quando conecta, por qual par conectou. Ajuda a entender por que um celular não entra']],
+  ['1.17.2', 'hoje', ['Passar a sala: em "quem está na sala" há "Segurar a sala". Quem segura é o PC a que todo mundo se conecta para entrar; se ele estiver longe ou numa rede difícil (e alguém não consegue entrar), dá para trazer a sala para o seu PC sem ninguém sair',
+                      'Quem segura a sala e fica ausente (ou está no celular) passa a sala sozinho para alguém ativo no PC',
+                      'Funciona quando quem segura a sala está na 1.17.2 ou mais nova']],
+  ['1.17.1', '22/10', ['Relatório: na conexão com a sala, diz se cada caminho é IPv4, IPv6 ou endereço local escondido (o iPhone esconde o dele) e, quando conecta, por qual par conectou. Ajuda a entender por que um celular não entra']],
   ['1.17.0', '22/10', ['Celular: interface própria para assistir. A tela fica em cima, na largura toda e sem nada por cima; nome, qualidade, som, tela cheia e reações ficam embaixo; as outras telas viram uma lista (toque para trocar). Um toque no vídeo mostra os botões',
                       'Celular: deitar o celular põe em tela cheia (no Android vira tela cheia de verdade no primeiro toque; no iPhone o vídeo ocupa a tela, e dá para abrir o player do iPhone). Reações e mensagens do chat aparecem por cima',
                       'Celular: chat em gaveta embaixo, sem o botão de compartilhar (o navegador do celular não compartilha a tela) e o celular nunca é escolhido para repassar vídeo',
@@ -1901,13 +1904,35 @@ function showRoom(){
 /* ---------- Diretório da sala (hub) ----------
    Um dos participantes assume o ID "hub" da sala e mantém a lista de quem está online.
    Se ele sair, outro assume automaticamente. O vídeo nunca passa pelo hub. */
-async function ensureHub(){
+async function ensureHub(tries){
   if (hubBusy) return;
   hubBusy = true;
   try{
-    if (!hubPeer || hubPeer.destroyed) await tryClaimHub();
+    // tries > 1: a sala acabou de ser passada para mim; o servidor pode levar um instante para soltar o endereço
+    for (let i = 0; i < (tries || 1) && (!hubPeer || hubPeer.destroyed); i++){
+      if (await tryClaimHub()) break;
+      if (i + 1 < (tries || 1)) await sleep(700);
+    }
     connectHub();
   } finally { hubBusy = false; }
+}
+// Pedir para segurar a sala (ou passar para alguém, se sou eu que seguro). Precisa de quem segura na 1.17.2+.
+function askHandover(to){
+  if (!me || !hubConn || !hubConn.open || !to) return false;
+  try{ hubConn.send({t: 'handover', to}); }catch{ return false; }
+  return true;
+}
+// Quem segura a sala e ficou ausente (ou está no celular) passa sozinho para alguém ativo no PC.
+let lastAutoHand = 0;
+function autoHandover(){
+  if (!me || !hubPeer || hubPeer.destroyed || !(amAway || PHONE) || Date.now() - lastAutoHand < 60000) return;
+  const cands = members.filter(m => m.id !== me.id && !peerAway.has(m.id) && !kickedIds.has(m.id)).map(m => ({m, v: peerVer.get(m.id) || {}}))
+    .filter(x => x.v.v && cmpVer(x.v.v, '1.17.2') >= 0 && !x.v.ph);
+  const best = cands.find(x => x.v.d) || cands[0];
+  if (!best) return;
+  lastAutoHand = Date.now();
+  netLog('passando a sala para ' + best.m.name + (amAway ? ' (fiquei ausente)' : ' (estou no celular)'));
+  askHandover(best.m.id);
 }
 
 function tryClaimHub(){
@@ -1944,8 +1969,9 @@ function runHub(hp){
   const chatLog = chatMsgs.slice(-CHAT_KEEP).map(m => ({id: m.id, from: m.from, n: m.n, x: m.x, st: m.st, at: m.at}));   // quem assume a sala continua o histórico
   const send = () => {
     const list = [...mem].map(([id, m]) => ({id, name: m.name, sharing: m.sharing}));
-    for (const m of mem.values()) if (m.conn.open) try{ m.conn.send({t:'list', list}); }catch{}
+    for (const m of mem.values()) if (m.conn.open) try{ m.conn.send({t:'list', list, owner: me ? me.id : ''}); }catch{}   // owner: quem segura a sala (1.17.2+)
   };
+  let handing = false;
   // Conexão de um participante (aberta por ele, ou pelo hub no caminho invertido).
   const attach = conn => {
     conn.on('data', msg => {
@@ -1965,6 +1991,13 @@ function runHub(hp){
         const x = msg.m;
         chatLog.push({id: x.id, from: conn.peer, n: String(x.n || m.name).slice(0, 24), x: String(x.x || '').slice(0, CHAT_MAX_LEN), st: validHash(x.st) ? x.st : '', at: +x.at || Date.now()});
         while (chatLog.length > CHAT_KEEP) chatLog.shift();
+      }
+      else if (msg.t === 'handover' && typeof msg.to === 'string' && mem.has(msg.to) && !(me && msg.to === me.id) && !handing){
+        // passar a sala: avisa todo mundo quem assume e larga o "endereço" da sala para essa pessoa pegar
+        handing = true;
+        netLog('hub: passando a sala para ' + mem.get(msg.to).name);
+        for (const x of mem.values()) if (x.conn.open) try{ x.conn.send({t: 'handover', to: msg.to}); }catch{}
+        setTimeout(() => { try{ hp.destroy(); }catch{} }, 600);
       }
       else if (msg.t === 'relay' && typeof msg.to === 'string'){
         const dst = mem.get(msg.to);
@@ -2039,7 +2072,8 @@ function wireHubConn(c){
   c.on('data', msg => {
     if (c !== hubConn) return;
     lastHubMsg = Date.now();
-    if (msg && msg.t === 'list') onList(msg.list);
+    if (msg && msg.t === 'list'){ hubOwner = typeof msg.owner === 'string' && msg.owner ? msg.owner : null; onList(msg.list); }
+    else if (msg && msg.t === 'handover' && typeof msg.to === 'string') handover = {to: msg.to, at: Date.now()};
     else if (msg && msg.t === 'relay' && msg.data) onRelay(msg.from, msg.data);
     else if (msg && msg.t === 'chatlog' && Array.isArray(msg.list)){ for (const m of msg.list.slice(-CHAT_KEEP)) addChat(m, {history: true, via: hubConn && hubConn.peer}); }
   });
@@ -2050,8 +2084,22 @@ function wireHubConn(c){
 // Falhas seguidas ao abrir a conexão com quem segura a sala = rede bloqueando conexão direta.
 // (Quando a sala simplesmente ficou sem dono, não conta: alguém assume em seguida.)
 let hubFailStreak = 0, hubMissing = false;
+let hubOwner = null;        // id de quem segura a sala (null: quem segura está numa versão anterior à 1.17.2)
+let handover = null;        // {to, at}: a sala está sendo passada para alguém
 function scheduleHubRecovery(){
   if (hubRetryTimer || !me || me.destroyed) return;
+  const ho = handover && Date.now() - handover.at < 10000 ? handover : null;
+  if (ho){
+    // a sala está sendo passada: quem recebe assume na hora; os outros esperam e se conectam a ela
+    handover = null;
+    const old = hubConn; hubConn = null; try{ old && old.close(); }catch{}
+    const mine = ho.to === me.id;
+    setStatus(mine ? 'Assumindo a sala…' : 'A sala está mudando de dono…', 'warn');
+    netLog(mine ? 'a sala foi passada para mim' : 'a sala foi passada para ' + nameOf(ho.to));
+    if (mine) toast('A sala passou para você: quem entrar agora se conecta ao seu ' + (DESKTOP ? 'PC' : 'aparelho') + '.', 'ok', 6000);
+    hubRetryTimer = setTimeout(async () => { hubRetryTimer = null; lastHubMsg = Date.now(); await ensureHub(mine ? 6 : 1); }, mine ? 50 : 2500 + Math.random() * 1000);
+    return;
+  }
   setStatus('Reorganizando a sala…', 'warn');
   const old = hubConn; hubConn = null;
   netLog(hubMissing ? 'a sala ficou sem dono: tentando assumir' : 'conexão com o hub ' + (old && old._opened ? 'caiu' : 'não abriu'));
@@ -2079,6 +2127,7 @@ function tickClient(){
   pumpBlobs();
   if (hubConn && hubConn.open) try{ hubConn.send({t:'ping'}); }catch{}
   if (Date.now() - lastHubMsg > 15000) scheduleHubRecovery();
+  if (bulletinTick % 3 === 1) autoHandover();
   updatePip();
   syncWaits();
   renderMembers();
@@ -2118,7 +2167,7 @@ const VER_GRACE = 8000;
 function announceTo(pid){
   if (announced.has(pid)) return;
   announced.add(pid);
-  hubSend({t:'relay', to: pid, data: {k:'hi', v: TELAO_VERSION, d: DESKTOP, av: myAvatar || '', aw: amAway}});
+  hubSend({t:'relay', to: pid, data: {k:'hi', v: TELAO_VERSION, d: DESKTOP, ph: PHONE, av: myAvatar || '', aw: amAway}});
   sendStickersTo(pid);
   sendGamesTo(pid);
 }
@@ -2200,7 +2249,7 @@ function renderMemPop(){
     const row = document.createElement('div'); row.className = 'mrow';
     const nm = document.createElement('span'); nm.className = 'mn';
     const b = document.createElement('b'); b.textContent = m.name + (isMe ? ' (você)' : '');
-    const sm = document.createElement('small'); sm.textContent = mv.txt; if (mv.old) sm.className = 'old';
+    const sm = document.createElement('small'); sm.textContent = mv.txt + (hubOwner && m.id === hubOwner ? ' · segura a sala' : ''); if (mv.old) sm.className = 'old';
     nm.append(b, sm);
     const st = document.createElement('span'); st.className = 'mst' + (isMe ? ' me' : '');
     if (isAway(m.id)){ st.classList.add('aw'); st.textContent = 'ausente'; }
@@ -2237,6 +2286,22 @@ function renderMemPop(){
   call.onclick = () => { closePop(); copyInvite(); };
   const sep = document.createElement('div'); sep.className = 'sep';
   box.append(sep, call);
+  // Quem segura a sala: é o PC a que todo mundo se conecta para entrar. Se ele estiver longe ou numa rede difícil,
+  // quem não consegue chegar nele não entra; dá para passar a sala para outro PC.
+  if (me && hubOwner !== me.id){
+    const hold = document.createElement('button'); hold.type = 'button'; hold.className = 'mi'; hold.id = 'memHold';
+    hold.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>';
+    if (hubOwner){
+      hold.append('Segurar a sala (hoje com ' + nameOf(hubOwner) + ')');
+      hold.title = 'Todo mundo passa a se conectar ao seu ' + (DESKTOP ? 'PC' : 'aparelho') + ' para entrar na sala. Ajuda quando alguém não consegue entrar.';
+      hold.onclick = () => { closePop(); if (askHandover(me.id)) toast('Pedindo a sala para você…'); };
+    } else {
+      hold.append('Quem segura a sala está numa versão antiga');
+      hold.title = 'Para passar a sala de um PC para outro, quem segura precisa estar na 1.17.2 ou mais nova.';
+      hold.disabled = true;
+    }
+    box.appendChild(hold);
+  }
 }
 // Sala vazia: quem está aqui e um botão grande para transmitir.
 function renderEmptyPeople(){
@@ -3559,7 +3624,7 @@ function onRelay(from, data){
   if (data.k === 'kicked'){ onKickNote(from, data); return; }
   if (/^rly-(ok|no|fail|stop|lost)$/.test(data.k)){ onRelayMsgForStreamer(from, data); return; }
   if (data.k === 'hi'){
-    peerVer.set(from, {v: String(data.v || '').slice(0, 20), d: !!data.d});
+    peerVer.set(from, {v: String(data.v || '').slice(0, 20), d: !!data.d, ph: !!data.ph});
     if (data.aw === true && !peerAway.has(from)) onAwayMsg(from, {on: true});
     const av = validHash(data.av) ? data.av : '';
     if (av !== (peerAvatar.get(from) || '')){ if (av) peerAvatar.set(from, av); else peerAvatar.delete(from); }
