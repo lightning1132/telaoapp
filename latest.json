@@ -1,26 +1,24 @@
 {
-  "version": "1.18.1",
+  "version": "1.18.2",
   "minShell": 2,
-  "page": "versoes/telao-1.18.1.html",
-  "sha256": "7f890e6f37564874e8722a3a37b4f471b13ae0b8317fd72c8c480a66119df4d7",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.18.1",
+  "page": "versoes/telao-1.18.2.html",
+  "sha256": "4bcdf06b76a53c1d83f83f3bc489fd458e7766748d2a26c9af507ac23744b816",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.18.2",
   "notes": [
-    "Motor de vídeo: conexão nova não abre mais uma codificação à parte enquanto a internet ainda está sendo medida (cada troca fazia a tela engasgar no começo)",
-    "Motor de vídeo em H.265: o vídeo de mentira passa a ser 640x360 (codificadores H.265 da placa recusam imagem muito pequena)",
-    "Medição de uso real e \"Ao vivo\" mostram os números de verdade do motor (resolução, ritmo, codificador do Telão Audio) em vez dos do vídeo de mentira"
+    "Janela de teste (Opções → Desempenho): abre um segundo Telão neste PC, com outro nome e já na sua sala, para assistir a si mesmo e testar o motor de vídeo sem precisar de outra pessoa"
   ],
   "app": {
-    "version": "1.18.1",
+    "version": "1.18.2",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.18.1/app.asar",
-        "sha256": "fc5b8b863ef17fb811948aa791c605d432dbfdf5f4a00512435e38145be32bd7",
-        "size": 622248
+        "path": "versoes/app-1.18.2/app.asar",
+        "sha256": "1723c834c9a67a3a82848648de04bef508b258149e897027de22b2c9f69c3013",
+        "size": 625498
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.18.1/telao-audio.exe",
+        "path": "versoes/app-1.18.2/telao-audio.exe",
         "sha256": "6d899dfded3654d71b4127f5b808d4c59e6fc3c0f7fab7b1f370f8a54656aef9",
         "size": 797696
       }

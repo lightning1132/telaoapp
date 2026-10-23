@@ -978,7 +978,9 @@ html:not(.cinema) #cineChat{display:none}
       <section id="optPerfSec" hidden>
         <h3>Desempenho</h3>
         <div id="optEngineBox"><label class="chk"><input type="checkbox" id="optEngine"> Motor de vídeo do Telão Audio</label>
-        <p class="muted dg-p" style="margin-top:6px;margin-bottom:10px">Transmitindo: o Telão Audio captura e codifica o jogo direto na placa de vídeo. Assistindo: ele decodifica e desenha a tela numa janela própria. Usa bem menos memória e processador. Se algo der errado, a tela volta sozinha para o caminho normal; desligue aqui só se algo ficar estranho.</p></div>
+        <p class="muted dg-p" style="margin-top:6px;margin-bottom:10px" id="optEngineP">Transmitindo: o Telão Audio captura e codifica o jogo direto na placa de vídeo. Assistindo: ele decodifica e desenha a tela numa janela própria. Usa bem menos memória e processador. Se algo der errado, a tela volta sozinha para o caminho normal; desligue aqui só se algo ficar estranho.</p>
+        <div id="optTestBox" hidden style="margin-bottom:12px"><button type="button" class="ghost" id="optTestWin">Abrir janela de teste</button>
+        <p class="muted dg-p" style="margin-top:6px">Abre um segundo Telão neste PC, com outro nome, para você entrar na mesma sala e assistir a si mesmo (bom para testar o motor sem precisar de outra pessoa). Abaixe o volume da sua tela nela, senão o som do jogo sai duas vezes.</p></div></div>
         <div id="optNativeOvBox"><label class="chk"><input type="checkbox" id="optNativeOv"> Reações e chat por cima do jogo desenhados pelo Telão Audio</label>
         <p class="muted dg-p" style="margin-top:6px">Mais leve: não disputa a placa de vídeo com a captura turbo (com a camada antiga, spam de reações travava a transmissão). Desligue só se as reações não aparecerem direito por cima do jogo.</p></div>
         <label class="chk" style="margin-top:10px"><input type="checkbox" id="optGpuPrio"> Prioridade do Telão na placa de vídeo <span class="muted">(experimental)</span></label>
@@ -1036,7 +1038,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.18.1';
+const TELAO_VERSION = '1.18.2';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1046,7 +1048,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.18.1', 'hoje', ['Motor de vídeo: conexão nova não abre mais uma codificação à parte enquanto a internet ainda está sendo medida (cada troca fazia a tela engasgar no começo)',
+  ['1.18.2', 'hoje', ['Janela de teste (Opções → Desempenho): abre um segundo Telão neste PC, com outro nome e já na sua sala, para assistir a si mesmo e testar o motor de vídeo sem precisar de outra pessoa']],
+  ['1.18.1', '23/10', ['Motor de vídeo: conexão nova não abre mais uma codificação à parte enquanto a internet ainda está sendo medida (cada troca fazia a tela engasgar no começo)',
                       'Motor de vídeo em H.265: o vídeo de mentira passa a ser 640x360 (codificadores H.265 da placa recusam imagem muito pequena)',
                       'Medição de uso real e "Ao vivo" mostram os números de verdade do motor (resolução, ritmo, codificador do Telão Audio) em vez dos do vídeo de mentira']],
   ['1.18.0', '23/10', ['Motor de vídeo (app 1.18): transmitindo, o Telão Audio captura e codifica o jogo direto na placa de vídeo; assistindo, ele decodifica na placa e desenha a tela numa janela própria. Bem menos memória e processador do que pelo Chromium. Ligado por padrão',
@@ -1221,8 +1224,10 @@ function initUpdates(){
 function initVersion(){
   const kind = window.telaoDesktop ? 'Desktop' : 'Navegador';
   const appV = window.telaoDesktop && window.telaoDesktop.version && window.telaoDesktop.version !== '?' ? window.telaoDesktop.version : '';
-  $('#verTxt').textContent = 'v' + TELAO_VERSION + ' · ' + kind + (appV ? ' · app ' + appV : '');
-  $('#barVer').textContent = 'v' + TELAO_VERSION;
+  const testWin = DESKTOP && !!window.telaoDesktop.profile;
+  $('#verTxt').textContent = 'v' + TELAO_VERSION + ' · ' + kind + (appV ? ' · app ' + appV : '') + (testWin ? ' · janela de teste' : '');
+  $('#barVer').textContent = 'v' + TELAO_VERSION + (testWin ? ' · teste' : '');
+  if (testWin) document.title = 'Telão (janela de teste)';
   $('#barVer').title = 'Telão ' + TELAO_VERSION + ' (' + kind + ')';
   const news = $('#news');
   for (const [v, when, items] of CHANGELOG){
@@ -1594,6 +1599,11 @@ function initLobby(){
   const fromHash = cleanCode((location.hash.match(/sala=([^&]+)/) || [])[1]);
   const openTurn = store.get('openTurn', false);
   $('#code').value = fromHash || (openTurn && store.get('lastRoom', '')) || genCode();
+  if (DESKTOP && window.telaoDesktop.profile){   // janela de teste: já vem com a sala de quem abriu e um nome próprio
+    const r = cleanCode(window.telaoDesktop.room || '');
+    if (r) $('#code').value = r;
+    if (!$('#name').value) $('#name').value = 'Teste';
+  }
   const t = store.get('turn', {});
   $('#turnUrl').value = t.url || ''; $('#turnUser').value = t.user || ''; $('#turnPass').value = t.pass || '';
   $('#turnLink').value = t.link || '';
@@ -5033,6 +5043,7 @@ function syncOpts(){
   $('#optNativeOv').checked = !!store.get('nativeOverlay', true);
   $('#optEngineBox').hidden = !engineAllowed();
   $('#optEngine').checked = store.get('engine', true) !== false;
+  $('#optTestBox').hidden = !(DESKTOP && typeof window.telaoDesktop.openTest === 'function' && !window.telaoDesktop.profile);
   $('#optPrivMsg').value = privateMsg();
   renderThemeOpts();
   renderLobbyAvatar();
@@ -5048,6 +5059,10 @@ function initOpts(){
   };
   $('#optH265').onchange = () => { store.set('h265auto', $('#optH265').checked); h265PrefCache = null; toast('Vale a partir da próxima conexão (comece a transmitir de novo, ou recarregue quem assiste).'); };
   $('#optNativeOv').onchange = () => { store.set('nativeOverlay', $('#optNativeOv').checked); if (localStream && (overlayOn() || chatOverlayOn())){ hideOverlay(); showOverlay(); } };
+  $('#optTestWin').onclick = async () => {
+    let ok = false; try{ ok = await window.telaoDesktop.openTest(room || ''); }catch{}
+    toast(ok ? 'Abrindo a janela de teste' + (room ? ': ela já vem com o código da sala ' + room : '') + '.' : 'Não consegui abrir a janela de teste.', ok ? 'ok' : 'warn', 8000);
+  };
   $('#optEngine').onchange = () => {
     store.set('engine', $('#optEngine').checked);
     if ($('#optEngine').checked){ engineInit(); toast('Motor de vídeo ligado: vale para as próximas telas e a próxima transmissão.'); }

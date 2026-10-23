@@ -10,6 +10,12 @@ const fs = require('fs');
 const {spawn} = require('child_process');
 const {Updater, SHELL_VERSION} = require('./updater');
 
+// Janela de teste (--telao-perfil=teste): uma segunda janela do Telão no mesmo PC, com perfil próprio (outro nome, outra
+// pessoa na sala), para assistir a si mesmo. Usa o Telão Audio e a página da janela principal e não atualiza nada.
+const PROFILE = ((process.argv.find(a => a.startsWith('--telao-perfil=')) || '').split('=')[1] || '').replace(/[^a-z0-9]/gi, '').slice(0, 16);
+const MAIN_USERDATA = app.getPath('userData');
+if (PROFILE) app.setPath('userData', MAIN_USERDATA + '-' + PROFILE);
+
 // Configurações que precisam valer antes do Chromium iniciar (alteradas pelo painel de diagnóstico).
 const CONFIG_FILE = path.join(app.getPath('userData'), 'telao-config.json');
 function readConfig(){ try{ return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) || {}; }catch{ return {}; } }
@@ -65,6 +71,7 @@ const ICON_MARK = () => path.join(app.getPath('userData'), 'exe-icone.txt');
 const ICON_TRIES = () => path.join(app.getPath('userData'), 'exe-icone-tentativas.json');
 function exeIconDone(){ try{ return fs.readFileSync(ICON_MARK(), 'utf8').trim().toLowerCase() === process.execPath.toLowerCase(); }catch{ return false; } }
 function scheduleExeIcon(){
+  if (PROFILE) return;
   if (process.platform !== 'win32' || !app.isPackaged || (updater && updater.applying) || exeIconDone()) return;
   try{
     const exe = process.execPath, hp = helperPath(), ud = app.getPath('userData');
@@ -97,7 +104,7 @@ function createWindow(){
   win = new BrowserWindow({
     width: 1280, height: 800, minWidth: 720, minHeight: 480,
     backgroundColor: '#0d0f12',
-    title: 'Telão',
+    title: PROFILE ? 'Telão (janela de teste)' : 'Telão',
     icon: APP_ICON,
     autoHideMenuBar: true,
     ...(wco ? {titleBarStyle: 'hidden', titleBarOverlay: {color: '#12151a', symbolColor: '#8a93a2', height: WCO_H}} : {}),
@@ -107,14 +114,14 @@ function createWindow(){
       nodeIntegration: false,
       backgroundThrottling: false,
       additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION, '--telao-main-pid=' + process.pid,
-                            '--telao-wco=' + (wco ? WCO_H : 0)],
+                            '--telao-wco=' + (wco ? WCO_H : 0), ...(PROFILE ? ['--telao-perfil=' + PROFILE, '--telao-sala=' + ((process.argv.find(a => a.startsWith('--telao-sala=')) || '').split('=')[1] || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40)] : [])],
     },
   });
   Menu.setApplicationMenu(null);
   // Página: a baixada pela atualização automática (se mais nova e saudável) ou a instalada.
   const page = updater.choosePage();
   win.loadFile(page.file);
-  updater.watch(win);
+  if (!PROFILE) updater.watch(win);
 
   // Links externos abrem no navegador; nada de janelas novas dentro do app.
   win.webContents.setWindowOpenHandler(({url, frameName}) => {
@@ -307,6 +314,12 @@ app.whenReady().then(() => {
     const w = BrowserWindow.fromWebContents(e.sender); if (!w) return '';
     try{ const b = w.getNativeWindowHandle(); return b.length >= 8 ? b.readBigUInt64LE(0).toString() : b.readUInt32LE(0).toString(); }catch{ return ''; }
   });
+  // Abre a janela de teste (outro processo do Telão com perfil próprio). Se já estiver aberta, ela só vem para a frente.
+  ipcMain.handle('telao:openTest', (_e, room) => {
+    if (PROFILE) return false;
+    const r = String(room || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40);
+    try{ spawn(process.execPath, [...(app.isPackaged ? [] : [app.getAppPath()]), '--telao-perfil=teste', ...(r ? ['--telao-sala=' + r] : [])], {detached: true, stdio: 'ignore'}).unref(); return true; }catch{ return false; }
+  });
   // Duplo clique na janela de vídeo do Telão Audio: tela cheia exige "gesto do usuário", que só o app consegue dar à página.
   ipcMain.handle('telao:natGesture', e => {
     if (!win || e.sender !== win.webContents) return false;
@@ -432,11 +445,11 @@ app.whenReady().then(() => {
   });
 
   // ---- atualização automática ----
-  ipcMain.handle('telao:ready', (_e, v) => { updater.pageReady(v); updater.markAppOk(); cleanExeIcon(); return {shell: SHELL_VERSION, cached: !!(updater.loaded && updater.loaded.cached)}; });
-  ipcMain.handle('telao:applyApp', () => updater.applyApp());
-  ipcMain.handle('telao:checkUpdate', () => updater.check());
+  ipcMain.handle('telao:ready', (_e, v) => { updater.pageReady(v); if (!PROFILE){ updater.markAppOk(); cleanExeIcon(); } return {shell: SHELL_VERSION, cached: !!(updater.loaded && updater.loaded.cached)}; });
+  ipcMain.handle('telao:applyApp', () => PROFILE ? false : updater.applyApp());
+  ipcMain.handle('telao:checkUpdate', () => PROFILE ? {status: 'janela de teste'} : updater.check());
   ipcMain.handle('telao:applyUpdate', () => {
-    if (!win) return false;
+    if (!win || PROFILE) return false;
     const page = updater.choosePage();
     win.loadFile(page.file);
     updater.watch(win);
@@ -444,9 +457,10 @@ app.whenReady().then(() => {
   });
 
   updater = new Updater(__dirname);
+  if (PROFILE){ updater.dir = path.join(MAIN_USERDATA, 'page'); updater.metaFile = path.join(updater.dir, 'meta.json'); }   // mesma página da janela principal
   startHelper();
   createWindow();
-  updater.start();
+  if (!PROFILE) updater.start();
 });
 
 app.on('before-quit', () => { stopHelper(); if (overlay && !overlay.isDestroyed()) overlay.destroy(); });
