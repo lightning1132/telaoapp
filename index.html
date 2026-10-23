@@ -1038,7 +1038,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.18.2';
+const TELAO_VERSION = '1.18.3';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1048,7 +1048,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.18.2', 'hoje', ['Janela de teste (Opções → Desempenho): abre um segundo Telão neste PC, com outro nome e já na sua sala, para assistir a si mesmo e testar o motor de vídeo sem precisar de outra pessoa']],
+  ['1.18.3', 'hoje', ['Motor de vídeo, quem assiste: o decodificador do Windows não abria ("não entrega NV12") porque precisava saber um tamanho de vídeo antes do primeiro quadro. Agora parte de 1080p e se ajusta no primeiro quadro completo; se ainda não sair imagem, o relatório diz por quê']],
+  ['1.18.2', '23/10', ['Janela de teste (Opções → Desempenho): abre um segundo Telão neste PC, com outro nome e já na sua sala, para assistir a si mesmo e testar o motor de vídeo sem precisar de outra pessoa']],
   ['1.18.1', '23/10', ['Motor de vídeo: conexão nova não abre mais uma codificação à parte enquanto a internet ainda está sendo medida (cada troca fazia a tela engasgar no começo)',
                       'Motor de vídeo em H.265: o vídeo de mentira passa a ser 640x360 (codificadores H.265 da placa recusam imagem muito pequena)',
                       'Medição de uso real e "Ao vivo" mostram os números de verdade do motor (resolução, ritmo, codificador do Telão Audio) em vez dos do vídeo de mentira']],

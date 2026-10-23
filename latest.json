@@ -1,26 +1,26 @@
 {
-  "version": "1.18.2",
+  "version": "1.18.3",
   "minShell": 2,
-  "page": "versoes/telao-1.18.2.html",
-  "sha256": "4bcdf06b76a53c1d83f83f3bc489fd458e7766748d2a26c9af507ac23744b816",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.18.2",
+  "page": "versoes/telao-1.18.3.html",
+  "sha256": "889bb93513cae530a4e6d32d4cd2483ed9c9ec091141221bcd18613bd696f226",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.18.3",
   "notes": [
-    "Janela de teste (Opções → Desempenho): abre um segundo Telão neste PC, com outro nome e já na sua sala, para assistir a si mesmo e testar o motor de vídeo sem precisar de outra pessoa"
+    "Motor de vídeo, quem assiste: o decodificador do Windows não abria (\"não entrega NV12\") porque precisava saber um tamanho de vídeo antes do primeiro quadro. Agora parte de 1080p e se ajusta no primeiro quadro completo; se ainda não sair imagem, o relatório diz por quê"
   ],
   "app": {
-    "version": "1.18.2",
+    "version": "1.18.3",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.18.2/app.asar",
-        "sha256": "1723c834c9a67a3a82848648de04bef508b258149e897027de22b2c9f69c3013",
-        "size": 625498
+        "path": "versoes/app-1.18.3/app.asar",
+        "sha256": "218483645c70054ec6c2da10f12cd908f9ba99b38754747ec58f0b7d1f4b2f3a",
+        "size": 625802
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.18.2/telao-audio.exe",
-        "sha256": "6d899dfded3654d71b4127f5b808d4c59e6fc3c0f7fab7b1f370f8a54656aef9",
-        "size": 797696
+        "path": "versoes/app-1.18.3/telao-audio.exe",
+        "sha256": "15e35fef3408e9233eb2a042f8d551b78162460edceb24f45640ff2aa8c4df03",
+        "size": 801792
       }
     }
   }
