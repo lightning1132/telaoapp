@@ -1010,7 +1010,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.17.0';
+const TELAO_VERSION = '1.17.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1020,7 +1020,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 13;      // nível do app desktop mais novo (13: camada por cima do jogo desenhada pelo Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.17.0', 'hoje', ['Celular: interface própria para assistir. A tela fica em cima, na largura toda e sem nada por cima; nome, qualidade, som, tela cheia e reações ficam embaixo; as outras telas viram uma lista (toque para trocar). Um toque no vídeo mostra os botões',
+  ['1.17.1', 'hoje', ['Relatório: na conexão com a sala, diz se cada caminho é IPv4, IPv6 ou endereço local escondido (o iPhone esconde o dele) e, quando conecta, por qual par conectou. Ajuda a entender por que um celular não entra']],
+  ['1.17.0', '22/10', ['Celular: interface própria para assistir. A tela fica em cima, na largura toda e sem nada por cima; nome, qualidade, som, tela cheia e reações ficam embaixo; as outras telas viram uma lista (toque para trocar). Um toque no vídeo mostra os botões',
                       'Celular: deitar o celular põe em tela cheia (no Android vira tela cheia de verdade no primeiro toque; no iPhone o vídeo ocupa a tela, e dá para abrir o player do iPhone). Reações e mensagens do chat aparecem por cima',
                       'Celular: chat em gaveta embaixo, sem o botão de compartilhar (o navegador do celular não compartilha a tela) e o celular nunca é escolhido para repassar vídeo',
                       'Dá para adicionar o Telão à tela inicial do celular: abre como app, sem a barra do navegador']],
@@ -1208,15 +1209,18 @@ function netLog(m){
 async function netLogCandidates(pc, label){
   if (!pc) return;
   try{
-    const rep = await pc.getStats(), loc = {}, rem = {};
+    const rep = await pc.getStats(), loc = {}, rem = {}, byId = {};
     let pair = null;
+    // tipo + endereço (v4, v6 ou nome .local escondido) + protocolo: mostra se dava para tentar IPv6 direto
+    const kind = r => { const a = String(r.address || r.ip || ''); return r.candidateType + (!a ? '' : /\.local$/i.test(a) ? '(local escondido)' : a.includes(':') ? '(v6)' : '(v4)') + '/' + (r.protocol || '?'); };
     rep.forEach(r => {
-      if (r.type === 'local-candidate') loc[r.candidateType + '/' + (r.protocol || '?')] = (loc[r.candidateType + '/' + (r.protocol || '?')] || 0) + 1;
-      if (r.type === 'remote-candidate') rem[r.candidateType + '/' + (r.protocol || '?')] = (rem[r.candidateType + '/' + (r.protocol || '?')] || 0) + 1;
+      if (r.type === 'local-candidate'){ byId[r.id] = r; loc[kind(r)] = (loc[kind(r)] || 0) + 1; }
+      if (r.type === 'remote-candidate'){ byId[r.id] = r; rem[kind(r)] = (rem[kind(r)] || 0) + 1; }
       if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated) pair = r;
     });
     const fmt = o => Object.entries(o).map(([k, v]) => k + '×' + v).join(' ') || 'nenhum';
-    netLog(label + ' · meus caminhos: ' + fmt(loc) + ' · do outro lado: ' + fmt(rem) + (pair ? ' · par conectado' : ' · nenhum par conectado') +
+    const pk = pair && byId[pair.localCandidateId] && byId[pair.remoteCandidateId] ? ' (' + kind(byId[pair.localCandidateId]) + ' → ' + kind(byId[pair.remoteCandidateId]) + ')' : '';
+    netLog(label + ' · meus caminhos: ' + fmt(loc) + ' · do outro lado: ' + fmt(rem) + (pair ? ' · par conectado' + pk : ' · nenhum par conectado') +
            ' · ICE ' + pc.iceConnectionState + '/' + pc.connectionState);
   }catch{}
 }
@@ -1227,6 +1231,7 @@ function watchConnPc(c, label){
     pc.addEventListener('iceconnectionstatechange', () => {
       netLog(label + ': ICE ' + pc.iceConnectionState);
       if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') netLogCandidates(pc, label);
+      else if (pc.iceConnectionState === 'connected' && !c._pairLogged){ c._pairLogged = true; setTimeout(() => netLogCandidates(pc, label + ' por onde conectou'), 300); }
     });
   };
   c._pcTries = 1; hook();

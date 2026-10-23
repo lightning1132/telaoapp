@@ -1,27 +1,24 @@
 {
-  "version": "1.17.0",
+  "version": "1.17.1",
   "minShell": 2,
-  "page": "versoes/telao-1.17.0.html",
-  "sha256": "b38597cb6ca97c01cc70bbaef0f9f7fbdf589d2a98f51701d84a3f5f4147312b",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.17.0",
+  "page": "versoes/telao-1.17.1.html",
+  "sha256": "ac1d2a9c0f72a60860ed19273e4108290ac6bca17642df3e6b36cf11f9eec402",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.17.1",
   "notes": [
-    "Celular: interface própria para assistir. A tela fica em cima, na largura toda e sem nada por cima; nome, qualidade, som, tela cheia e reações ficam embaixo; as outras telas viram uma lista (toque para trocar). Um toque no vídeo mostra os botões",
-    "Celular: deitar o celular põe em tela cheia (no Android vira tela cheia de verdade no primeiro toque; no iPhone o vídeo ocupa a tela, e dá para abrir o player do iPhone). Reações e mensagens do chat aparecem por cima",
-    "Celular: chat em gaveta embaixo, sem o botão de compartilhar (o navegador do celular não compartilha a tela) e o celular nunca é escolhido para repassar vídeo",
-    "Dá para adicionar o Telão à tela inicial do celular: abre como app, sem a barra do navegador"
+    "Relatório: na conexão com a sala, diz se cada caminho é IPv4, IPv6 ou endereço local escondido (o iPhone esconde o dele) e, quando conecta, por qual par conectou. Ajuda a entender por que um celular não entra"
   ],
   "app": {
-    "version": "1.17.0",
+    "version": "1.17.1",
     "shell": 13,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.17.0/app.asar",
-        "sha256": "331fbdd2ee81a7541f0c10016b2dd1cd5bf35eff4e47799f3e750b4eadfe8809",
-        "size": 558222
+        "path": "versoes/app-1.17.1/app.asar",
+        "sha256": "4b256b6091a77c255c14ba507634f7d0735ad4d744c7f18610edbc1363a8a8ad",
+        "size": 559055
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.17.0/telao-audio.exe",
+        "path": "versoes/app-1.17.1/telao-audio.exe",
         "sha256": "5f543cc598b34c81baad48eb6a27e6ab617482d8881ee031eb277632d654038e",
         "size": 694784
       }
