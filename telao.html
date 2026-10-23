@@ -357,7 +357,7 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
   cursor:grab;touch-action:none;user-select:none}
 #pip.dragging{cursor:grabbing;opacity:.92;box-shadow:0 14px 40px rgba(0,0,0,.65)}
 #pip video{width:100%;aspect-ratio:16/9;background:#000;display:block;object-fit:contain;pointer-events:none}
-#pip.mini video{display:none}
+#pip.mini video,#pip.noprev video{display:none}
 #pip .pbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px;font-size:12px}
 #pip .pbar #pipTxt{order:-1;flex:1 1 100%;display:flex;align-items:center;gap:6px;padding:0 2px 2px}
 #pip .pbar #pipTxt::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--danger);flex:none}
@@ -904,7 +904,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.16.2';
+const TELAO_VERSION = '1.16.3';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -914,7 +914,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 13;      // nível do app desktop mais novo (13: camada por cima do jogo desenhada pelo Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.16.2', 'hoje', ['App, captura turbo pela placa: se ela começar a perder quadros (o Telão Audio entrega 60 e a transmissão sai com bem menos, como quando você assiste alguém ao mesmo tempo), o Telão troca sozinho para a turbo pela memória, sem cortar',
+  ['1.16.3', 'hoje', ['App, captura turbo: a miniatura "Transmitindo" era o que derrubava tudo. Mostrar a imagem da turbo nela fazia a transmissão cair para ~5 fps (pela placa) ou travava a tela do amigo que você assiste (pela memória). Agora a miniatura mostra uma prévia pequena (12 quadros/s) e a turbo segue a 60 com as telas dos amigos lisas']],
+  ['1.16.2', '22/10', ['App, captura turbo pela placa: se ela começar a perder quadros (o Telão Audio entrega 60 e a transmissão sai com bem menos, como quando você assiste alguém ao mesmo tempo), o Telão troca sozinho para a turbo pela memória, sem cortar',
                       'Relatório: a turbo segundo a segundo (quanto chega, quanto sai, por que descarta), para achar onde os quadros se perdem']],
   ['1.16.1', '22/10', ['App: reações e chat por cima do jogo agora são desenhados pelo Telão Audio. Com a captura turbo, reação ou chat (principalmente em spam) travava a transmissão; não trava mais',
                       'Corrige quem transmitia em VP8 pelo processador sem precisar: quando a 1ª imagem de alguém demorava (PC sobrecarregado), o Telão de quem assistia marcava o formato como "não consigo exibir" para sempre. Agora só marca se a imagem chega e não aparece, a marca vale 12 h, e as marcas antigas foram esquecidas',
@@ -2660,7 +2661,7 @@ async function startShare(){
     toast('Transmitindo sem som. Para enviar o áudio do sistema, marque "Compartilhar áudio" na janela de compartilhamento.', 'warn', 8000);
   }
   failCount.clear();
-  $('#pipVideo').srcObject = s; $('#pip').hidden = false;
+  syncPipVideo(); $('#pip').hidden = false;
   syncPrivateUi();
   $('#pip').classList.toggle('mini', store.get('pipMini', false));
   restorePip();
@@ -2755,7 +2756,27 @@ function swapOutgoingVideo(){
     const pc = c.peerConnection; if (!pc) continue;
     for (const snd of pc.getSenders()) if (snd.track && snd.track.kind === 'video' && snd.track !== vt) snd.replaceTrack(vt).then(() => applyQuality(pc, pid)).catch(() => {});
   }
-  $('#pipVideo').srcObject = privateOn ? new MediaStream([privateTrack]) : localStream;
+  syncPipVideo();
+}
+/* O que a miniatura "Transmitindo" mostra. Nunca a imagem da captura turbo: exibir aquela trilha numa <video> faz o
+   processo de vídeo do Telão subir/desenhar 60 imagens por segundo e disputa com o resto (pela placa, a transmissão
+   caía para ~5 fps; pela memória, a tela do amigo que você assiste travava). Com a turbo, a miniatura mostra a captura
+   normal de reserva (pequena e a poucos quadros por segundo), que não disputa nada. */
+const PIP_TURBO_PREVIEW = {w: 480, h: 270, fps: 12};
+function pipTrack(){
+  if (privateOn && privateTrack) return privateTrack;
+  if (!localStream) return null;
+  if (turboShare && turboActive()){
+    const sb = turboShare.standby;
+    return sb && sb.readyState === 'live' ? sb : null;
+  }
+  return localStream.getVideoTracks()[0] || null;
+}
+function syncPipVideo(){
+  const v = $('#pipVideo'), tr = pipTrack();
+  const cur = v.srcObject && v.srcObject.getVideoTracks()[0];
+  if (cur !== tr) v.srcObject = tr ? new MediaStream([tr]) : null;
+  $('#pip').classList.toggle('noprev', !tr);
 }
 function syncPrivateUi(){
   const on = privateOn && !!localStream;
@@ -5000,10 +5021,10 @@ function attachTurbo(ses, stream, chosen, tgt){
   for (const t of olds){
     t.removeEventListener('ended', stopShare); stream.removeTrack(t);
     if (!standby && !(t instanceof MediaStreamTrackGenerator) && t.readyState === 'live'){
-      // A captura normal fica de reserva, quase parada (1 quadro/s, minúscula): se a turbo cair, ela volta na hora,
-      // e enquanto há uma captura aberta o Chromium continua dizendo qual codificador está em uso.
+      // A captura normal fica de reserva, pequena e a poucos quadros/s: é ela que a miniatura mostra (ver pipTrack); se a
+      // turbo cair, ela volta na hora, e enquanto há uma captura aberta o Chromium continua dizendo qual codificador está em uso.
       standby = t;
-      t.applyConstraints({width: {max: 320}, height: {max: 180}, frameRate: {max: 1}}).catch(() => {});
+      t.applyConstraints({width: {max: PIP_TURBO_PREVIEW.w}, height: {max: PIP_TURBO_PREVIEW.h}, frameRate: {max: PIP_TURBO_PREVIEW.fps}}).catch(() => {});
     } else try{ t.stop(); }catch{}
   }
   turboShare = {ses, stream, chosen, tgt, standby, pending: null, retuning: false};

@@ -15,6 +15,10 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.16.3
+- Captura turbo: a miniatura "Transmitindo" mostra uma prévia pequena (12 quadros/s) em vez da imagem da turbo.
+  Exibir a imagem da turbo ali derrubava a transmissão ou travava a tela de quem você estava assistindo.
+
 NOVIDADES DO APP 1.16.2
 - Captura turbo pela placa perdendo quadros (por exemplo, assistindo alguém enquanto transmite): o Telão troca
   sozinho para a turbo pela memória, sem cortar a transmissão.

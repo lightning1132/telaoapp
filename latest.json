@@ -1,25 +1,24 @@
 {
-  "version": "1.16.2",
+  "version": "1.16.3",
   "minShell": 2,
-  "page": "versoes/telao-1.16.2.html",
-  "sha256": "763f3f05e9fb3dcb40b221f096f8796c7cb1f241ba31a7116a6e40c570683ecc",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.2",
+  "page": "versoes/telao-1.16.3.html",
+  "sha256": "797eeb80b0a545ec7d44c365cac8177214e828ba943fa2bbc4f5111b5e936b4c",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.3",
   "notes": [
-    "App, captura turbo pela placa: se ela começar a perder quadros (o Telão Audio entrega 60 e a transmissão sai com bem menos, como quando você assiste alguém ao mesmo tempo), o Telão troca sozinho para a turbo pela memória, sem cortar",
-    "Relatório: a turbo segundo a segundo (quanto chega, quanto sai, por que descarta), para achar onde os quadros se perdem"
+    "App, captura turbo: a miniatura \"Transmitindo\" era o que derrubava tudo. Mostrar a imagem da turbo nela fazia a transmissão cair para ~5 fps (pela placa) ou travava a tela do amigo que você assiste (pela memória). Agora a miniatura mostra uma prévia pequena (12 quadros/s) e a turbo segue a 60 com as telas dos amigos lisas"
   ],
   "app": {
-    "version": "1.16.2",
+    "version": "1.16.3",
     "shell": 13,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.16.2/app.asar",
-        "sha256": "7370f627b23182b5ddc3f2375870ec1413b9bf8a8c9eabef14dc46b93495fa0d",
-        "size": 492281
+        "path": "versoes/app-1.16.3/app.asar",
+        "sha256": "891e6a5fde16083ad86c8f399819991058da298cb00486d485e05fe7636406b3",
+        "size": 493698
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.16.2/telao-audio.exe",
+        "path": "versoes/app-1.16.3/telao-audio.exe",
         "sha256": "5f543cc598b34c81baad48eb6a27e6ab617482d8881ee031eb277632d654038e",
         "size": 694784
       }
