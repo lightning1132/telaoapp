@@ -1,24 +1,26 @@
 {
-  "version": "1.16.3",
+  "version": "1.16.4",
   "minShell": 2,
-  "page": "versoes/telao-1.16.3.html",
-  "sha256": "797eeb80b0a545ec7d44c365cac8177214e828ba943fa2bbc4f5111b5e936b4c",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.3",
+  "page": "versoes/telao-1.16.4.html",
+  "sha256": "9f7c24cfa7b969535a3e9db7d85a38c6237f6829c09ae580664acfa4e5dc01c0",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.4",
   "notes": [
-    "App, captura turbo: a miniatura \"Transmitindo\" era o que derrubava tudo. Mostrar a imagem da turbo nela fazia a transmissão cair para ~5 fps (pela placa) ou travava a tela do amigo que você assiste (pela memória). Agora a miniatura mostra uma prévia pequena (12 quadros/s) e a turbo segue a 60 com as telas dos amigos lisas"
+    "Tirar da sala funciona com quem está numa versão antiga: a sala fecha a conexão dele, ele some da lista de todo mundo e não consegue voltar por 20 min (quem está na 1.16+ continua saindo sozinho e pode voltar quando quiser)",
+    "Ausente e tirado da sala não recebem mais repasse: antes, quando você parava de enviar, outro amigo podia passar a repassar a sua tela para ele",
+    "Ausente continua ausente mesmo se o Telão antigo dele pedir o vídeo de novo"
   ],
   "app": {
-    "version": "1.16.3",
+    "version": "1.16.4",
     "shell": 13,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.16.3/app.asar",
-        "sha256": "891e6a5fde16083ad86c8f399819991058da298cb00486d485e05fe7636406b3",
-        "size": 493698
+        "path": "versoes/app-1.16.4/app.asar",
+        "sha256": "724e4c5cbb20d4545e64b9f812a7db91c4f41df0ff5ccabb47d4efe96e13bc97",
+        "size": 496300
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.16.3/telao-audio.exe",
+        "path": "versoes/app-1.16.4/telao-audio.exe",
         "sha256": "5f543cc598b34c81baad48eb6a27e6ab617482d8881ee031eb277632d654038e",
         "size": 694784
       }

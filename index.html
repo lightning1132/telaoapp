@@ -904,7 +904,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.16.3';
+const TELAO_VERSION = '1.16.4';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -914,7 +914,10 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 13;      // nível do app desktop mais novo (13: camada por cima do jogo desenhada pelo Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.16.3', 'hoje', ['App, captura turbo: a miniatura "Transmitindo" era o que derrubava tudo. Mostrar a imagem da turbo nela fazia a transmissão cair para ~5 fps (pela placa) ou travava a tela do amigo que você assiste (pela memória). Agora a miniatura mostra uma prévia pequena (12 quadros/s) e a turbo segue a 60 com as telas dos amigos lisas']],
+  ['1.16.4', 'hoje', ['Tirar da sala funciona com quem está numa versão antiga: a sala fecha a conexão dele, ele some da lista de todo mundo e não consegue voltar por 20 min (quem está na 1.16+ continua saindo sozinho e pode voltar quando quiser)',
+                      'Ausente e tirado da sala não recebem mais repasse: antes, quando você parava de enviar, outro amigo podia passar a repassar a sua tela para ele',
+                      'Ausente continua ausente mesmo se o Telão antigo dele pedir o vídeo de novo']],
+  ['1.16.3', '22/10', ['App, captura turbo: a miniatura "Transmitindo" era o que derrubava tudo. Mostrar a imagem da turbo nela fazia a transmissão cair para ~5 fps (pela placa) ou travava a tela do amigo que você assiste (pela memória). Agora a miniatura mostra uma prévia pequena (12 quadros/s) e a turbo segue a 60 com as telas dos amigos lisas']],
   ['1.16.2', '22/10', ['App, captura turbo pela placa: se ela começar a perder quadros (o Telão Audio entrega 60 e a transmissão sai com bem menos, como quando você assiste alguém ao mesmo tempo), o Telão troca sozinho para a turbo pela memória, sem cortar',
                       'Relatório: a turbo segundo a segundo (quanto chega, quanto sai, por que descarta), para achar onde os quadros se perdem']],
   ['1.16.1', '22/10', ['App: reações e chat por cima do jogo agora são desenhados pelo Telão Audio. Com a captura turbo, reação ou chat (principalmente em spam) travava a transmissão; não trava mais',
@@ -1803,8 +1806,23 @@ function tryClaimHub(){
   });
 }
 
+/* Quem segura a sala também faz valer o "tirar da sala": um Telão antigo (antes da 1.16) não sabe sair sozinho, então
+   o hub fecha a conexão dele e não deixa voltar por um tempo (pelo id; e pelo nome, se ele estava numa versão antiga,
+   porque recarregar a página gera outro id). Quem está na 1.16+ recebe o aviso, sai sozinho e pode voltar quando quiser. */
+const KICK_BAN_MS = 20 * 60000;
 function runHub(hp){
   const mem = new Map();
+  const banIds = new Map(), banNames = new Map();   // id/nome → até quando
+  const banned = (id, name) => { const now = Date.now(); return (banIds.get(id) || 0) > now || (name != null && (banNames.get(name) || 0) > now); };
+  const ban = id => {
+    const m = mem.get(id), until = Date.now() + (window.__kickBanMs || KICK_BAN_MS);
+    banIds.set(id, until);
+    const v = peerVer.get(id);
+    if (m && (!v || !v.v || cmpVer(v.v, '1.16.0') < 0)) banNames.set(m.name, until);
+    netLog('hub: ' + (m ? m.name : id.slice(-6)) + ' foi tirado da sala');
+    // um instante para o aviso chegar (quem está na 1.16+ sai sozinho e vai para a tela de entrada)
+    setTimeout(() => { const x = mem.get(id); if (x){ mem.delete(id); try{ x.conn.close(); }catch{} send(); } }, 1500);
+  };
   const chatLog = chatMsgs.slice(-CHAT_KEEP).map(m => ({id: m.id, from: m.from, n: m.n, x: m.x, st: m.st, at: m.at}));   // quem assume a sala continua o histórico
   const send = () => {
     const list = [...mem].map(([id, m]) => ({id, name: m.name, sharing: m.sharing}));
@@ -1815,6 +1833,7 @@ function runHub(hp){
     conn.on('data', msg => {
       if (!msg || typeof msg !== 'object') return;
       if (msg.t === 'hello'){
+        if (banned(conn.peer, String(msg.name || '?').slice(0, 24))){ setTimeout(() => { try{ conn.close(); }catch{} }, 200); return; }
         mem.set(conn.peer, {name: String(msg.name || '?').slice(0, 24), sharing: !!msg.sharing, conn, seen: Date.now()});
         send();
         if (chatLog.length) try{ conn.send({t: 'chatlog', list: chatLog}); }catch{}
@@ -1832,6 +1851,7 @@ function runHub(hp){
       else if (msg.t === 'relay' && typeof msg.to === 'string'){
         const dst = mem.get(msg.to);
         if (dst && dst.conn.open) try{ dst.conn.send({t:'relay', from: conn.peer, data: msg.data}); }catch{}
+        if (dst && msg.to !== conn.peer && msg.data && msg.data.k === 'kick') ban(msg.to);
       }
     });
     const drop = () => { const m = mem.get(conn.peer); if (m && m.conn === conn){ mem.delete(conn.peer); send(); } };
@@ -2801,7 +2821,7 @@ function initPrivate(){
 }
 
 function callPeer(pid){
-  if (!localStream || !me || me.destroyed) return;
+  if (!localStream || !me || me.destroyed || kickedIds.has(pid)) return;
   const codec = currentCodec();
   const hi = myHighHw();
   const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi, av1: myAv1Hw(), h265: myH265Hw(), h265all: h265Auto()}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
@@ -3317,6 +3337,7 @@ function onAwayMsg(from, d){
   else return;
   // quem transmite: para de mandar para quem está ausente (vale também para versões que não sabem ficar ausentes)
   if (d.on) pausedBy.set(who, true); else pausedBy.delete(who);
+  for (const ent of relayOut.values()) if (ent.v === who) relayPause(ent.s, who, !!d.on);   // e o que eu repasso para ela
   const c = outCalls.get(who);
   if (c) applyQuality(c.peerConnection, who);
   renderMembers(); updatePip();
@@ -3344,6 +3365,8 @@ function onKickNote(from, d){
   const c = outCalls.get(who);
   if (c){ outCalls.delete(who); try{ c.close(); }catch{} }
   relayVia.delete(who);
+  for (const [key, ent] of [...relayOut]) if (ent.v === who){ relayOut.delete(key); try{ ent.call.close(); }catch{} }   // não repasso mais nada para ela
+  renderRelayBar();
   updatePip();
 }
 function onKicked(from, d){
@@ -3447,6 +3470,7 @@ function onRelay(from, data){
   }
   if (data.k !== 'pause') return;
   const on = !!data.on;
+  if (!on && (peerAway.has(from) || kickedIds.has(from))) return;   // ausente continua pausado (um Telão antigo não sabe ficar ausente e pode pedir de novo)
   if (data.s && me && data.s !== me.id){ relayPause(data.s, from, on); return; }   // sou retransmissor desta tela
   if (on) pausedBy.set(from, true); else pausedBy.delete(from);
   const c = outCalls.get(from);
@@ -4530,7 +4554,7 @@ function noteUpload(totalKbps, hw){
 function directViewers(){
   const out = [];
   for (const [pid, c] of outCalls){
-    if (pausedBy.get(pid) || relayVia.has(pid)) continue;
+    if (pausedBy.get(pid) || relayVia.has(pid) || kickedIds.has(pid) || peerAway.has(pid)) continue;
     const pc = c.peerConnection;
     if (pc && pc.connectionState === 'connected') out.push(pid);
   }
@@ -4600,7 +4624,7 @@ function relayTick(bwLimited){
   // 2) alguém que não recebe direto de jeito nenhum
   for (const m of members){
     const v = m.id;
-    if (v === me.id || relayVia.has(v) || pausedBy.get(v) || !supportsRelay(v)) { noConnSince.delete(v); continue; }
+    if (v === me.id || relayVia.has(v) || pausedBy.get(v) || kickedIds.has(v) || peerAway.has(v) || !supportsRelay(v)) { noConnSince.delete(v); continue; }
     const c = outCalls.get(v);
     const ok = c && c.peerConnection && c.peerConnection.connectionState === 'connected';
     if (ok){ noConnSince.delete(v); continue; }
@@ -4633,7 +4657,7 @@ function onRelayMsgForStreamer(from, d){
 }
 // ----- lado de quem retransmite -----
 function onRelayReq(from, d){
-  const vs = (Array.isArray(d.vs) ? d.vs : []).filter(v => typeof v === 'string' && v !== me.id && v !== from).slice(0, 8);
+  const vs = (Array.isArray(d.vs) ? d.vs : []).filter(v => typeof v === 'string' && v !== me.id && v !== from && !kickedIds.has(v) && !peerAway.has(v)).slice(0, 8);   // nunca repassa para quem foi tirado ou está ausente
   const t = tiles.get(from);
   if (!relayAllowed() || !t || !t.video.srcObject || t.via || !vs.length){
     hubSend({t: 'relay', to: from, data: {k: 'rly-no', vs}}); return;
