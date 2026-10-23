@@ -1,26 +1,25 @@
 {
-  "version": "1.16.1",
+  "version": "1.16.2",
   "minShell": 2,
-  "page": "versoes/telao-1.16.1.html",
-  "sha256": "30672b40376ebc3d12e828a2b51fa23da1813a146c4151011ffde47baf473f49",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.1",
+  "page": "versoes/telao-1.16.2.html",
+  "sha256": "763f3f05e9fb3dcb40b221f096f8796c7cb1f241ba31a7116a6e40c570683ecc",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.2",
   "notes": [
-    "App: reações e chat por cima do jogo agora são desenhados pelo Telão Audio. Com a captura turbo, reação ou chat (principalmente em spam) travava a transmissão; não trava mais",
-    "Corrige quem transmitia em VP8 pelo processador sem precisar: quando a 1ª imagem de alguém demorava (PC sobrecarregado), o Telão de quem assistia marcava o formato como \"não consigo exibir\" para sempre. Agora só marca se a imagem chega e não aparece, a marca vale 12 h, e as marcas antigas foram esquecidas",
-    "Relatório mostra os formatos marcados, e o Diagnóstico tem \"Esquecer formatos marcados\""
+    "App, captura turbo pela placa: se ela começar a perder quadros (o Telão Audio entrega 60 e a transmissão sai com bem menos, como quando você assiste alguém ao mesmo tempo), o Telão troca sozinho para a turbo pela memória, sem cortar",
+    "Relatório: a turbo segundo a segundo (quanto chega, quanto sai, por que descarta), para achar onde os quadros se perdem"
   ],
   "app": {
-    "version": "1.16.1",
+    "version": "1.16.2",
     "shell": 13,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.16.1/app.asar",
-        "sha256": "a59912afd03f573eab928d7d6e54defe4c64aa92fdcb39006587997516ca410b",
-        "size": 486604
+        "path": "versoes/app-1.16.2/app.asar",
+        "sha256": "7370f627b23182b5ddc3f2375870ec1413b9bf8a8c9eabef14dc46b93495fa0d",
+        "size": 492281
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.16.1/telao-audio.exe",
+        "path": "versoes/app-1.16.2/telao-audio.exe",
         "sha256": "5f543cc598b34c81baad48eb6a27e6ab617482d8881ee031eb277632d654038e",
         "size": 694784
       }

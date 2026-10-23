@@ -904,7 +904,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.16.1';
+const TELAO_VERSION = '1.16.2';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -914,7 +914,9 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 13;      // nível do app desktop mais novo (13: camada por cima do jogo desenhada pelo Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.16.1', 'hoje', ['App: reações e chat por cima do jogo agora são desenhados pelo Telão Audio. Com a captura turbo, reação ou chat (principalmente em spam) travava a transmissão; não trava mais',
+  ['1.16.2', 'hoje', ['App, captura turbo pela placa: se ela começar a perder quadros (o Telão Audio entrega 60 e a transmissão sai com bem menos, como quando você assiste alguém ao mesmo tempo), o Telão troca sozinho para a turbo pela memória, sem cortar',
+                      'Relatório: a turbo segundo a segundo (quanto chega, quanto sai, por que descarta), para achar onde os quadros se perdem']],
+  ['1.16.1', '22/10', ['App: reações e chat por cima do jogo agora são desenhados pelo Telão Audio. Com a captura turbo, reação ou chat (principalmente em spam) travava a transmissão; não trava mais',
                       'Corrige quem transmitia em VP8 pelo processador sem precisar: quando a 1ª imagem de alguém demorava (PC sobrecarregado), o Telão de quem assistia marcava o formato como "não consigo exibir" para sempre. Agora só marca se a imagem chega e não aparece, a marca vale 12 h, e as marcas antigas foram esquecidas',
                       'Relatório mostra os formatos marcados, e o Diagnóstico tem "Esquecer formatos marcados"']],
   ['1.16.0', '22/10', ['Ausente: quem não responde ao "Ainda está aí?" (45 min sem mexer no PC), bloqueia a tela ou é marcado por alguém para de receber vídeo, e ninguém gasta internet ou placa com ele. Volta ao mexer',
@@ -4860,7 +4862,7 @@ function startTurbo(o){
     try{ gtr = new MediaStreamTrackGenerator({kind: 'video'}); writer = gtr.writable.getWriter(); }
     catch(e){ return reject(new Error('gerador de vídeo indisponível (' + e.message + ')')); }
     const s = {gen, mode: gpu ? 'gpu' : 'mem', track: gtr, boxW: o.w, boxH: o.h, fps: o.fps, w: 0, h: 0, sw: 0, sh: 0, fmt: '', adapter: '',
-               frames: 0, dropped: 0, writing: 0, stat: null, ended: false, started: false, imported: false, onEnd: null, t0: performance.now()};
+               frames: 0, dropped: 0, dropBusy: 0, dropSlot: 0, written: 0, lat: [], writing: 0, stat: null, ended: false, started: false, imported: false, onEnd: null, t0: performance.now()};
     let ws = null, timer = null;
     const cleanup = () => {
       clearTimeout(timer);
@@ -4884,7 +4886,7 @@ function startTurbo(o){
     s.info = info;
     s.push = f => {
       if (s.ended){ try{ f.close(); }catch{} return; }
-      if (s.writing >= 2){ try{ f.close(); }catch{} s.dropped++; return; }   // o codificador está atrasado: descarta em vez de acumular atraso
+      if (s.writing >= 2){ try{ f.close(); }catch{} s.dropped++; s.dropBusy++; return; }   // o codificador está atrasado: descarta em vez de acumular atraso
       let vf = null;
       if (s.mode === 'gpu' && !s.noCopy){
         // O quadro que vem da placa carrega o horário de quando a imagem foi importada (sempre o mesmo), e com isso o
@@ -4900,8 +4902,10 @@ function startTurbo(o){
       // (trocar só o horário de um quadro já pronto não adianta: o WebRTC continua vendo o horário original)
       if (vf) try{ f.close(); }catch{}
       else vf = f;
-      s.writing++; s.frames++; s.lastAt = performance.now();
-      writer.write(vf).then(() => { s.writing--; }, () => { s.writing--; try{ vf.close(); }catch{} });
+      const t0 = performance.now();
+      s.writing++; s.frames++; s.lastAt = t0;
+      writer.write(vf).then(() => { s.writing--; s.written++; s.lat.push(performance.now() - t0); if (s.lat.length > 240) s.lat.shift(); },
+                         () => { s.writing--; try{ vf.close(); }catch{} });
       if (!s.started){ s.started = true; clearTimeout(timer); turboNote('turbo ' + s.mode + ' ok: ' + s.sw + 'x' + s.sh + ' → ' + s.w + 'x' + s.h + ' ' + s.fmt + (s.adapter ? ' · ' + s.adapter : '')); resolve(s); }
     };
     try{ ws = new WebSocket(HELPER_URL); }catch{ return fail(new Error('não consegui falar com o Telão Audio')); }
@@ -4917,6 +4921,7 @@ function startTurbo(o){
         if (s.mode !== 'mem' || !(b instanceof ArrayBuffer) || b.byteLength < 16) return;
         const dv = new DataView(b);
         if (dv.getUint32(0, true) !== 0x31465654) return;   // "TVF1"
+        { const t = performance.now(); if (s.vfLast) s.vfGap = Math.max(s.vfGap || 0, t - s.vfLast); s.vfLast = t; s.vfN = (s.vfN || 0) + 1; }
         const w = dv.getUint32(4, true), h = dv.getUint32(8, true), n = w * h * 3 / 2;
         if (!w || !h || b.byteLength < 16 + n) return;
         let f;
@@ -4937,7 +4942,8 @@ function startTurbo(o){
           s.imported = true;
         }
       } else if (m.type === 'vf'){
-        if (s.imported && !window.telaoDesktop.turboFrame(gen, m.s | 0)) s.dropped++;
+        { const t = performance.now(); if (s.vfLast) s.vfGap = Math.max(s.vfGap || 0, t - s.vfLast); s.vfLast = t; s.vfN = (s.vfN || 0) + 1; }
+        if (s.imported && !window.telaoDesktop.turboFrame(gen, m.s | 0)){ s.dropped++; s.dropSlot++; }
       } else if (m.type === 'vstat'){
         s.stat = m;
       } else if (m.type === 'verror'){
@@ -5061,13 +5067,58 @@ function turboWantBox(){
   if (!n) return null;
   return {w: Math.round(q.w * h / q.h / 2) * 2, h, fps: fps || q.fps};
 }
+/* Vigia da turbo pela placa: cada quadro dela passa pelo processo de vídeo do Telão, o mesmo que decodifica e mostra
+   as telas dos amigos. Quando os dois disputam (assistindo alguém enquanto transmite), os quadros ficam na fila e são
+   descartados: o Telão Audio entrega 60 e saem 15. Se a entrega cair bem abaixo do que chega por alguns segundos,
+   troca para a turbo pela memória (quadro vem pronto pelo processador, sem passar por ali), sem cortar. */
+const turboWatched = () => { let n = 0; for (const pid of tiles.keys()) if (!hiddenIds.has(pid)) n++; return n; };
+function turboRate(t){
+  const ses = t.ses, now = performance.now(), r = ses.rate || (ses.rate = {at: now, frames: ses.frames, written: ses.written, busy: ses.dropBusy, slot: ses.dropSlot, vf: ses.vfN || 0, fps: null});
+  const dt = (now - r.at) / 1000;
+  if (dt < 0.9) return r.fps;
+  r.fps = {out: (ses.written - r.written) / dt, busy: (ses.dropBusy - r.busy) / dt, slot: (ses.dropSlot - r.slot) / dt, vf: ((ses.vfN || 0) - r.vf) / dt, push: (ses.frames - r.frames) / dt,
+           gap: ses.vfGap || 0, lag: Math.max(0, now - r.at - 1000)};
+  ses.vfGap = 0;
+  Object.assign(r, {at: now, frames: ses.frames, written: ses.written, busy: ses.dropBusy, slot: ses.dropSlot, vf: ses.vfN || 0});
+  // linha do tempo (relatório): o que chegou do Telão Audio, o que foi entregue, o que o WebRTC viu e enviou
+  const si = sendInfo && Date.now() - sendInfo.at < 3000 ? sendInfo : null;
+  turboHist.push({at: Date.now(), mode: ses.mode, helper: ses.stat ? +ses.stat.out || 0 : 0, f: r.fps, src: si && si.capFps != null ? si.capFps : null,
+                  send: si && si.worst ? si.worst.fps : null, why: si && si.worst ? si.worst.reason || '' : '', watch: turboWatched()});
+  if (turboHist.length > 30) turboHist.shift();
+  return r.fps;
+}
+const TURBO_STARVE_S = 4;
+function turboStarveCheck(t){
+  const ses = t.ses, r = turboRate(t), helperOut = ses.stat && +ses.stat.out;
+  if (!r || !(helperOut >= 24) || performance.now() - ses.t0 < 5000) { t.starve = 0; return false; }
+  const want = Math.min(helperOut, ses.fps || helperOut), low = r.out < want * 0.7;
+  t.starve = low ? (t.starve || 0) + 1 : 0;
+  if (t.starve < (window.__turboStarveS || TURBO_STARVE_S)) return false;
+  t.starve = 0;
+  const what = 'turbo ' + ses.mode + ' entregando ' + Math.round(r.out) + ' de ' + Math.round(helperOut) + ' fps (descartando ' + Math.round(r.busy) +
+               '/s com o codificador ocupado, ' + Math.round(r.slot) + '/s sem quadro) · assistindo ' + turboWatched() + ' tela(s)';
+  if (ses.mode === 'gpu' && !t.memTried){
+    t.memTried = true;
+    turboNote(what + ' → trocando para a memória');
+    turboStarved = {at: Date.now(), what, to: 'mem'};
+    toast('A captura turbo pela placa estava perdendo quadros (' + Math.round(r.out) + ' de ' + Math.round(helperOut) + ' fps). Trocando para a turbo pela memória, sem cortar.', '', 6000);
+    retuneTurbo({w: ses.boxW, h: ses.boxH, fps: ses.fps}, 'mem');
+    return true;
+  }
+  if (!t.starveNoted){ t.starveNoted = true; turboNote(what); turboStarved = {at: Date.now(), what, to: null}; }
+  return false;
+}
+let turboStarved = null;
+const turboHist = [];
 let turboAdaptIv = null;
 function turboAdaptTimer(){
   clearInterval(turboAdaptIv);
   turboAdaptIv = setInterval(() => {
     const t = turboShare;
     if (!t || !turboActive()){ if (!t){ clearInterval(turboAdaptIv); turboAdaptIv = null; } return; }
-    if (window.__turboAdaptOff || t.retuning) return;
+    if (t.retuning) return;
+    if (turboStarveCheck(t)) return;
+    if (window.__turboAdaptOff) return;
     const b = turboWantBox();
     if (!b || (b.w === t.ses.boxW && b.h === t.ses.boxH && b.fps === t.ses.fps)){ t.pending = null; return; }
     const key = b.w + 'x' + b.h + '@' + b.fps, now = Date.now();
@@ -5078,16 +5129,17 @@ function turboAdaptTimer(){
   }, 1000);
 }
 // Abre uma captura turbo nova no tamanho/ritmo novo e troca sem cortar (qualidade mudou ou quem assiste mudou).
-async function retuneTurbo(box){
+async function retuneTurbo(box, mode){
   const t = turboShare;
   if (!t || t.retuning) return;
   const b = box || turboWantBox() || QUALITY[currentQ()];
-  if (t.ses.boxW === b.w && t.ses.boxH === b.h && t.ses.fps === b.fps) return;
+  const md = mode || t.ses.mode;
+  if (t.ses.boxW === b.w && t.ses.boxH === b.h && t.ses.fps === b.fps && md === t.ses.mode) return;
   t.retuning = true;
   try{
-    const ns = await startTurbo(Object.assign({}, t.tgt, {w: b.w, h: b.h, fps: b.fps, mode: t.ses.mode}));
+    const ns = await startTurbo(Object.assign({}, t.tgt, {w: b.w, h: b.h, fps: b.fps, mode: md}));
     if (turboShare !== t || localStream !== t.stream){ ns.stop(); return; }
-    turboNote('turbo: tamanho ' + t.ses.w + 'x' + t.ses.h + '@' + t.ses.fps + ' → ' + ns.w + 'x' + ns.h + '@' + ns.fps);
+    turboNote('turbo: ' + (ns.mode !== t.ses.mode ? 'modo ' + t.ses.mode + ' → ' + ns.mode + ', ' : '') + 'tamanho ' + t.ses.w + 'x' + t.ses.h + '@' + t.ses.fps + ' → ' + ns.w + 'x' + ns.h + '@' + ns.fps);
     attachTurbo(ns, t.stream, t.chosen, t.tgt);
   }catch(e){ toast('Não consegui ajustar a captura turbo (' + e.message + ').', 'warn', 7000); }
   finally{ t.retuning = false; }
@@ -5284,7 +5336,19 @@ function turboReport(){
   if (!DESKTOP) return L;
   L.push('Captura turbo: ' + (turboAvailable() ? (turboOn() ? 'ligada' : 'desligada') + ' · modo preferido ' + store.get('turboMode', 'gpu') : 'indisponível (app nível ' + (window.telaoDesktop.shell || 0) + ')') +
          (turboActive() ? ' · EM USO ' + turboShare.ses.mode + ' ' + turboShare.ses.w + 'x' + turboShare.ses.h + (turboShare.ses.stat ? ' (Windows ' + turboShare.ses.stat.win + ' / saída ' + turboShare.ses.stat.out + ' fps, ' + turboShare.ses.stat.ms + ' ms, Telão Audio ' + turboShare.ses.stat.cpu + '%)' : '') : ''));
-  if (turboActive()) L.push('Turbo em uso: cópia do quadro da placa ' + (turboShare.ses.mode !== 'gpu' ? '-' : turboShare.ses.noCopy ? 'FALHOU (' + turboShare.ses.noCopy + ')' : 'ok') + ' · descartados ' + turboShare.ses.dropped);
+  if (turboActive()){
+    const ts = turboShare.ses, lat = ts.lat.slice().sort((a, b) => a - b), r = turboRate(turboShare);
+    L.push('Turbo em uso: ' + ts.mode + ' · cópia do quadro da placa ' + (ts.mode !== 'gpu' ? '-' : ts.noCopy ? 'FALHOU (' + ts.noCopy + ')' : 'ok') + ' · descartados ' + ts.dropped +
+           ' (codificador ocupado ' + ts.dropBusy + ', sem quadro ' + ts.dropSlot + ')' + (r ? ' · entregando agora ' + r.out.toFixed(1) + ' fps' : '') +
+           (lat.length ? ' · entrega ' + lat[lat.length >> 1].toFixed(1) + ' ms (95% abaixo de ' + lat[Math.floor(lat.length * 0.95)].toFixed(1) + ')' : '') + ' · assistindo ' + turboWatched() + ' tela(s)');
+  }
+  if (turboHist.length){
+    L.push('Turbo segundo a segundo (Telão Audio → chegou → entregue · descartes ocupado/sem quadro · maior intervalo entre quadros · atraso da página · WebRTC vê → envia · telas assistindo):');
+    const f0 = n => n == null ? '-' : Math.round(n);
+    for (const h of turboHist.slice(-20)) L.push('  ' + new Date(h.at).toLocaleTimeString('pt-BR') + ' ' + h.mode + ' ' + f0(h.helper) + ' → ' + f0(h.f.vf) + ' → ' + f0(h.f.out) + ' · ' + f0(h.f.busy) + '/' + f0(h.f.slot) +
+                                                 ' · ' + f0(h.f.gap) + ' ms · ' + f0(h.f.lag) + ' ms · ' + f0(h.src) + ' → ' + f0(h.send) + (h.why && h.why !== 'none' ? ' (' + h.why + ')' : '') + ' · ' + h.watch);
+  }
+  if (turboStarved) L.push('Turbo perdendo quadros (' + new Date(turboStarved.at).toLocaleTimeString('pt-BR') + '): ' + turboStarved.what + (turboStarved.to ? ' → trocou para ' + turboStarved.to : ''));
   if (turboLast) L.push('Última captura turbo: ' + JSON.stringify(turboLast));
   if (turboTest && turboTest.rows.length){
     L.push('Teste da captura turbo (' + new Date(turboTest.at).toLocaleTimeString('pt-BR') + ', ' + turboTest.q + ', "' + (turboTest.target || '?') + '"):');
