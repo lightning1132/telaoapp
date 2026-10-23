@@ -25,6 +25,16 @@ As reações e as mensagens do chat que aparecem por cima do jogo de quem transm
 janela transparente que não recebe clique nem foco e não aparece em captura de tela. O desenho é feito pelo
 processador (Direct2D + DirectWrite) e só enquanto há algo animando; não usa a placa de vídeo do Telão.
 
+MOTOR DE VÍDEO (só no Telão Desktop 1.18+)
+Transmitindo: captura o jogo (Windows Graphics Capture), reduz e converte na placa (D3D11 Video Processor) e
+codifica no codificador da placa pelo Media Foundation (H.264 ou H.265, taxa constante, baixa latência, sem
+quadros B). Cada tamanho/ritmo pedido pelos espectadores é uma "sessão" (no máximo 4); quem pede o mesmo
+compartilha a mesma codificação. Os quadros prontos vão para o Telão, que só os empacota no WebRTC.
+Assistindo: recebe do Telão os quadros comprimidos de cada tela, decodifica na placa (decodificador H.264 do
+Windows; H.265 precisa da "Extensão de Vídeo HEVC") e desenha numa janela própria, presa à janela do Telão,
+com as reações e os controles da tela cheia por cima (Direct2D). Onde a página tem algo por cima (aviso, menu,
+janela), a janela de vídeo abre um "buraco". Nada disso funciona no navegador: só no app.
+
 PRIORIDADE NA PLACA DE VÍDEO (só no Telão Desktop, experimental)
 Enquanto você transmite, o Telão pede ao Windows prioridade "alta" na placa de vídeo para os processos dele
 (D3DKMTSetProcessSchedulingPriorityClass), para a captura e a codificação não ficarem na fila atrás de um

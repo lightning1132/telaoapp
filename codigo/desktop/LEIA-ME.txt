@@ -15,6 +15,20 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.18
+- Motor de vídeo (ligado por padrão): quem transmite, o Telão Audio captura o jogo e codifica direto na placa
+  de vídeo (H.264, ou H.265 quando os dois lados aceitam); o Telão só empacota e manda. Quem assiste, o Telão
+  Audio decodifica na placa e desenha a tela numa janela própria, por cima do Telão. Gasta bem menos memória e
+  processador do que o caminho pelo Chromium.
+- Com o motor, a tela de quem você assiste ganha uma faixa embaixo do vídeo com o nome, a qualidade e os botões
+  (nada da página fica por cima da imagem). "Reagir" abre a fileira de reações. Tela cheia: dois cliques no
+  vídeo ou o botão; lá as reações e o "sair" aparecem ao mexer o mouse.
+- Rede de segurança: se o motor falhar em qualquer ponto (codificar, decodificar, desenhar, o Telão Audio fechar),
+  aquela transmissão ou aquela tela volta sozinha para o caminho normal, sem cortar. Dá para desligar em
+  Opções → Desempenho → "Motor de vídeo do Telão Audio". O relatório do Diagnóstico mostra o que o motor fez.
+- Não usam o motor (ficam no caminho normal): clipes ligados, janela flutuante, tela que você retransmite
+  para alguém, e celular.
+
 NOVIDADES DO APP 1.16.3
 - Captura turbo: a miniatura "Transmitindo" mostra uma prévia pequena (12 quadros/s) em vez da imagem da turbo.
   Exibir a imagem da turbo ali derrubava a transmissão ou travava a tela de quem você estava assistindo.

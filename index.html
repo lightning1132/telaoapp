@@ -346,6 +346,30 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 .tile.needs-click .clickplay{display:grid}
 .tile:fullscreen{border:0;border-radius:0;max-height:none}
 .tile.float-holder{background:var(--panel)}
+/* Motor de vídeo: a imagem é a janela do Telão Audio por cima do <video> (que fica invisível, só tocando o som);
+   nome, qualidade e botões vão para uma faixa embaixo, porque nada da página aparece por cima da janela de vídeo. */
+.tile.nat{display:flex;flex-direction:column;aspect-ratio:auto;background:#000;border:1px solid #2a303a}
+.tile.nat .tstrip,.tile.nat .reacts{background:#161920}
+.tile.nat video{flex:none;width:100%;height:auto;aspect-ratio:16/9;visibility:hidden;background:#000}
+.tile.nat .tstrip{flex:none;display:flex;align-items:center;gap:10px;height:56px;padding:0 8px 0 10px;min-width:0;color:#e9ebee}
+.tile.nat .tstrip .tag{position:static;background:transparent;padding:0;max-width:none;min-width:0;flex:0 1 auto;font-size:14px}
+.tile.nat .tstrip .tq{position:static;flex:none;white-space:nowrap}
+.tile.nat .tstrip .nstat{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a7b0bd;font-size:12px}
+.tile.nat .tstrip .rxbtn{display:flex;align-items:center;gap:6px;flex:none;height:34px;padding:0 12px;margin-left:auto;background:var(--over);
+  border:1px solid rgba(255,255,255,.12);border-radius:999px;color:#e9ebee;font-size:13px}
+.tile.nat.rxopen .tstrip .rxbtn{border-color:var(--accent);color:var(--accent)}
+.tile.nat .tstrip .tbar{position:static;opacity:1;background:none;padding:0;flex:none;gap:8px;z-index:auto}
+.tile.nat .tstrip .tbar .grow{display:none}
+.tile.nat .tinfo,.tile.nat .fx,.tile.nat .tmsg,.tile.nat .clickplay{display:none}
+.tile.nat .reacts{position:static;opacity:1;display:none;max-width:none;flex:none;padding:8px 10px;border-top:1px solid #2a303a}
+.tile.nat.rxopen .reacts{display:flex}
+.tile.nat.is-focus{max-height:none}
+.tile.nat.is-focus video{max-height:calc(100vh - 150px)}
+.tile.nat:fullscreen{background:#000;border:0}
+.tile.nat:fullscreen video{flex:1;height:100%;max-height:none;aspect-ratio:auto}
+.tile.nat:fullscreen .tstrip,.tile.nat:fullscreen .reacts{display:none}
+@media (max-width:1100px){.tile.nat .tstrip .nstat{display:none}}
+@media (max-width:900px){.tile.nat .tstrip .tag .tgame,.tile.nat .tstrip .tbar .clip{display:none}}
 
 #empty{width:100%;max-width:680px;margin:auto;display:flex;flex-direction:column;align-items:center;gap:26px;text-align:center;color:var(--muted);padding:32px 16px}
 #empty h2{color:var(--text);margin:0 0 8px;font-size:30px;font-weight:700;letter-spacing:-.5px}
@@ -953,6 +977,8 @@ html:not(.cinema) #cineChat{display:none}
       </section>
       <section id="optPerfSec" hidden>
         <h3>Desempenho</h3>
+        <div id="optEngineBox"><label class="chk"><input type="checkbox" id="optEngine"> Motor de vídeo do Telão Audio</label>
+        <p class="muted dg-p" style="margin-top:6px;margin-bottom:10px">Transmitindo: o Telão Audio captura e codifica o jogo direto na placa de vídeo. Assistindo: ele decodifica e desenha a tela numa janela própria. Usa bem menos memória e processador. Se algo der errado, a tela volta sozinha para o caminho normal; desligue aqui só se algo ficar estranho.</p></div>
         <div id="optNativeOvBox"><label class="chk"><input type="checkbox" id="optNativeOv"> Reações e chat por cima do jogo desenhados pelo Telão Audio</label>
         <p class="muted dg-p" style="margin-top:6px">Mais leve: não disputa a placa de vídeo com a captura turbo (com a camada antiga, spam de reações travava a transmissão). Desligue só se as reações não aparecerem direito por cima do jogo.</p></div>
         <label class="chk" style="margin-top:10px"><input type="checkbox" id="optGpuPrio"> Prioridade do Telão na placa de vídeo <span class="muted">(experimental)</span></label>
@@ -1010,17 +1036,21 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.17.2';
+const TELAO_VERSION = '1.18.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 13;      // nível do app desktop mais novo (13: camada por cima do jogo desenhada pelo Telão Audio)
+const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.17.2', 'hoje', ['Passar a sala: em "quem está na sala" há "Segurar a sala". Quem segura é o PC a que todo mundo se conecta para entrar; se ele estiver longe ou numa rede difícil (e alguém não consegue entrar), dá para trazer a sala para o seu PC sem ninguém sair',
+  ['1.18.0', 'hoje', ['Motor de vídeo (app 1.18): transmitindo, o Telão Audio captura e codifica o jogo direto na placa de vídeo; assistindo, ele decodifica na placa e desenha a tela numa janela própria. Bem menos memória e processador do que pelo Chromium. Ligado por padrão',
+                      'Assistindo pelo motor: nome, qualidade e botões ficam numa faixa embaixo do vídeo; "Reagir" abre as reações. Na tela cheia, as reações e o "sair" aparecem ao mexer o mouse',
+                      'Se o motor falhar, a transmissão ou a tela volta sozinha para o caminho normal, sem cortar. Dá para desligar em Opções → Desempenho',
+                      'Precisa do app 1.18 (atualiza sozinho). Quem assiste no navegador ou em versão antiga continua vendo normalmente']],
+  ['1.17.2', '23/10', ['Passar a sala: em "quem está na sala" há "Segurar a sala". Quem segura é o PC a que todo mundo se conecta para entrar; se ele estiver longe ou numa rede difícil (e alguém não consegue entrar), dá para trazer a sala para o seu PC sem ninguém sair',
                       'Quem segura a sala e fica ausente (ou está no celular) passa a sala sozinho para alguém ativo no PC',
                       'Funciona quando quem segura a sala está na 1.17.2 ou mais nova']],
   ['1.17.1', '22/10', ['Relatório: na conexão com a sala, diz se cada caminho é IPv4, IPv6 ou endereço local escondido (o iPhone esconde o dele) e, quando conecta, por qual par conectou. Ajuda a entender por que um celular não entra']],
@@ -1387,6 +1417,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && openPop){ 
 window.addEventListener('resize', () => { if (openPop) placePop(openPop.el, openPop.btn); syncWcoInset(); });
 
 const ICON = {
+  react: '<svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></svg>',
   lock: '<svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
   vol:'<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   mute: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
@@ -1588,6 +1619,7 @@ function initLobby(){
   $('#audioSrc').addEventListener('blur', () => { if (audioRebuildPending){ audioRebuildPending = false; populateAudio(); } });
   helperConnect();
   setInterval(() => helperSend({cmd: 'list'}), 5000);
+  engineInit();
 
   const warn = [];
   if (typeof Peer === 'undefined') warn.push('Não consegui carregar a biblioteca de conexão (sem internet ou bloqueio de rede).');
@@ -2803,7 +2835,8 @@ async function startShare(){
   let capId = DESKTOP ? chosen.id : null, fastHwnd = '';
   fastCapture = false;
   const useTurbo = DESKTOP && turboAvailable() && turboOn();
-  if (DESKTOP && chosen.type === 'window' && fastCaptureAvailable() && fastCaptureOn() && !useTurbo){
+  const useEngine = DESKTOP && engineSendOk() && (chosen.type === 'window' || chosen.type === 'screen');
+  if (DESKTOP && chosen.type === 'window' && fastCaptureAvailable() && fastCaptureOn() && !useTurbo && !useEngine){
     const hwnd = chosen.id.split(':')[1] || '';
     const sid = await fastScreenFor(hwnd);
     if (sid){ capId = sid; fastCapture = true; fastHwnd = hwnd; }
@@ -2876,12 +2909,14 @@ async function startShare(){
   hubSend({t:'state', sharing:true});
   for (const m of members) if (m.id !== me.id) callPeer(m.id);
   updatePip();
-  if (useTurbo) engageTurbo(chosen, s).catch(e => toast('Captura turbo: ' + e.message, 'warn'));
+  if (useEngine) engageEngine(chosen, s).then(ok => { if (!ok && useTurbo && localStream === s) engageTurbo(chosen, s).catch(e => toast('Captura turbo: ' + e.message, 'warn')); }, () => {});
+  else if (useTurbo) engageTurbo(chosen, s).catch(e => toast('Captura turbo: ' + e.message, 'warn'));
   setTimeout(() => autoProbeH264().catch(() => {}), 8000);
 }
 
 function stopShare(){
   if (!localStream) return;
+  engineShareEnd('transmissão parou', false);
   stopTurboShare();
   localStream.getTracks().forEach(t => t.stop());
   localStream = null;
@@ -2960,6 +2995,7 @@ function swapOutgoingVideo(){
   if (!vt) return;
   for (const [pid, c] of outCalls){
     const pc = c.peerConnection; if (!pc) continue;
+    if (engineLinked(pid)){ if (privateOn) engineUnlink(pid, 'tela privada', false); continue; }   // no motor: a trilha é o vídeo de mentira
     for (const snd of pc.getSenders()) if (snd.track && snd.track.kind === 'video' && snd.track !== vt) snd.replaceTrack(vt).then(() => applyQuality(pc, pid)).catch(() => {});
   }
   syncPipVideo();
@@ -3010,9 +3046,12 @@ function callPeer(pid){
   if (!localStream || !me || me.destroyed || kickedIds.has(pid)) return;
   const codec = currentCodec();
   const hi = myHighHw();
-  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi, av1: myAv1Hw(), h265: myH265Hw(), h265all: h265Auto()}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
+  // com o motor, AV1 fica de fora (o Telão Audio codifica H.264/H.265) e H.265 só se ele também codifica H.265
+  const eng = engineSendOk(), av1 = myAv1Hw() && !eng, h265 = myH265Hw() && (!eng || !!engine.caps.enc.h265);
+  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi, av1, h265, h265all: h265Auto()}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
   if (!call) return;
   outCalls.set(pid, call);
+  engineTapSend(pid, call);
   const pc = call.peerConnection;
   applyQuality(pc, pid);
   let everConnected = false;
@@ -3072,9 +3111,10 @@ async function applyQuality(pc, pid){
       if (!p.encodings || !p.encodings.length) continue; // ainda negociando; reaplica quando conectar
       p.encodings.forEach(e => { e.active = active; });
       if (kind === 'video'){
-        p.encodings[0].maxBitrate = plan.kbps * 1000;
-        p.encodings[0].maxFramerate = plan.fps;
-        p.encodings[0].scaleResolutionDownBy = plan.scale;
+        const eq = engineQuality(pid);   // no motor: o vídeo de mentira não é reduzido nem limitado (quem decide é o Telão Audio)
+        p.encodings[0].maxBitrate = (eq ? eq.kbps : plan.kbps) * 1000;
+        p.encodings[0].maxFramerate = eq ? eq.fps : plan.fps;
+        p.encodings[0].scaleResolutionDownBy = eq ? 1 : plan.scale;
         p.degradationPreference = 'maintain-framerate';
       } else {
         p.encodings[0].maxBitrate = 128000;
@@ -3102,6 +3142,7 @@ async function onQualityChange(){
   const vt = localStream.getVideoTracks()[0];
   if (turboActive()) await retuneTurbo();
   else if (vt) try{ await vt.applyConstraints({width:{ideal:q.w, max:q.w}, height:{ideal:q.h, max:q.h}, frameRate:{ideal:q.fps, max:q.fps}}); }catch{}
+  if (engine.share){ engine.share.low = false; engine.share.lowAt = 0; engineShareSync(); }
   for (const [pid, c] of outCalls) applyQuality(c.peerConnection, pid);
   toast('Qualidade alterada para ' + q.label + '.');
 }
@@ -3180,6 +3221,12 @@ async function updateSendStats(){
       const mbps = prev && now > prev.at && bytes >= prev.bytes ? (bytes - prev.bytes) * 8 / ((now - prev.at) / 1000) / 1e6 : 0;
       sendPrev.set(pid, {bytes, at: now});
       const paused = !!pausedBy.get(pid) && !isRelayHub(pid);
+      const eL = engine.share && engine.share.links.get(pid), eS = eL && engine.share.ses.get(eL.sid);
+      if (eS){   // no motor: os números do Chromium são do vídeo de mentira; os de verdade vêm do Telão Audio
+        out = Object.assign({}, out, {frameHeight: eS.h, framesPerSecond: eS.stat ? +eS.stat.out || 0 : 0, powerEfficientEncoder: true, encoderImplementation: 'Telão Audio (' + (eS.enc || '?') + ')',
+                                      qualityLimitationReason: out.qualityLimitationReason === 'bandwidth' ? 'bandwidth' : 'none'});
+        if (eS.stat) capFps = Math.max(capFps || 0, +eS.stat.in || 0);
+      }
       const vhw = out.powerEfficientEncoder != null ? !!out.powerEfficientEncoder : (out.encoderImplementation ? !SW_ENC.test(out.encoderImplementation) : null);
       viewers.push({pid, h: out.frameHeight || 0, fps: out.framesPerSecond || 0, mbps, paused, hub: isRelayHub(pid), hw: vhw,
                     codec: ((codecs[out.codecId] || {}).mimeType || '').replace(/^video\//i, '')});
@@ -3195,7 +3242,7 @@ async function updateSendStats(){
   }
   const target = QUALITY[currentQ()].fps;
   const parts = [];
-  if (capFps != null) parts.push((capFps < target * 0.8 ? '!' : '') + 'captura ' + Math.round(capFps) + 'fps' + (turboActive() ? ' (turbo)' : fastCapture ? ' (modo rápido)' : ''));
+  if (capFps != null) parts.push((capFps < target * 0.8 ? '!' : '') + 'captura ' + Math.round(capFps) + 'fps' + (engine.share && engine.share.links.size ? ' (motor)' : turboActive() ? ' (turbo)' : fastCapture ? ' (modo rápido)' : ''));
   if (worst){
     parts.push((worst.fps < target * 0.8 ? '!' : '') + 'envio ' + Math.round(worst.fps) + 'fps' + (worst.h ? ' ' + worst.h + 'p' : ''));
     const hw = worst.hw != null ? worst.hw : (worst.impl ? !SW_ENC.test(worst.impl) : null);
@@ -3591,9 +3638,9 @@ function wantedHeight(t){
   const doc = t.el.ownerDocument, view = doc.defaultView || window;
   if (doc.fullscreenElement === t.el) return 9999;   // tela cheia: qualidade total
   if (t.pipH) return RES_STEPS.find(step => step >= t.pipH * (window.devicePixelRatio || 1) * 0.9) || 9999;   // PiP de vídeo
-  const r = t.el.getBoundingClientRect();
+  const r = (t.nat ? t.video : t.el).getBoundingClientRect();   // no motor a tela tem a faixa embaixo
   if (!r.width || !r.height) return 0;
-  const ar = t.video.videoWidth && t.video.videoHeight ? t.video.videoWidth / t.video.videoHeight : 16 / 9;
+  const ar = t.nat && t.nat.w && t.nat.h ? t.nat.w / t.nat.h : t.video.videoWidth && t.video.videoHeight ? t.video.videoWidth / t.video.videoHeight : 16 / 9;
   const px = Math.min(r.height, r.width / ar) * (view.devicePixelRatio || 1);
   return RES_STEPS.find(step => step >= px * 0.9) || 9999;
 }
@@ -3733,14 +3780,16 @@ function onPullCall(call){
   const avoid = Array.isArray(call.metadata && call.metadata.avoid) ? call.metadata.avoid : [];
   const pref = currentCodec();
   let codec = !avoid.includes(pref) ? pref : (['VP9', 'VP8', 'H264'].find(c => !avoid.includes(c)) || pref);
-  if (codec === 'H264' && call.metadata && call.metadata.av1ok === true && myAv1Hw()) codec = 'AV1';
-  else if (codec === 'H264' && call.metadata && call.metadata.h265ok === true && myH265Hw()) codec = 'H265';
-  else if (codec === 'H264' && call.metadata && call.metadata.h265all === true && h265Auto() && myH265Hw()) codec = 'H265';
+  const eng = engineSendOk(), h265ok = myH265Hw() && (!eng || !!engine.caps.enc.h265);
+  if (codec === 'H264' && call.metadata && call.metadata.av1ok === true && myAv1Hw() && !eng) codec = 'AV1';
+  else if (codec === 'H264' && call.metadata && call.metadata.h265ok === true && h265ok) codec = 'H265';
+  else if (codec === 'H264' && call.metadata && call.metadata.h265all === true && h265Auto() && h265ok) codec = 'H265';
   const old = outCalls.get(pid);
   if (old && old !== call){ outCalls.delete(pid); try{ old.close(); }catch{} }
   relayVia.delete(pid);   // pediu direto: não precisa mais do repasse
   call.answer(outStream(), {sdpTransform: makeSdpTransform(codec, myHighHw())});
   outCalls.set(pid, call);
+  engineTapSend(pid, call);
   failCount.delete(pid);
   const pc = call.peerConnection;
   watchPc(pc, state => {
@@ -3788,6 +3837,7 @@ function onIncomingCall(call){
 }
 
 function attachIncoming(call, pid, via){
+  engineTapRecv(call);
   call.on('stream', stream => addTile(pid, call, stream, via));
   const gone = () => {
     const t = tiles.get(pid);
@@ -4567,6 +4617,7 @@ function addChat(m, opts){
     }
     floatChat(msg);
     cineChat(msg);
+    engineChat(msg);
   }
   return true;
 }
@@ -4977,6 +5028,8 @@ function syncOpts(){
   $('#optGpuPrio').checked = !!store.get('gpuPrio', true);
   $('#optNativeOvBox').hidden = !(DESKTOP && (window.telaoDesktop.shell || 0) >= NATIVE_OV_SHELL);
   $('#optNativeOv').checked = !!store.get('nativeOverlay', true);
+  $('#optEngineBox').hidden = !engineAllowed();
+  $('#optEngine').checked = store.get('engine', true) !== false;
   $('#optPrivMsg').value = privateMsg();
   renderThemeOpts();
   renderLobbyAvatar();
@@ -4992,6 +5045,11 @@ function initOpts(){
   };
   $('#optH265').onchange = () => { store.set('h265auto', $('#optH265').checked); h265PrefCache = null; toast('Vale a partir da próxima conexão (comece a transmitir de novo, ou recarregue quem assiste).'); };
   $('#optNativeOv').onchange = () => { store.set('nativeOverlay', $('#optNativeOv').checked); if (localStream && (overlayOn() || chatOverlayOn())){ hideOverlay(); showOverlay(); } };
+  $('#optEngine').onchange = () => {
+    store.set('engine', $('#optEngine').checked);
+    if ($('#optEngine').checked){ engineInit(); toast('Motor de vídeo ligado: vale para as próximas telas e a próxima transmissão.'); }
+    engineTick();
+  };
   $('#optGpuPrio').onchange = () => { store.set('gpuPrio', $('#optGpuPrio').checked); if (localStream) syncGpuPrio(); };
   $('#optPrivMsg').oninput = () => { store.set('privateMsg', $('#optPrivMsg').value.slice(0, 80)); if (privateOn) drawPrivate(); };
   $('#optRx').onclick = () => { $('#opts').hidden = true; openRxEdit(); };
@@ -5388,6 +5446,745 @@ function stopTurboShare(){
 }
 const turboActive = () => !!(turboShare && localStream && localStream.getVideoTracks()[0] === turboShare.ses.track);
 
+/* ---------- Motor de vídeo (app nível 14: Telão Audio 1.18) ----------
+   Quem transmite: o Telão Audio captura o jogo e codifica na placa de vídeo (Media Foundation); o Chromium só empacota
+   e manda. Cada espectador recebe um vídeo "de mentira" minúsculo (256x144) que o Chromium codifica quase de graça, e
+   no caminho (RTCRtpScriptTransform) o conteúdo de cada quadro é trocado pelo quadro de verdade que veio do Telão Audio.
+   Quem assiste: os quadros que chegam são desviados para o Telão Audio, que decodifica na placa e desenha numa janela
+   própria por cima da tela; o Chromium recebe no lugar um quadro completo minúsculo (não decodifica o vídeo grande e não
+   pede quadro completo à toa).
+   Rede de segurança em camadas: se qualquer parte falhar, aquela transmissão/tela volta sozinha para o caminho normal;
+   dá para desligar em Opções → Desempenho; e o arquivo flags.json do repositório desliga em todo mundo de uma vez. */
+const ENGINE_SHELL = 14;
+const ENGINE_TINY264 = 'AAAAAWdCwAzcEBOwEQAAAwABAAADADwPFCuAAAAAAWjODyyAAAABZYiEBLyYoAA4oycnJycnJycnJycnJycnJ111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111114A=';
+const ENGINE_TINY265 = 'AAAAAUABDAH//wQIAAADAJ+oAAADAAA8ugJAAAAAAUIBAQQIAAADAJ+oAAADAAA8oAgICRZbqSTK8BaAgAAAAwCAAAAPBAAAAAFEAcFysGJAAAABKAGvdlgi6677//xbZV8rBcUMW9cJAvamZTUgKIGiXsCTBgi8AHXA';
+const ENGINE_WORKER = `
+'use strict';
+const b64 = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+const TINY = {h264: b64('${ENGINE_TINY264}'), h265: b64('${ENGINE_TINY265}')};
+let ws = null, url = '', want = false, retry = null;
+const snd = new Map(), rcv = new Map(), sesV = new Map(), keyAt = new Map();
+const now = () => performance.now();
+const isOpen = () => !!ws && ws.readyState === 1;
+function connect(){
+  if (ws || !want) return;
+  try{ ws = new WebSocket(url); }catch{ ws = null; again(); return; }
+  ws.binaryType = 'arraybuffer';
+  ws.onopen = () => postMessage({t: 'open'});
+  ws.onclose = () => { ws = null; lost(); postMessage({t: 'close'}); again(); };
+  ws.onmessage = ev => {
+    if (typeof ev.data !== 'string'){ onEnc(ev.data); return; }
+    let m; try{ m = JSON.parse(ev.data); }catch{ return; }
+    if (m && m.type === 'dneedkey'){ const st = rcv.get(+m.id); if (st) kreq(st, false); }
+    postMessage({t: 'h', m});
+  };
+}
+function again(){ clearTimeout(retry); if (want) retry = setTimeout(connect, 3000); }
+function send(m){ if (isOpen()) try{ ws.send(JSON.stringify(m)); }catch{} }
+// O Telão Audio sumiu: quem assiste volta para o Chromium na hora; quem transmite segura (não manda nada) até a página
+// recolocar a trilha normal (mandar o vídeo de mentira apareceria como tela cinza).
+function lost(){
+  for (const st of snd.values()) if (st.mode === 'swap'){ st.q.length = 0; st.needKey = true; }
+  for (const st of rcv.values()) if (st.mode !== 'pass'){ st.mode = 'pass'; kreq(st, true); }
+}
+function askKey(sid, force){
+  const t = now();
+  if (!force && t - (keyAt.get(sid) || 0) < 300) return;
+  keyAt.set(sid, t);
+  send({cmd: 'ekey', id: String(sid)});
+}
+function kreq(st, force){
+  const t = now();
+  if (!force && t - (st.kAt || 0) < 300) return;
+  st.kAt = t; st.kreqs++;
+  try{ const p = st.tr.sendKeyFrameRequest(); if (p && p.catch) p.catch(() => {}); }catch{}
+}
+function unlink(st){ const s = sesV.get(st.sid); if (s){ s.delete(st.vid); if (!s.size) sesV.delete(st.sid); } st.sid = 0; }
+// quem transmite: troca o conteúdo do quadro do vídeo de mentira pelo quadro que veio do Telão Audio
+function tapSend(tr, vid){
+  const st = {tr, vid, mode: 'pass', sid: 0, q: [], needKey: true, fresh: true, out: 0, starve: 0, resets: 0, plis: 0, bytes: 0};
+  snd.set(vid, st);
+  tr.readable.pipeThrough(new TransformStream({transform(f, ctl){
+    if (st.mode !== 'swap'){ ctl.enqueue(f); return; }
+    try{
+      if (f.type === 'key'){ if (st.fresh) st.fresh = false; else if (st.sid){ st.plis++; askKey(st.sid, false); } }
+      const x = st.q.shift();
+      if (!x){ st.starve++; return; }
+      f.data = x.d; ctl.enqueue(f); st.out++; st.bytes += x.d.byteLength;
+    }catch(e){ st.errs = (st.errs || 0) + 1; }   // um erro aqui nunca pode parar o envio
+  }})).pipeTo(tr.writable).catch(() => {});
+}
+function onEnc(buf){
+  if (!(buf instanceof ArrayBuffer) || buf.byteLength < 25) return;
+  const dv = new DataView(buf);
+  if (dv.getUint32(0, true) !== 0x31464554) return;   // "TEF1"
+  const sid = dv.getUint32(4, true), key = (dv.getUint32(8, true) & 1) === 1;
+  const vs = sesV.get(sid); if (!vs) return;
+  const t = now();
+  for (const vid of vs){
+    const st = snd.get(vid);
+    if (!st || st.mode !== 'swap' || st.sid !== sid) continue;
+    // fila crescendo = o Chromium não está consumindo: descarta e recomeça de um quadro completo
+    if (st.q.length >= 4 || (st.q.length && t - st.q[0].at > 400)){ st.q.length = 0; st.needKey = true; st.resets++; }
+    if (st.needKey){ if (!key){ askKey(sid, false); continue; } st.needKey = false; }
+    st.q.push({d: buf.slice(24), at: t});
+    postMessage({t: 'dummy', vid});
+  }
+}
+// quem assiste: manda o quadro para o Telão Audio e entrega ao Chromium um quadro completo minúsculo
+function tapRecv(tr, rid){
+  const st = {tr, rid, mode: 'pass', codec: 'h264', seq: 0, sent: 0, keys: 0, drop: 0, kreqs: 0, kAt: 0};
+  rcv.set(rid, st);
+  tr.readable.pipeThrough(new TransformStream({transform(f, ctl){
+    if (st.mode === 'pass'){ ctl.enqueue(f); return; }
+    try{ divert(st, f, ctl); }catch(e){ st.errs = (st.errs || 0) + 1; try{ ctl.enqueue(f); }catch{} }
+  }})).pipeTo(tr.writable).catch(() => {});
+}
+function divert(st, f, ctl){
+  const key = f.type === 'key';
+  if (isOpen() && ws.bufferedAmount < 8e6){
+    const d = new Uint8Array(f.data), b = new Uint8Array(24 + d.length), dv = new DataView(b.buffer);
+    let ts = 0; try{ ts = f.getMetadata().rtpTimestamp || 0; }catch{}
+    dv.setUint32(0, 0x31464454, true);   // "TDF1"
+    dv.setUint32(4, st.rid, true); dv.setUint32(8, key ? 1 : 0, true); dv.setUint32(12, ++st.seq, true); dv.setUint32(16, ts >>> 0, true);
+    b.set(d, 24);
+    try{ ws.send(b.buffer); st.sent++; if (key) st.keys++; }catch{ st.drop++; }
+  } else st.drop++;
+  if (st.mode === 'tee'){ ctl.enqueue(f); return; }   // começo: o Chromium continua mostrando até o Telão Audio ter imagem
+  f.data = TINY[st.codec].slice().buffer;
+  ctl.enqueue(f);
+}
+onrtctransform = e => {
+  const tr = e.transformer, o = tr.options || {};
+  if (o.side === 'send') tapSend(tr, o.vid); else if (o.side === 'recv') tapRecv(tr, o.rid);
+};
+onmessage = e => {
+  const m = e.data || {};
+  if (m.t === 'init'){ url = m.url; want = true; connect(); }
+  else if (m.t === 'cmd') send(m.m);
+  else if (m.t === 'swap'){
+    const st = snd.get(m.vid); if (!st) return;
+    if (st.sid !== m.sid){ unlink(st); st.q.length = 0; st.needKey = true; }
+    if (st.mode !== 'swap'){ st.fresh = true; st.needKey = true; st.q.length = 0; }
+    st.mode = 'swap'; st.sid = m.sid;
+    let s = sesV.get(m.sid); if (!s) sesV.set(m.sid, s = new Set()); s.add(m.vid);
+    askKey(m.sid, true);
+  }
+  else if (m.t === 'pass'){ const st = snd.get(m.vid); if (st){ st.mode = 'pass'; unlink(st); st.q.length = 0; } }
+  else if (m.t === 'rmode'){
+    const st = rcv.get(m.rid); if (!st) return;
+    if (m.codec) st.codec = m.codec === 'h265' ? 'h265' : 'h264';
+    const was = st.mode; st.mode = m.mode;
+    if (m.mode === 'pass' && was !== 'pass') kreq(st, true);
+    if (m.mode === 'tee') kreq(st, true);
+  }
+  else if (m.t === 'kreq'){ const st = rcv.get(m.rid); if (st) kreq(st, true); }
+  else if (m.t === 'forget'){
+    if (m.vid){ const st = snd.get(m.vid); if (st) unlink(st); snd.delete(m.vid); }
+    if (m.rid) rcv.delete(m.rid);
+  }
+  else if (m.t === 'stats'){
+    postMessage({t: 'stats', snd: [...snd.values()].map(s => ({vid: s.vid, mode: s.mode, sid: s.sid, q: s.q.length, out: s.out, starve: s.starve, resets: s.resets, plis: s.plis, bytes: s.bytes})),
+                 rcv: [...rcv.values()].map(s => ({rid: s.rid, mode: s.mode, sent: s.sent, keys: s.keys, drop: s.drop, kreqs: s.kreqs})), buf: ws ? ws.bufferedAmount : 0});
+  }
+};
+`;
+const engine = {w: null, open: false, caps: null, hwnd: '', remote: store.get('engineRemote', null) || {}, log: [], vid: 0, rid: 0, sid: 0,
+                share: null, last: null, byVid: new Map(), views: new Map(), wstats: null, waiters: [], tick: null, warnedView: false, starts: 0};
+const engineNote = t => { engine.log.push(new Date().toLocaleTimeString('pt-BR') + ' ' + t); if (engine.log.length > 40) engine.log.shift(); };
+const engineAllowed = () => DESKTOP && (window.telaoDesktop.shell || 0) >= ENGINE_SHELL && typeof RTCRtpScriptTransform === 'function' && !PHONE;
+const engineOn = () => engineAllowed() && store.get('engine', true) !== false && engine.remote.on !== false && !window.__engineOff;
+const engineSendOk = () => engineOn() && engine.remote.send !== false && engine.open && !!(engine.caps && engine.caps.enc && engine.caps.enc.h264) &&
+                           typeof MediaStreamTrackGenerator === 'function' && typeof VideoFrame === 'function';
+const engineViewOk = codec => engineOn() && engine.remote.view !== false && engine.open && !!engine.hwnd && !!(engine.caps && engine.caps.dec && engine.caps.dec[codec]);
+function engineCmd(m){ if (engine.w) engine.w.postMessage({t: 'cmd', m}); }
+// Espera a resposta do Telão Audio que satisfaz test (ou null no tempo-limite).
+function engineAsk(m, test, ms){
+  return new Promise(resolve => {
+    if (!engine.open) return resolve(null);
+    const w = {test, resolve, timer: setTimeout(() => { engine.waiters = engine.waiters.filter(x => x !== w); resolve(null); }, ms || 4000)};
+    engine.waiters.push(w);
+    engineCmd(m);
+  });
+}
+function engineInit(){
+  if (!engineAllowed() || engine.w) return;
+  try{
+    const url = URL.createObjectURL(new Blob([ENGINE_WORKER], {type: 'text/javascript'}));
+    engine.w = new Worker(url);
+  }catch(e){ engineNote('não consegui abrir o motor: ' + e.message); return; }
+  engine.w.onmessage = e => engineMsg(e.data || {});
+  engine.w.onerror = e => engineNote('erro no motor: ' + (e.message || '?'));
+  engine.w.postMessage({t: 'init', url: HELPER_URL});
+  try{ window.telaoDesktop.hwnd().then(h => { engine.hwnd = String(h || ''); }).catch(() => {}); }catch{}
+  engineFlags();
+  setInterval(engineFlags, 30 * 60000);
+  clearInterval(engine.tick); engine.tick = setInterval(engineTick, 1000);
+}
+// Interruptor remoto: flags.json no repositório ({"motor": {"on": false}} desliga em todo mundo).
+async function engineFlags(){
+  if (!UPDATE_MANIFEST || !/latest\.json$/.test(UPDATE_MANIFEST)) return;
+  try{
+    const r = await fetch(UPDATE_MANIFEST.replace(/latest\.json$/, 'flags.json') + '?t=' + Date.now(), {cache: 'no-store'});
+    if (!r.ok) return;
+    const j = await r.json(), m = j && j.motor;
+    if (!m || typeof m !== 'object') return;
+    const nr = {on: m.on !== false, send: m.envio !== false, view: m.tela !== false};
+    if (JSON.stringify(nr) !== JSON.stringify(engine.remote)) engineNote('interruptor remoto: ' + JSON.stringify(nr));
+    engine.remote = nr; store.set('engineRemote', nr);
+    engineTick();
+  }catch{}
+}
+function engineMsg(d){
+  if (d.t === 'dummy') return engineDummy(d.vid);
+  if (d.t === 'h') return engineHelper(d.m || {});
+  if (d.t === 'open'){ engine.open = true; engineCmd({cmd: 'vcaps'}); return; }
+  if (d.t === 'close'){
+    const was = engine.open; engine.open = false; engine.caps = null;
+    if (was) engineNote('Telão Audio desconectou');
+    if (engine.share) engineShareEnd('o Telão Audio fechou', true);
+    for (const [pid, t] of tiles) if (t.nat) engineViewStop(pid, t, 'o Telão Audio fechou', false);
+    return;
+  }
+  if (d.t === 'stats'){ engine.wstats = Object.assign(d, {at: Date.now()}); engineLinkHealth(); return; }
+}
+function engineHelper(m){
+  for (const w of engine.waiters) if (w.test(m)){ engine.waiters = engine.waiters.filter(x => x !== w); clearTimeout(w.timer); w.resolve(m); break; }
+  switch (m.type){
+    case 'vcaps':
+      engine.caps = {mf: !!m.mf, enc: m.enc || {}, dec: m.dec || {}, encNames: String(m.encNames || ''), decNames: String(m.decNames || '')};
+      engineNote('Telão Audio: codifica ' + ['h264', 'h265'].filter(k => engine.caps.enc[k]).join('+') + ' · decodifica ' + ['h264', 'h265'].filter(k => engine.caps.dec[k]).join('+') +
+                 (engine.caps.encNames ? ' · ' + engine.caps.encNames : ''));
+      return;
+    case 'esessok': case 'esesserr': case 'estat': return engineSesMsg(m);
+    case 'eended':
+      if (!engine.share) return;
+      if (/janela fechou/.test(m.reason || '')){ engineShareEnd('a janela fechou', false); if (localStream) { toast('A janela do jogo fechou: transmissão encerrada.', 'warn', 6000); stopShare(); } }
+      else engineShareEnd(m.reason || 'a captura parou', true);
+      return;
+    case 'dopenok': case 'dopenerr': case 'dfirst': case 'dstat': case 'derror': case 'dev': case 'dneedkey': return engineViewMsg(m);
+  }
+}
+function engineTick(){
+  if (!engine.w) return;
+  engine.w.postMessage({t: 'stats'});
+  if (engine.share){
+    if (!engineOn() || engine.remote.send === false) engineShareEnd('motor desligado', true);
+    else engineShareSync();
+  }
+  engineViewSync();
+}
+function engineTapWanted(side){ return engineOn() && engine.open && !!engine.caps && (side === 'send' ? !!(engine.caps.enc && engine.caps.enc.h264) : !!(engine.caps.dec && engine.caps.dec.h264)); }
+const videoSenderOf = pc => pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
+// Cada envio de vídeo ganha o "desvio" (no modo normal ele só deixa passar). Precisa entrar antes do vídeo começar.
+function engineTapSend(pid, call){
+  if (!engineTapWanted('send') || !call || call.__evid) return;
+  const s = videoSenderOf(call.peerConnection);
+  if (!s || s.transform) return;
+  const vid = ++engine.vid;
+  try{ s.transform = new RTCRtpScriptTransform(engine.w, {side: 'send', vid}); }catch(e){ engineNote('desvio do envio falhou: ' + e.message); return; }
+  call.__evid = vid; call.__esnd = s;
+  const forget = () => { if (engine.share) engineUnlink(pid, 'conexão fechou', false, call); if (engine.w) engine.w.postMessage({t: 'forget', vid}); };
+  call.on('close', forget); call.on('error', forget);
+}
+function engineTapRecv(call){
+  if (!engineTapWanted('recv') || !call || !call.peerConnection || call.__etap) return;
+  call.__etap = true;
+  const pc = call.peerConnection;
+  const tap = r => {
+    if (!r || !r.track || r.track.kind !== 'video' || call.__erid || r.transform) return;
+    const rid = ++engine.rid;
+    try{ r.transform = new RTCRtpScriptTransform(engine.w, {side: 'recv', rid}); }catch(e){ engineNote('desvio do recebimento falhou: ' + e.message); return; }
+    call.__erid = rid;
+    const forget = () => { if (engine.w) setTimeout(() => engine.w.postMessage({t: 'forget', rid}), 1000); };
+    call.on('close', forget); call.on('error', forget);
+  };
+  pc.addEventListener('track', e => tap(e.receiver));
+  for (const r of pc.getReceivers()) tap(r);
+}
+
+/* --- quem transmite --- */
+const ENGINE_DUMMY = (() => { const b = new Uint8Array(256 * 144 * 3 / 2); b.fill(16, 0, 256 * 144); b.fill(128, 256 * 144); return b; })();
+const ENGINE_STEPS = [360, 480, 540, 720, 900, 1080, 1440, 2160];
+const engineLinked = pid => !!(engine.share && engine.share.links.has(pid));
+async function engageEngine(chosen, stream){
+  const tgt = await turboTarget(chosen);
+  if (!tgt){ engineNote('motor: não achei o alvo da captura'); return false; }
+  const ids = await turboGpu();
+  const r = await engineAsk({cmd: 'ecap', target: tgt.target, hwnd: String(tgt.hwnd || ''), x: String(tgt.x || 0), y: String(tgt.y || 0),
+                             vendor: String(ids.vendor || 0), device: String(ids.device || 0)}, m => m.type === 'ecapok' || m.type === 'ecaperr', 8000);
+  if (localStream !== stream){ if (r && r.type === 'ecapok') engineCmd({cmd: 'estop'}); return true; }
+  if (!r || r.type !== 'ecapok'){
+    const why = r ? String(r.message || 'erro') : 'o Telão Audio não respondeu';
+    engineNote('motor: captura não iniciou: ' + why); engine.last = {at: Date.now(), reason: 'não iniciou: ' + why};
+    return false;
+  }
+  engine.starts++;
+  engine.share = {stream, chosen, tgt, sw: +r.sw || 0, sh: +r.sh || 0, adapter: String(r.adapter || ''), border: !!r.border, t0: Date.now(),
+                  ses: new Map(), links: new Map(), bad: new Map(), badKeys: new Map(), bw: new Map(), low: false, lowAt: 0, pend: new Map()};
+  engineNote('motor transmitindo: captura ' + r.sw + 'x' + r.sh + (r.adapter ? ' · ' + r.adapter : ''));
+  toast('Motor de vídeo ligado: o jogo é capturado e codificado na placa de vídeo.' + (r.border ? ' Neste Windows aparece uma borda amarela em volta do jogo: ela é só na sua tela.' : ''), '', r.border ? 9000 : 4000);
+  engineShareSync();
+  return true;
+}
+// O que cada espectador deveria receber pelo motor (ou null = caminho normal).
+function engineDesire(pid, c, q, E){
+  const pc = c.peerConnection;
+  if (!pc || pc.connectionState !== 'connected' || !c.__evid || !c.__esnd) return null;
+  if (privateOn) return null;
+  const hub = isRelayHub(pid);
+  if (pausedBy.get(pid) && !hub) return null;
+  if ((E.bad.get(pid) || 0) > Date.now()) return null;
+  let p; try{ p = c.__esnd.getParameters(); }catch{ return null; }
+  const cd = p && p.codecs && p.codecs[0];
+  if (!cd) return null;
+  const mime = String(cd.mimeType || '').toLowerCase(), fmtp = String(cd.sdpFmtpLine || '');
+  let codec, profile;
+  if (mime === 'video/h264'){
+    if (!/packetization-mode=1/.test(fmtp)) return null;   // sem fatiar pacotes não cabe quadro grande
+    const pl = ((fmtp.match(/profile-level-id=([0-9a-f]{6})/i) || [])[1] || '42e01f').slice(0, 2).toLowerCase();
+    codec = 'h264'; profile = pl === '42' ? 'base' : pl === '4d' ? 'main' : 'high';
+  } else if (mime === 'video/h265' && engine.caps && engine.caps.enc && engine.caps.enc.h265){ codec = 'h265'; profile = 'main'; }
+  else return null;
+  const plan = planFor(q, q.h, hub ? 0 : wantH.get(pid), wantHz.get(pid));
+  const bw = E.bw.get(pid) || 0;
+  const low = !!bw && bw * 0.85 < plan.kbps * 0.75;   // internet desse espectador não dá conta: vai num vídeo à parte, menor
+  let h = Math.round(q.h / plan.scale);
+  if (low) h = Math.min(h, bw < 1500 ? 480 : bw < 3000 ? 720 : q.h);
+  h = Math.min(q.h, ENGINE_STEPS.find(x => x >= h) || q.h);
+  const kbps = low ? Math.max(500, Math.round(bw * 0.85 / 100) * 100) : plan.kbps;
+  return {group: codec + '|' + profile + (low ? '|L' : ''), codec, profile, h, fps: plan.fps, kbps, low};
+}
+function engineShareSync(){
+  const E = engine.share;
+  if (!E) return;
+  if (localStream !== E.stream){ engineShareEnd('transmissão parou', false); return; }
+  if (!engine.open){ engineShareEnd('o Telão Audio fechou', true); return; }
+  const q = QUALITY[currentQ()], now = Date.now();
+  const desired = new Map();
+  for (const [pid, c] of outCalls){ const d = engineDesire(pid, c, q, E); if (d && !(E.badKeys.get(d.group) > now)) desired.set(pid, d); }
+  // grupos: cada um é UMA codificação no Telão Audio (o maior tamanho pedido; o vídeo à parte usa a menor internet)
+  const groups = new Map();
+  for (const [pid, d] of desired){
+    let g = groups.get(d.group);
+    if (!g) groups.set(d.group, g = {group: d.group, codec: d.codec, profile: d.profile, low: d.low, h: 0, fps: 0, kbps: d.low ? Infinity : 0, pids: []});
+    g.h = Math.max(g.h, d.h); g.fps = Math.max(g.fps, d.fps); g.kbps = d.low ? Math.min(g.kbps, d.kbps) : Math.max(g.kbps, d.kbps);
+    g.pids.push(pid);
+  }
+  for (const g of groups.values()) g.w = Math.round(q.w * g.h / q.h / 2) * 2;
+  // quem não deve mais ir pelo motor volta para o caminho normal
+  for (const [pid, L] of [...E.links]) if (!desired.has(pid) || outCalls.get(pid) !== L.call) engineUnlink(pid, desired.has(pid) ? 'conexão nova' : 'caminho normal', false);
+  for (const g of groups.values()){
+    const cur = [...E.ses.values()].filter(s => s.group === g.group && s.state !== 'closing');
+    const live = cur.find(s => s.state === 'ok') || cur[0] || null;
+    const same = s => s.w === g.w && s.h === g.h && s.fps === g.fps;
+    if (!live){ engineOpenSes(g); continue; }
+    if (!same(live) && !cur.some(s => s !== live && same(s))){
+      // tamanho/ritmo mudou: espera firmar (subir 1,5 s, descer 5 s) e abre a codificação nova antes de largar a velha
+      const key = g.w + 'x' + g.h + '@' + g.fps, p = E.pend.get(g.group);
+      const up = g.h > live.h || g.fps > live.fps, wait = (window.__engineAdaptMs || 1) * (up ? 1500 : 5000);
+      if (!p || p.key !== key) E.pend.set(g.group, {key, since: now});
+      else if (now - p.since >= wait){ E.pend.delete(g.group); engineOpenSes(g); }
+    } else E.pend.delete(g.group);
+    const target = cur.find(s => s.state === 'ok' && same(s)) || (live.state === 'ok' ? live : null);
+    if (!target) continue;
+    if (Math.abs(g.kbps - target.kbps) > target.kbps * 0.1 && now - (target.rateAt || 0) > 1500){
+      target.kbps = Math.round(g.kbps); target.rateAt = now;
+      engineCmd({cmd: 'erate', id: String(target.id), kbps: String(target.kbps)});
+      for (const pid of g.pids){ const c = outCalls.get(pid); if (c && engineLinked(pid)) applyQuality(c.peerConnection, pid); }
+    }
+    for (const pid of g.pids){ const L = E.links.get(pid); if (!L || L.sid !== target.id) engineLink(pid, target); }
+    // codificações velhas desse grupo (já ninguém nelas) fecham
+    for (const s of cur) if (s !== target && s.state === 'ok' && ![...E.links.values()].some(L => L.sid === s.id)) engineCloseSes(s);
+  }
+  for (const s of [...E.ses.values()]){
+    const used = [...E.links.values()].some(L => L.sid === s.id) || groups.has(s.group) && s.state === 'opening';
+    if (used || s.state === 'closing'){ s.idleAt = 0; continue; }
+    if (!s.idleAt) s.idleAt = now; else if (now - s.idleAt > 3000) engineCloseSes(s);
+  }
+  engineSyncStandby();
+  engineBw();
+}
+function engineOpenSes(g){
+  const E = engine.share;
+  if (E.ses.size >= 4){ engineNote('motor: codificações demais; ' + g.group + ' fica no caminho normal'); return; }
+  const s = {id: ++engine.sid, group: g.group, codec: g.codec, profile: g.profile, w: g.w, h: g.h, fps: g.fps, kbps: Math.round(g.kbps), state: 'opening', at: Date.now(), stat: null, low: 0, enc: ''};
+  E.ses.set(s.id, s);
+  engineCmd({cmd: 'esess', id: String(s.id), w: String(s.w), h: String(s.h), fps: String(s.fps), kbps: String(s.kbps), codec: s.codec, profile: s.profile});
+  setTimeout(() => { if (s.state === 'opening' && engine.share === E){ engineNote('motor: codificação ' + s.id + ' não respondeu'); E.badKeys.set(s.group, Date.now() + 5 * 60000); E.ses.delete(s.id); } }, 6000);
+}
+function engineCloseSes(s){
+  const E = engine.share; if (!E) return;
+  s.state = 'closing'; E.ses.delete(s.id);
+  engineCmd({cmd: 'eclose', id: String(s.id)});
+}
+function engineSesMsg(m){
+  const E = engine.share; if (!E) return;
+  const s = E.ses.get(+m.id); if (!s) return;
+  if (m.type === 'esessok'){
+    s.state = 'ok'; s.w = +m.w || s.w; s.h = +m.h || s.h; s.enc = String(m.encoder || ''); s.async = !!m.async;
+    engineNote('motor: codificação ' + s.id + ' ' + s.codec.toUpperCase() + ' ' + s.w + 'x' + s.h + '@' + s.fps + ' ' + s.kbps + ' kbps (' + s.enc + (s.async ? '' : ', síncrono') + ')');
+    engineShareSync();
+  } else if (m.type === 'esesserr'){
+    engineNote('motor: codificação ' + s.group + ' não abriu: ' + (m.message || '?'));
+    E.ses.delete(s.id); E.badKeys.set(s.group, Date.now() + 5 * 60000);
+  } else if (m.type === 'estat'){
+    s.stat = Object.assign({}, m, {at: Date.now()});
+    const users = [...E.links.values()].filter(L => L.sid === s.id && Date.now() - L.at > 4000).length;
+    s.low = users && (+m.out || 0) < 1 ? s.low + 1 : 0;
+    if (s.low >= 2){   // codificador parou de entregar: essa codificação sai, os espectadores voltam para o caminho normal
+      engineNote('motor: codificação ' + s.id + ' parou de entregar quadros');
+      E.badKeys.set(s.group, Date.now() + 5 * 60000);
+      for (const [pid, L] of [...E.links]) if (L.sid === s.id) engineUnlink(pid, 'codificação parou', false);
+      engineCloseSes(s);
+    }
+  }
+}
+async function engineLink(pid, ses){
+  const E = engine.share, c = outCalls.get(pid);
+  if (!E || !c || !c.__esnd) return;
+  let L = E.links.get(pid);
+  if (L && L.call === c){ L.sid = ses.id; L.at = Date.now(); engine.w.postMessage({t: 'swap', vid: L.vid, sid: ses.id}); return; }
+  let gen, writer;
+  try{ gen = new MediaStreamTrackGenerator({kind: 'video'}); writer = gen.writable.getWriter(); }catch(e){ engineNote('motor: gerador indisponível (' + e.message + ')'); return; }
+  try{ gen.contentHint = 'motion'; }catch{}
+  L = {pid, call: c, vid: c.__evid, sender: c.__esnd, gen, writer, sid: ses.id, at: Date.now(), ts: 0, writes: 0, inflight: 0, last: null, idle: 0, plis: []};
+  E.links.set(pid, L); engine.byVid.set(L.vid, L);
+  engine.w.postMessage({t: 'swap', vid: L.vid, sid: ses.id});
+  try{ await L.sender.replaceTrack(gen); }
+  catch(e){ engineNote('motor: troca de trilha falhou para ' + nameOf(pid) + ' (' + e.message + ')'); engineUnlink(pid, 'troca falhou', true); return; }
+  if (E.links.get(pid) !== L){ try{ gen.stop(); }catch{} return; }
+  engineNote('motor → ' + nameOf(pid) + ' (codificação ' + ses.id + ')');
+  applyQuality(c.peerConnection, pid);
+}
+// Quadro do vídeo de mentira: um por quadro que chegou do Telão Audio (o Chromium codifica e o desvio troca o conteúdo).
+function engineDummy(vid){
+  const L = engine.byVid.get(vid);
+  if (!L || !L.writer) return;
+  const ts = Math.max(L.ts + 1000, Math.round(performance.now() * 1000)); L.ts = ts;
+  let f; try{ f = new VideoFrame(ENGINE_DUMMY, {format: 'I420', codedWidth: 256, codedHeight: 144, timestamp: ts}); }catch{ return; }
+  L.inflight++;
+  L.writer.write(f).then(() => { L.inflight--; L.writes++; }, () => { L.inflight--; try{ f.close(); }catch{} });
+}
+async function engineUnlink(pid, why, bad, onlyCall, E0){
+  const E = E0 || engine.share; const L = E && E.links.get(pid);
+  if (!L || (onlyCall && L.call !== onlyCall)) return;
+  E.links.delete(pid); engine.byVid.delete(L.vid);
+  const pc = L.call.peerConnection, alive = pc && pc.connectionState !== 'closed';
+  if (privateOn) engine.w.postMessage({t: 'pass', vid: L.vid});   // tela privada: corta o jogo antes de tudo
+  const vt = activeVideoTrack();
+  if (alive && vt) try{ await L.sender.replaceTrack(vt); }catch{}
+  engine.w.postMessage({t: 'pass', vid: L.vid});
+  try{ L.writer.releaseLock(); }catch{}
+  try{ L.gen.stop(); }catch{}
+  engineNote('motor ✕ ' + nameOf(pid) + ': ' + why);
+  if (bad) E.bad.set(pid, Date.now() + 10 * 60000);
+  if (alive) applyQuality(pc, pid);
+  engineSyncStandby();
+}
+// Saúde de cada espectador no motor (a partir das contas do desvio).
+function engineLinkHealth(){
+  const E = engine.share, W = engine.wstats;
+  if (!E || !W) return;
+  const now = Date.now();
+  for (const [pid, L] of [...E.links]){
+    const s = W.snd.find(x => x.vid === L.vid);
+    if (!s) continue;
+    const prev = L.last; L.last = {at: now, out: s.out, plis: s.plis, starve: s.starve, resets: s.resets};
+    if (!prev || now - L.at < 4000) continue;
+    const ses = E.ses.get(L.sid), sesOut = ses && ses.stat ? +ses.stat.out || 0 : 0;
+    L.idle = s.out === prev.out && sesOut >= 5 ? L.idle + 1 : 0;
+    L.plis.push(s.plis - prev.plis); if (L.plis.length > 8) L.plis.shift();
+    const plis = L.plis.reduce((a, b) => a + b, 0);
+    if (L.idle >= 4) engineUnlink(pid, 'nenhum quadro saindo', true);
+    else if (L.plis.length >= 8 && plis >= 12) engineUnlink(pid, 'quem assiste pede quadro completo sem parar (' + plis + ' em 8 s)', true);
+  }
+}
+// A captura normal fica de reserva (miniatura e quem não está no motor). Com todo mundo no motor, ela fica pequena.
+function engineSyncStandby(){
+  const E = engine.share;
+  if (!E || turboShare || !localStream) return;
+  const vt = localStream.getVideoTracks()[0]; if (!vt || vt.readyState !== 'live') return;
+  let normal = 0, inEngine = 0;
+  for (const [pid, c] of outCalls){
+    const pc = c.peerConnection;
+    if (!pc || pc.connectionState === 'closed' || pc.connectionState === 'failed') continue;
+    if (pausedBy.get(pid) && !isRelayHub(pid)) continue;
+    if (E.links.has(pid)) inEngine++; else normal++;
+  }
+  const wantLow = !normal && inEngine > 0 && !privateOn, now = Date.now();
+  if (!wantLow){
+    E.lowAt = 0;
+    if (E.low){ E.low = false; const q = QUALITY[currentQ()]; vt.applyConstraints({width: {ideal: q.w, max: q.w}, height: {ideal: q.h, max: q.h}, frameRate: {ideal: q.fps, max: q.fps}}).catch(() => {}); }
+    return;
+  }
+  if (E.low) return;
+  if (!E.lowAt){ E.lowAt = now; return; }
+  if (now - E.lowAt < 4000) return;
+  E.low = true;
+  vt.applyConstraints({width: {max: PIP_TURBO_PREVIEW.w}, height: {max: PIP_TURBO_PREVIEW.h}, frameRate: {max: PIP_TURBO_PREVIEW.fps}}).catch(() => {});
+}
+// Internet disponível até cada espectador (o WebRTC mede): espectador apertado vai para o vídeo à parte.
+async function engineBw(){
+  const E = engine.share; if (!E || E.bwBusy) return;
+  E.bwBusy = true;
+  try{
+    for (const [pid, c] of outCalls){
+      const pc = c.peerConnection; if (!pc || pc.connectionState !== 'connected') continue;
+      try{ (await pc.getStats()).forEach(r => { if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded' && r.availableOutgoingBitrate) E.bw.set(pid, Math.round(r.availableOutgoingBitrate / 1000)); }); }catch{}
+    }
+  } finally { E.bwBusy = false; }
+}
+function engineShareEnd(why, fallback){
+  const E = engine.share; if (!E) return;
+  engine.share = null;
+  engine.last = {at: Date.now(), reason: why, secs: Math.round((Date.now() - E.t0) / 1000), ses: [...E.ses.values()].map(s => s.codec + ' ' + s.w + 'x' + s.h + '@' + s.fps + ' ' + (s.enc || ''))};
+  engineNote('motor parou: ' + why);
+  for (const pid of [...E.links.keys()]) engineUnlink(pid, why, false, null, E);
+  engineCmd({cmd: 'estop'});
+  if (E.low && localStream === E.stream && !turboShare){
+    const vt = localStream.getVideoTracks()[0], q = QUALITY[currentQ()];
+    if (vt) vt.applyConstraints({width: {ideal: q.w, max: q.w}, height: {ideal: q.h, max: q.h}, frameRate: {ideal: q.fps, max: q.fps}}).catch(() => {});
+  }
+  if (fallback && localStream === E.stream){
+    toast('O motor de vídeo parou (' + why + '). A transmissão continua pelo caminho normal.', 'warn', 8000);
+    if (DESKTOP && turboAvailable() && turboOn() && !turboShare) engageTurbo(E.chosen, E.stream).catch(() => {});
+  }
+}
+// Parâmetros do envio para quem está no motor: sem reduzir o vídeo de mentira e com folga de taxa para o vídeo de verdade.
+function engineQuality(pid){
+  const E = engine.share, L = E && E.links.get(pid);
+  if (!L) return null;
+  const s = E.ses.get(L.sid);
+  return {kbps: Math.round((s ? s.kbps : QUALITY[currentQ()].kbps) * 1.5), fps: 240, scale: 1};
+}
+
+/* --- quem assiste --- */
+function engineViewBlock(pid, t, codec){
+  const call = t.call;
+  if (!call || !call.__erid) return 'sem desvio';
+  if (!codec) return 'formato ' + (t.mime || '?');
+  if (!engineViewOk(codec)) return 'motor indisponível';
+  if (t.natBad && Date.now() < t.natBad) return 'falhou há pouco';
+  if (t.via) return 'chega por retransmissão';
+  if ([...relayOut.values()].some(e => e.s === pid)) return 'eu retransmito esta tela';
+  if (hiddenIds.has(pid) || t.el.hidden) return 'oculta';
+  if (amAway) return 'ausente';
+  if (store.get('clips', false)) return 'clipes ligados';
+  if (floatState && floatState.pid === pid) return 'janela flutuante';
+  if (!t.firstFrame) return 'conectando';
+  if (t.el.classList.contains('needs-click')) return 'esperando clique';
+  return '';
+}
+function engineViewSync(){
+  for (const [pid, t] of tiles){
+    const codec = t.mime === 'H264' ? 'h264' : t.mime === 'H265' ? 'h265' : '';
+    const n = t.nat;
+    if (n && n.call !== t.call){ engineViewStop(pid, t, 'conexão nova', false); continue; }
+    const why = engineViewBlock(pid, t, codec);
+    t.natWhy = why;
+    if (n && why) engineViewStop(pid, t, why, false);
+    else if (!n && !why) engineViewStart(pid, t, codec);
+    else if (n) engineViewCheck(pid, t);
+  }
+}
+function engineViewStart(pid, t, codec){
+  const id = t.call.__erid;
+  t.nat = {id, pid, call: t.call, codec, state: 'opening', at: Date.now(), kAt: 0, stat: null, bad: 0, w: 0, h: 0, rect: ''};
+  engine.views.set(id, t.nat);
+  engineCmd({cmd: 'dopen', id: String(id), codec, owner: String(engine.hwnd)});
+}
+function engineViewMsg(m){
+  const n = engine.views.get(+m.id);
+  if (!n) return;
+  const t = tiles.get(n.pid);
+  if (!t || t.nat !== n) return;
+  if (m.type === 'dopenok'){
+    n.state = 'tee'; n.teeAt = Date.now(); n.dec = String(m.decoder || '');
+    engine.w.postMessage({t: 'rmode', rid: n.id, mode: 'tee', codec: n.codec});
+  } else if (m.type === 'dopenerr'){
+    engineViewStop(n.pid, t, 'não abriu: ' + (m.message || '?'), true);
+  } else if (m.type === 'derror'){
+    engineViewStop(n.pid, t, String(m.message || 'erro'), true);
+  } else if (m.type === 'dfirst'){
+    if (n.state !== 'tee') return;
+    n.state = 'on'; n.onAt = Date.now(); n.w = +m.w || 0; n.h = +m.h || 0;
+    engine.w.postMessage({t: 'rmode', rid: n.id, mode: 'divert', codec: n.codec});
+    engineNatUi(t, true);
+    engineNote('motor: ' + nameOf(n.pid) + ' na janela do Telão Audio (' + n.codec.toUpperCase() + ' ' + n.w + 'x' + n.h + ', ' + (n.dec || '?') + ', ' + ((n.onAt - n.at) / 1000).toFixed(1) + ' s)');
+    engineRectLoop();
+  } else if (m.type === 'dstat'){
+    n.stat = Object.assign({}, m, {at: Date.now()});
+    if (+m.w) n.w = +m.w; if (+m.h) n.h = +m.h;
+    n.fz = (n.fz || []).concat([{at: Date.now(), n: +m.freezes || 0}]).filter(x => Date.now() - x.at < 11000);
+    const stuck = n.state === 'on' && (+m.in || 0) >= 5 && (+m.dec || 0) < 0.5;
+    n.bad = stuck ? n.bad + 1 : 0;
+    if (n.bad >= 2) engineViewStop(n.pid, t, 'parou de decodificar', true);
+  } else if (m.type === 'dev') engineViewEvent(n.pid, t, String(m.ev || ''), +m.n || 0);
+}
+function engineViewCheck(pid, t){
+  const n = t.nat, now = Date.now();
+  if (n.state === 'opening' && now - n.at > 6000) return engineViewStop(pid, t, 'o Telão Audio não respondeu', true);
+  if (n.state === 'tee'){
+    if (now - n.teeAt > 7000) return engineViewStop(pid, t, 'nenhuma imagem decodificada', true);
+    if (now - n.kAt > 1500){ n.kAt = now; engine.w.postMessage({t: 'kreq', rid: n.id}); }
+  }
+  if (n.state === 'on' && (!n.stat || now - n.stat.at > 7000) && now - n.onAt > 7000) return engineViewStop(pid, t, 'o Telão Audio parou de responder', true);
+}
+function engineViewStop(pid, t, why, bad){
+  const n = t.nat; if (!n) return;
+  t.nat = null; engine.views.delete(n.id);
+  if (engine.w){ engine.w.postMessage({t: 'rmode', rid: n.id, mode: 'pass'}); engineCmd({cmd: 'dclose', id: String(n.id)}); }
+  engineNatUi(t, false);
+  engineNote('motor ✕ tela de ' + nameOf(pid) + ': ' + why);
+  if (bad){
+    t.natBad = Date.now() + 10 * 60000;
+    engine.viewFails = (engine.viewFails || 0) + 1;
+    if (!engine.warnedView){ engine.warnedView = true; toast('O motor de vídeo não conseguiu mostrar a tela de ' + nameOf(pid) + ' (' + why + '). Ela segue pelo caminho normal.', 'warn', 8000); }
+  }
+}
+// Tela no motor: a imagem é da janela do Telão Audio; nome, qualidade e botões vão para uma faixa embaixo do vídeo.
+function engineNatUi(t, on){
+  if (!t.strip){
+    t.strip = document.createElement('div'); t.strip.className = 'tstrip';
+    t.rxBtn = document.createElement('button'); t.rxBtn.type = 'button'; t.rxBtn.className = 'rxbtn'; t.rxBtn.innerHTML = ICON.react + 'Reagir';
+    t.rxBtn.onclick = () => { t.el.classList.toggle('rxopen'); layout(); };
+    t.tagEl = t.el.querySelector('.tag'); t.tbarEl = t.el.querySelector('.tbar');
+    t.nstatEl = document.createElement('span'); t.nstatEl.className = 'nstat';
+  }
+  t.el.classList.toggle('nat', on);
+  if (on){
+    t.video.after(t.strip);
+    t.strip.append(t.tagEl, t.tqEl, t.nstatEl, t.rxBtn, t.tbarEl);
+  } else {
+    t.el.classList.remove('rxopen');
+    t.el.querySelector('.tinfo').before(t.tagEl, t.tqEl);
+    t.el.appendChild(t.tbarEl);
+    t.strip.remove();
+  }
+  layout();
+}
+function engineViewEvent(pid, t, ev, n){
+  if (ev === 'dbl'){ try{ window.telaoDesktop.natGesture(); }catch{} engine.fsWant = pid; }
+  else if (ev === 'click'){ try{ t.el.focus({preventScroll: true}); }catch{} }
+  else if (ev === 'wheel'){ $('#stage').scrollBy(0, -n); }
+  else if (ev === 'react'){ const it = reactBar()[n]; if (it) sendReact(pid, it); }
+  else if (ev === 'exit'){ if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
+}
+// Chamado pelo app com "gesto do usuário" (duplo clique na janela de vídeo): tela cheia precisa disso.
+window.__natGesture = () => {
+  const pid = engine.fsWant; engine.fsWant = null;
+  const t = pid && tiles.get(pid);
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else if (t) t.el.requestFullscreen().catch(() => {});
+};
+function engineFullSync(){
+  for (const t of tiles.values()){
+    const n = t.nat; if (!n || n.state !== 'on') continue;
+    const on = document.fullscreenElement === t.el;
+    if (!!n.full === on) continue;
+    n.full = on;
+    const labels = reactBar().map(x => x.t === 'e' ? x.v : '★');
+    engineCmd({cmd: 'dfull', id: String(n.id), on: on ? '1' : '0', name: t.nameEl.textContent, sub: t.gameEl.textContent, reacts: labels.join('\n')});
+  }
+}
+// Reação/mensagem por cima da tela no motor: quem desenha é o Telão Audio. Devolve true se tratou.
+function engineReact(pid, item, who){
+  const t = tiles.get(pid), n = t && t.nat;
+  if (!n || n.state !== 'on') return false;
+  const img = item.t === 's' ? (blobs.get(item.v) || '') : '';
+  engineCmd({cmd: 'dreact', id: String(n.id), kind: 'react', text: item.t === 'e' ? String(item.v) : '', who: String(who || '').slice(0, 24), img: img.length < 1100000 ? img : ''});
+  return true;
+}
+function engineChat(m){
+  for (const t of tiles.values()){
+    const n = t.nat;
+    if (!n || n.state !== 'on' || document.fullscreenElement !== t.el) continue;
+    engineCmd({cmd: 'dreact', id: String(n.id), kind: 'chat', text: m.x || '[figurinha]', who: m.n, img: ''});
+  }
+}
+// Posição da janela de vídeo: o retângulo do vídeo na página (pixels físicos) e os "buracos" onde a página tem algo por cima.
+const ENGINE_OVERS = '#toasts > *, .pop:not([hidden]), #pip:not([hidden]), #picker:not([hidden]), #diag:not([hidden]), .modal:not([hidden]), .rx-panel:not([hidden]), #upd:not([hidden]), #cropper:not([hidden])';
+let engineRectIv = 0;
+function engineRectLoop(){
+  if (!engineRectIv) engineRectIv = setInterval(engineRects, 100);
+  engineRects();
+}
+function engineRects(){
+  let any = false;
+  const dpr = devicePixelRatio || 1, st = $('#stage').getBoundingClientRect();
+  let overs = null;
+  for (const t of tiles.values()){
+    const n = t.nat;
+    if (!n || n.state !== 'on') continue;
+    any = true;
+    const fs = document.fullscreenElement;
+    const r = t.video.getBoundingClientRect();
+    const clip = fs === t.el ? {l: 0, t: 0, r: innerWidth, b: innerHeight}
+      : {l: Math.max(0, st.left), t: Math.max(0, st.top), r: Math.min(innerWidth, st.right), b: Math.min(innerHeight, st.bottom)};
+    const vis = {l: Math.max(r.left, clip.l), t: Math.max(r.top, clip.t), r: Math.min(r.right, clip.r), b: Math.min(r.bottom, clip.b)};
+    const show = !document.hidden && !t.el.hidden && t.el.ownerDocument === document && t.el.isConnected && (!fs || fs === t.el) && vis.r - vis.l > 8 && vis.b - vis.t > 8;
+    const holes = [];
+    if (show){
+      if (vis.t > r.top) holes.push([r.left, r.top, r.right, vis.t]);
+      if (vis.b < r.bottom) holes.push([r.left, vis.b, r.right, r.bottom]);
+      if (vis.l > r.left) holes.push([r.left, r.top, vis.l, r.bottom]);
+      if (vis.r < r.right) holes.push([vis.r, r.top, r.right, r.bottom]);
+      if (!overs){
+        overs = [...document.querySelectorAll(ENGINE_OVERS)];
+        const ch = $('#chat'); if (ch && !ch.hidden && getComputedStyle(ch).position === 'fixed') overs.push(ch);
+      }
+      for (const o of overs){
+        if (fs && !fs.contains(o)) continue;
+        const b = o.getBoundingClientRect();
+        if (b.width < 1 || b.height < 1 || b.right <= r.left || b.left >= r.right || b.bottom <= r.top || b.top >= r.bottom) continue;
+        holes.push([Math.max(b.left, r.left), Math.max(b.top, r.top), Math.min(b.right, r.right), Math.min(b.bottom, r.bottom)]);
+      }
+    }
+    const P = v => Math.round(v * dpr);
+    const msg = {cmd: 'drect', id: String(n.id), show: show ? '1' : '0', x: String(P(r.left)), y: String(P(r.top)), w: String(P(r.right) - P(r.left)), h: String(P(r.bottom) - P(r.top)),
+                 holes: holes.slice(0, 30).map(h => [P(h[0]), P(h[1]), P(h[2]) - P(h[0]), P(h[3]) - P(h[1])].join(',')).join(';')};
+    const key = JSON.stringify(msg);
+    if (key !== n.rect){ n.rect = key; n.shown = show; engineCmd(msg); }
+  }
+  if (!any && engineRectIv){ clearInterval(engineRectIv); engineRectIv = 0; }
+}
+// A janela de vídeo acompanha na hora o que mexe na página (redimensionar, rolar, tela cheia, minimizar).
+addEventListener('resize', () => { if (engineRectIv) engineRects(); });
+document.addEventListener('scroll', () => { if (engineRectIv) engineRects(); }, true);
+document.addEventListener('visibilitychange', () => { if (engineRectIv) engineRects(); });
+document.addEventListener('fullscreenchange', () => { engineFullSync(); if (engineRectIv) setTimeout(engineRects, 0); });
+
+function engineReport(){
+  const L = [];
+  if (!DESKTOP) return L;
+  const c = engine.caps;
+  L.push('Motor de vídeo: ' + (!engineAllowed() ? 'indisponível (app nível ' + (window.telaoDesktop.shell || 0) + ')' :
+    (store.get('engine', true) === false ? 'DESLIGADO nas Opções' : engine.remote.on === false ? 'DESLIGADO remotamente' : 'ligado') +
+    ' · Telão Audio ' + (engine.open ? 'conectado' : 'desconectado') + (c ? ' · codifica ' + (['h264', 'h265'].filter(k => c.enc[k]).join('+') || 'nada') + ' · decodifica ' + (['h264', 'h265'].filter(k => c.dec[k]).join('+') || 'nada') : ' · sem resposta do motor (Telão Audio antigo?)') +
+    (engine.remote.send === false ? ' · envio desligado remotamente' : '') + (engine.remote.view !== false ? '' : ' · tela desligada remotamente') + (engine.hwnd ? '' : ' · sem janela do app')));
+  if (c && (c.encNames || c.decNames)) L.push('  componentes: ' + c.encNames + (c.decNames ? ' · H.265: ' + c.decNames : ''));
+  const E = engine.share;
+  if (E){
+    L.push('  transmitindo pelo motor há ' + Math.round((Date.now() - E.t0) / 1000) + ' s · captura ' + E.sw + 'x' + E.sh + ' · ' + E.adapter + (E.low ? ' · reserva pequena' : ''));
+    for (const s of E.ses.values()) L.push('  codificação ' + s.id + ' ' + s.group + ' ' + s.w + 'x' + s.h + '@' + s.fps + ' ' + s.kbps + ' kbps ' + s.state + ' (' + (s.enc || '?') + ')' +
+      (s.stat ? ' · entra ' + s.stat.in + ' sai ' + s.stat.out + ' fps · ocupado ' + s.stat.busy + '/s · ' + s.stat.kbps + ' kbps · ' + s.stat.lat + ' ms · ' + s.stat.keys + ' quadros completos' : ''));
+    for (const [pid, Lk] of E.links){
+      const w = engine.wstats && engine.wstats.snd.find(x => x.vid === Lk.vid);
+      L.push('  → ' + nameOf(pid) + ': codificação ' + Lk.sid + ' · quadros ' + (w ? w.out + ' · sem quadro ' + w.starve + ' · recomeços ' + w.resets + ' · pedidos de quadro completo ' + w.plis : '?') + ' · internet ' + (E.bw.get(pid) || '?') + ' kbps');
+    }
+    for (const [pid, c2] of outCalls) if (!E.links.has(pid)){ const d = engineDesire(pid, c2, QUALITY[currentQ()], E); L.push('  → ' + nameOf(pid) + ': caminho normal' + (d ? ' (entrando)' : '')); }
+  } else if (engine.last) L.push('  última transmissão pelo motor: ' + JSON.stringify(engine.last));
+  for (const [pid, t] of tiles){
+    const n = t.nat;
+    if (n) L.push('  tela de ' + nameOf(pid) + ': ' + n.state + ' ' + n.codec.toUpperCase() + ' ' + n.w + 'x' + n.h + ' (' + (n.dec || '?') + ')' +
+      (n.stat ? ' · chega ' + n.stat.in + ' decodifica ' + n.stat.dec + ' mostra ' + n.stat.pres + ' fps · travadas ' + n.stat.freezes + ' · descartes ' + n.stat.drop + ' · ' + n.stat.ms + ' ms' : ''));
+    else L.push('  tela de ' + nameOf(pid) + ': caminho normal' + (t.natWhy ? ' (' + t.natWhy + ')' : ''));
+  }
+  for (const x of engine.log.slice(-14)) L.push('  ' + x);
+  return L;
+}
+
 /* Teste no Diagnóstico: captura normal × turbo (placa) × turbo (memória) na janela do jogo, cada uma codificada
    localmente na qualidade escolhida (nada vai para a rede). Mostra quantos quadros chegam e quantos saem. */
 async function trackLuma(track){
@@ -5679,7 +6476,7 @@ function showReact(streamerId, item, who, fromId){
   }
   let box = null;
   if (me && streamerId === me.id){ if (localStream) box = $('#pipFx'); }
-  else { const t = tiles.get(streamerId); if (t && !t.el.hidden) box = t.fxEl; }
+  else { const t = tiles.get(streamerId); if (t && !t.el.hidden){ if (engineReact(streamerId, item, who)) return; box = t.fxEl; } }
   if (!box || box.childElementCount > 24) return;
   const d = box.ownerDocument;
   const el = d.createElement('div'); el.className = 'rx';
@@ -5910,6 +6707,7 @@ function syncClipBuffers(restart, restartPid){
 }
 function setClips(on){
   store.set('clips', !!on);
+  if (on) engineViewSync();   // gravar precisa do vídeo decodificado pelo Chromium
   syncClipBuffers();
 }
 // No navegador o Chromium descarta nomes de download com acento; lá o nome sai sem acentos.
@@ -6360,9 +7158,12 @@ function fitGrid(){
   const W = st.clientWidth - 2 * pad - 1, H = st.clientHeight - 2 * pad - 1;
   if (W <= 0 || H <= 0) return;
   let best = 0;
+  // telas no motor têm a faixa de nome/botões embaixo (e a de reações, se aberta)
+  let extra = 0;
+  for (const e of st.children) if (e.classList.contains('nat') && !e.hidden) extra = Math.max(extra, 58 + (e.classList.contains('rxopen') ? 57 : 0));
   for (let c = 1; c <= n; c++){
     const r = Math.ceil(n / c);
-    const w = Math.min((W - gap * (c - 1)) / c, (H - gap * (r - 1)) / r * 16 / 9);
+    const w = Math.min((W - gap * (c - 1)) / c, ((H - gap * (r - 1)) / r - extra) * 16 / 9);
     if (w > best) best = w;
   }
   st.style.setProperty('--tw', Math.floor(Math.max(Math.min(W, 200), best)) + 'px');
@@ -6393,15 +7194,29 @@ async function updateStats(){
       if (v.frameHeight) parts.push(v.frameHeight + 'p');
       if (v.framesPerSecond) parts.push(Math.round(v.framesPerSecond) + ' fps');
       if (mbps > 0) parts.push(mbps.toFixed(1).replace('.', ',') + ' Mbps');
-      const lines = [parts.join(' · ')];
       const mime = ((codecs[v.codecId] || {}).mimeType || '').replace(/^video\//i, '').toUpperCase();
-      const dec = v.powerEfficientDecoder != null ? (v.powerEfficientDecoder ? 'placa de vídeo' : 'processador') : '';
+      t.mime = mime;
+      const nat = t.nat && t.nat.state === 'on' ? t.nat : null;
+      if (nat){   // no motor quem decodifica e mostra é o Telão Audio: os números do Chromium são do quadro minúsculo
+        parts.length = 0;
+        if (nat.h) parts.push(nat.h + 'p');
+        if (nat.stat) parts.push(Math.round(+nat.stat.pres || 0) + ' fps');
+        if (mbps > 0) parts.push(mbps.toFixed(1).replace('.', ',') + ' Mbps');
+      }
+      const lines = [parts.join(' · ')];
+      const dec = nat ? 'placa de vídeo (motor)' : v.powerEfficientDecoder != null ? (v.powerEfficientDecoder ? 'placa de vídeo' : 'processador') : '';
       if (mime) lines.push(mime.replace(/^H26([45])$/, 'H.26$1') + (dec ? ' · decodifica: ' + dec : ''));
       lines.push(t.via ? 'via ' + nameOf(t.via) + ' (retransmissão)' : relay ? 'via servidor TURN' : 'direto');
+      if (t.nstatEl) t.nstatEl.textContent = nat ? [parts.join(' · '), mime.replace(/^H26([45])$/, 'H.26$1'), 'motor'].filter(Boolean).join(' · ') : '';
       t.statsEl.textContent = '';
       lines.forEach((l, i) => { if (i) t.statsEl.appendChild(document.createElement('br')); t.statsEl.append(l); });
       // "liso" x "engasgando": travadas de vídeo (freezes) nos últimos ~10 s
-      const fz = v.freezeCount != null ? v.freezeCount : null;
+      const fz = nat ? null : v.freezeCount != null ? v.freezeCount : null;
+      if (nat && nat.fz && nat.fz.length){
+        const recent = nat.fz.reduce((a, x) => a + x.n, 0) - nat.fz[0].n;
+        const want = recent > 0 ? 'engasgando' : 'liso';
+        if (t.tqEl.textContent !== want){ t.tqEl.textContent = want; t.tqEl.classList.toggle('warn', recent > 0); }
+      }
       if (fz != null){
         t.fzHist = (t.fzHist || []).concat([{at: Date.now(), n: fz}]).filter(x => Date.now() - x.at < 11000);
         const recent = fz - t.fzHist[0].n;
@@ -6723,6 +7538,7 @@ function diagReport(){
   if (!diagResults.length) L.push('(teste de encoder não executado)');
   for (const el of $('#dgLive').children) L.push('Ao vivo — ' + el.textContent);
   L.push(...turboReport());
+  L.push(...engineReport());
   if (perfLast){ L.push('--- medição de uso real ---'); L.push(perfLast.text); }
   L.push('--- conexão com a sala ---');
   for (const e of netEvents.slice(-40)) L.push(e);

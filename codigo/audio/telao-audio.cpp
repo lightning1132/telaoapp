@@ -10,6 +10,7 @@
 //
 // Build (de qualquer SO, com Zig):
 //   zig c++ -target x86_64-windows-gnu -O2 -o telao-audio.exe telao-audio.cpp -lole32 -lws2_32 -luser32 -lgdi32
+//   (motor.inc, no mesmo diretório, entra junto: codificar/decodificar vídeo na placa)
 
 #include <cstdarg>
 #include <cstdlib>
@@ -344,6 +345,67 @@ static std::vector<uint8_t> grpIconDir(const std::vector<IcoImg>& imgs, uint16_t
   return g;
 }
 
+/* ---------- motor de vídeo: partes portáveis ----------
+   Quadros comprimidos (Annex B: 00 00 01 antes de cada NAL) de H.264 e H.265 e o cabeçalho dos quadros que vão e vêm
+   entre o Telão e o Telão Audio pelo WebSocket. */
+struct Nal { size_t off, len; int type; };
+static std::vector<Nal> annexbNals(const uint8_t* p, size_t n, bool hevc){
+  std::vector<Nal> v;
+  size_t start = (size_t)-1;
+  auto push = [&](size_t a, size_t b){ if (b > a) v.push_back({a, b - a, hevc ? (p[a] >> 1) & 0x3f : p[a] & 0x1f}); };
+  for (size_t i = 0; i + 2 < n; ){
+    if (p[i] == 0 && p[i + 1] == 0 && p[i + 2] == 1){
+      size_t sc = (i > 0 && p[i - 1] == 0) ? i - 1 : i;
+      if (start != (size_t)-1) push(start, sc);
+      start = i + 3; i += 3;
+    } else i++;
+  }
+  if (start != (size_t)-1 && start < n) push(start, n);
+  return v;
+}
+struct AuInfo { bool key = false, params = false; int nals = 0; };
+// key: tem quadro completo (IDR no H.264; IDR/CRA/BLA no H.265). params: traz SPS/PPS (e VPS no H.265).
+static AuInfo auInfo(const uint8_t* p, size_t n, bool hevc){
+  AuInfo a; bool sps = false, pps = false, vps = !hevc;
+  for (const Nal& x : annexbNals(p, n, hevc)){
+    a.nals++;
+    if (hevc){ if (x.type >= 16 && x.type <= 21) a.key = true; if (x.type == 32) vps = true; if (x.type == 33) sps = true; if (x.type == 34) pps = true; }
+    else { if (x.type == 5) a.key = true; if (x.type == 7) sps = true; if (x.type == 8) pps = true; }
+  }
+  a.params = sps && pps && vps;
+  return a;
+}
+// Quadro completo sem SPS/PPS (alguns codificadores só mandam no começo): coloca o cabeçalho na frente.
+static std::vector<uint8_t> withParams(const uint8_t* p, size_t n, const std::vector<uint8_t>& seq, bool hevc){
+  std::vector<uint8_t> o;
+  AuInfo a = auInfo(p, n, hevc);
+  if (a.key && !a.params && !seq.empty()){ o.assign(seq.begin(), seq.end()); if (!(seq.size() >= 3 && seq[0] == 0 && seq[1] == 0)){ o.clear(); } }
+  o.insert(o.end(), p, p + n);
+  return o;
+}
+// Cabeçalho de 24 bytes: "TEF1" (Telão Audio → Telão, quadro codificado) ou "TDF1" (Telão → Telão Audio, para decodificar).
+static void engHeader(uint8_t* p, const char* magic, uint32_t id, uint32_t flags, uint32_t seq, uint64_t ts){
+  memcpy(p, magic, 4);
+  for (int i = 0; i < 4; i++){ p[4 + i] = (id >> (8 * i)) & 255; p[8 + i] = (flags >> (8 * i)) & 255; p[12 + i] = (seq >> (8 * i)) & 255; }
+  for (int i = 0; i < 8; i++) p[16 + i] = (ts >> (8 * i)) & 255;
+}
+static bool engParse(const uint8_t* p, size_t n, const char* magic, uint32_t* id, uint32_t* flags, uint32_t* seq, uint64_t* ts){
+  if (n < 24 || memcmp(p, magic, 4) != 0) return false;
+  uint32_t a = 0, b = 0, c = 0; uint64_t t = 0;
+  for (int i = 3; i >= 0; i--){ a = (a << 8) | p[4 + i]; b = (b << 8) | p[8 + i]; c = (c << 8) | p[12 + i]; }
+  for (int i = 7; i >= 0; i--) t = (t << 8) | p[16 + i];
+  *id = a; *flags = b; *seq = c; *ts = t;
+  return true;
+}
+// Vídeo dentro da janela: centralizado, sem distorcer (faixas pretas nas sobras).
+struct FRect { float l, t, r, b; };
+static FRect letterbox(int vw, int vh, int W, int H){
+  if (vw <= 0 || vh <= 0 || W <= 0 || H <= 0) return {0, 0, (float)W, (float)H};
+  double k = std::min((double)W / vw, (double)H / vh);
+  float w = (float)(vw * k), h = (float)(vh * k);
+  return {(W - w) / 2, (H - h) / 2, (W + w) / 2, (H + h) / 2};
+}
+
 #ifdef TELAO_PORTABLE_TEST
 int main(){
   int fails = 0;
@@ -450,6 +512,40 @@ int main(){
     check(!parseIco(bad, &im), "ícone: recusa arquivo que não é .ico");
     std::vector<uint8_t> cut(f.begin(), f.end() - 2);
     check(!parseIco(cut, &im), "ícone: recusa .ico cortado");
+  }
+  {
+    // motor: Annex B
+    const uint8_t h264[] = {0,0,0,1, 0x67, 1, 2, 0,0,0,1, 0x68, 3, 0,0,1, 0x65, 9, 9, 0, 0,0,1, 0x41, 7};
+    auto ns = annexbNals(h264, sizeof h264, false);
+    check(ns.size() == 4 && ns[0].type == 7 && ns[1].type == 8 && ns[2].type == 5 && ns[2].len == 3 && ns[3].type == 1, "motor: NALs do H.264 (início de 3 e 4 bytes)");
+    AuInfo a = auInfo(h264, sizeof h264, false);
+    check(a.key && a.params && a.nals == 4, "motor: quadro completo com SPS/PPS");
+    const uint8_t idrOnly[] = {0,0,0,1, 0x65, 1, 2};
+    a = auInfo(idrOnly, sizeof idrOnly, false);
+    check(a.key && !a.params, "motor: quadro completo sem SPS/PPS");
+    std::vector<uint8_t> seq = {0,0,0,1, 0x67, 1, 0,0,0,1, 0x68, 2};
+    auto w = withParams(idrOnly, sizeof idrOnly, seq, false);
+    check(w.size() == seq.size() + sizeof idrOnly && auInfo(w.data(), w.size(), false).params, "motor: põe SPS/PPS na frente do quadro completo");
+    const uint8_t pf[] = {0,0,1, 0x41, 5};
+    check(withParams(pf, sizeof pf, seq, false).size() == sizeof pf, "motor: quadro parcial passa igual");
+    // H.265: VPS(32)=0x40, SPS(33)=0x42, PPS(34)=0x44, IDR_W_RADL(19)=0x26, TRAIL_R(1)=0x02 (tipo << 1)
+    const uint8_t h265[] = {0,0,0,1, 0x40, 1, 0,0,0,1, 0x42, 1, 0,0,0,1, 0x44, 1, 0,0,0,1, 0x26, 1, 5};
+    a = auInfo(h265, sizeof h265, true);
+    check(a.key && a.params && a.nals == 4, "motor: H.265 com VPS/SPS/PPS e IDR");
+    const uint8_t h265p[] = {0,0,0,1, 0x02, 1, 7};
+    a = auInfo(h265p, sizeof h265p, true);
+    check(!a.key && !a.params, "motor: H.265 quadro parcial");
+    const uint8_t cra[] = {0,0,1, 0x2a, 1};   // CRA (21)
+    check(auInfo(cra, sizeof cra, true).key, "motor: CRA conta como quadro completo");
+    check(annexbNals((const uint8_t*)"\x01\x02", 2, false).empty(), "motor: lixo não quebra");
+    uint8_t hd[24]; engHeader(hd, "TEF1", 7, 1, 300, 123456789012ULL);
+    uint32_t id, fl, sq; uint64_t ts;
+    check(engParse(hd, 24, "TEF1", &id, &fl, &sq, &ts) && id == 7 && fl == 1 && sq == 300 && ts == 123456789012ULL, "motor: cabeçalho ida e volta");
+    check(!engParse(hd, 24, "TDF1", &id, &fl, &sq, &ts) && !engParse(hd, 20, "TEF1", &id, &fl, &sq, &ts), "motor: cabeçalho errado é recusado");
+    FRect r = letterbox(1920, 1080, 1000, 1000);
+    check(std::fabs(r.t - 218.75f) < 0.01f && r.l == 0 && r.r == 1000, "motor: vídeo 16:9 numa janela quadrada (faixas em cima e embaixo)");
+    r = letterbox(1920, 1080, 1920, 1080);
+    check(r.l == 0 && r.t == 0 && r.r == 1920 && r.b == 1080, "motor: mesma proporção ocupa tudo");
   }
   return fails;
 }
@@ -1551,6 +1647,8 @@ struct Ov {
   double t0 = 0;
   double now(){ return nowMs() - t0; }
 } gOv;
+static thread_local Ov* gOvCur = nullptr;   // janelas de vídeo do motor desenham com o próprio contexto
+static Ov& ovCur(){ return gOvCur ? *gOvCur : gOv; }
 
 static void ovFreeTarget(){
   Ov& o = gOv;
@@ -1598,8 +1696,7 @@ static bool ovMakeTarget(int w, int h){
 }
 
 // Imagem (foto de perfil ou figurinha; GIF anima) → bitmaps prontos para desenhar, reduzidos a no máximo maxSide.
-static std::shared_ptr<OvImg> ovDecode(const std::string& url, int maxSide){
-  Ov& o = gOv;
+static std::shared_ptr<OvImg> ovDecode(Ov& o, const std::string& url, int maxSide){
   if (url.empty() || !o.rt) return nullptr;
   size_t key = std::hash<std::string>()(url) ^ (size_t)maxSide;
   for (auto& c : o.cache) if (c.first == key) return c.second;
@@ -1691,16 +1788,16 @@ static std::shared_ptr<OvImg> ovDecode(const std::string& url, int maxSide){
 
 static IDWriteTextLayout* ovLayout(const std::wstring& t, IDWriteTextFormat* f, float maxW){
   IDWriteTextLayout* l = nullptr;
-  if (gOv.dw && f) gOv.dw->CreateTextLayout(t.c_str(), (UINT32)t.size(), f, maxW, 10000, &l);
+  if (ovCur().dw && f) ovCur().dw->CreateTextLayout(t.c_str(), (UINT32)t.size(), f, maxW, 10000, &l);
   return l;
 }
 static void ovText(IDWriteTextLayout* l, float x, float y, ID2D1Brush* b){
-  Ov& o = gOv;
+  Ov& o = ovCur();
   if (o.dc) o.dc->DrawTextLayout(D2D1::Point2F(x, y), l, b, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
   else o.rt->DrawTextLayout(D2D1::Point2F(x, y), l, b);
 }
 static void ovCircleImg(ID2D1Bitmap* b, float x, float y, float d, float alpha){
-  Ov& o = gOv;
+  Ov& o = ovCur();
   if (!b) return;
   ID2D1EllipseGeometry* g = nullptr; ID2D1Layer* layer = nullptr;
   if (SUCCEEDED(o.d2->CreateEllipseGeometry(D2D1::Ellipse(D2D1::Point2F(x + d / 2, y + d / 2), d / 2, d / 2), &g)) && SUCCEEDED(o.rt->CreateLayer(&layer))){
@@ -1713,7 +1810,7 @@ static void ovCircleImg(ID2D1Bitmap* b, float x, float y, float d, float alpha){
 
 // Uma reação: conteúdo (emoji, texto curto ou figurinha) com o nome embaixo, subindo e sumindo.
 static void ovDrawReact(const OvItem& it, double t){
-  Ov& o = gOv; double s = o.scale;
+  Ov& o = ovCur(); double s = o.scale;
   RxPose p = rxPose(t);
   if (p.alpha <= 0.003) return;
   IDWriteTextLayout* body = nullptr; float bw, bh;
@@ -1766,7 +1863,7 @@ static void ovDrawReact(const OvItem& it, double t){
 
 // Mensagens do chat: empilhadas a partir de baixo, alinhadas à direita; a mais nova embaixo.
 static void ovDrawChat(double now){
-  Ov& o = gOv; double s = o.scale;
+  Ov& o = ovCur(); double s = o.scale;
   float maxW = (float)(o.W - 16 * s), y = (float)(o.H - 12 * s);
   for (int i = (int)o.items.size() - 1; i >= 0; i--){
     const OvItem& it = o.items[i];
@@ -1875,8 +1972,8 @@ static void ovApply(OvCmd* c){
   } else if (c->kind == 3 && o.rt){   // reação ou mensagem
     OvItem it; it.chat = c->chat; it.born = o.now();
     it.text = wide(c->text); it.who = wide(c->who);
-    if (!c->img.empty()) it.img = ovDecode(c->img, (int)std::lround((c->chat ? 120 : 96) * o.scale * 1.5));
-    if (!c->av.empty()) it.av = ovDecode(c->av, (int)std::lround(26 * o.scale * 2));
+    if (!c->img.empty()) it.img = ovDecode(gOv, c->img, (int)std::lround((c->chat ? 120 : 96) * o.scale * 1.5));
+    if (!c->av.empty()) it.av = ovDecode(gOv, c->av, (int)std::lround(26 * o.scale * 2));
     if (it.text.empty() && !it.img) return;
     it.xFrac = (float)(0.08 + (rand() % 1000) / 1000.0 * 0.52);
     if (!it.chat && std::count_if(o.items.begin(), o.items.end(), [](const OvItem& x){ return !x.chat; }) > 24) return;
@@ -1963,8 +2060,12 @@ static void overlayCommand(Conn* c, const std::string& cmd, const std::string& m
   }
 }
 
+#include <deque>
+#include "motor.inc"
+
 static void handleCommand(Conn* c, const std::string& msg){
   std::string cmd = jsonStr(msg, "cmd");
+  if (engineCommand(c, cmd, msg)) return;
   if (cmd == "list"){ wsText(c, buildAppList()); return; }
   if (cmd == "stop"){ stopCapture(c); return; }
   if (cmd == "vstart"){ startVideo(c, msg); return; }
@@ -2056,12 +2157,14 @@ static DWORD WINAPI connThread(void* arg){
       if (op == 0x8){ wsSend(c, 0x8, nullptr, 0); break; }
       if (op == 0x9){ wsSend(c, 0xA, p.data(), p.size()); continue; }
       if (op == 0x1) handleCommand(c, p);
+      else if (op == 0x2) presFrame(c, p);   // quadro do motor para decodificar
     }
     logf("Telão desconectado");
   }
   InterlockedExchange(&c->alive, 0);
   stopCapture(c);
   stopVideo(c);
+  engineClosed(c);
   if (gGprioOwner == c){ gGprioOwner = nullptr; InterlockedExchange(&gGprioOn, 0); applyGpuPrio(false); }
   if (gOvOwner == c && gOvState == 1){ gOvOwner = nullptr; OvCmd* o = new OvCmd; o->kind = 2; ovPost(o); }
   closesocket(c->s);
@@ -2264,6 +2367,9 @@ int main(int argc, char** argv){
   InitializeCriticalSection(&gOriginLock);
   InitializeCriticalSection(&gCapLock);
   InitializeCriticalSection(&gVidLock);
+  InitializeCriticalSection(&gMFLock);
+  InitializeCriticalSection(&gEngLock);
+  InitializeCriticalSection(&gPresLock);
   loadOrigins();
   if (gBoostRoot){ HANDLE bt = CreateThread(nullptr, 0, boostThread, nullptr, 0, nullptr); if (bt) CloseHandle(bt); }
 

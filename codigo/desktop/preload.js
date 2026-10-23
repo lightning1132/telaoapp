@@ -41,6 +41,8 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   titleBar: c => ipcRenderer.invoke('telao:titleBar', c),
   idle: () => ipcRenderer.invoke('telao:idle'),
   onPower: cb => ipcRenderer.on('telao:power', (_e, ev) => cb(String(ev))),
+  hwnd: () => ipcRenderer.invoke('telao:hwnd'),
+  natGesture: () => ipcRenderer.invoke('telao:natGesture'),
   floatWindows: true,
   turbo: !!sharedTexture,
   mainPid: parseInt(arg('telao-main-pid'), 10) || 0,

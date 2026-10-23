@@ -302,6 +302,16 @@ app.whenReady().then(() => {
       return {ok: true, name: path.basename(target)};
     }catch(e){ return {ok: false, error: e.code || e.message}; }
   });
+  // Motor de vídeo (nível 14): o Telão Audio desenha a tela de quem assiste numa janela "filha" desta (ele precisa do identificador)
+  ipcMain.handle('telao:hwnd', e => {
+    const w = BrowserWindow.fromWebContents(e.sender); if (!w) return '';
+    try{ const b = w.getNativeWindowHandle(); return b.length >= 8 ? b.readBigUInt64LE(0).toString() : b.readUInt32LE(0).toString(); }catch{ return ''; }
+  });
+  // Duplo clique na janela de vídeo do Telão Audio: tela cheia exige "gesto do usuário", que só o app consegue dar à página.
+  ipcMain.handle('telao:natGesture', e => {
+    if (!win || e.sender !== win.webContents) return false;
+    return e.sender.executeJavaScript('window.__natGesture && window.__natGesture(), true', true).catch(() => false);
+  });
   ipcMain.handle('telao:openClips', () => { try{ fs.mkdirSync(clipsDir(), {recursive: true}); }catch{} return shell.openPath(clipsDir()); });
 
   // ---- diagnóstico de vídeo ----
