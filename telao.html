@@ -2,7 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Telão">
+<link rel="apple-touch-icon" href="icone-180.png">
+<link rel="manifest" href="manifest.webmanifest">
 <title>Telão</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Crect x=%272%27 y=%272%27 width=%2796%27 height=%2796%27 rx=%2724%27 fill=%27%23161920%27/%3E%3Cpath d=%27M27 25c7-9 15-9 23 0s16 9 23 0%27 fill=%27none%27 stroke=%27%237cf29a%27 stroke-width=%2710%27 stroke-linecap=%27round%27/%3E%3Crect x=%2718%27 y=%2738%27 width=%2764%27 height=%2742%27 rx=%279%27 fill=%27none%27 stroke=%27%23e9ebee%27 stroke-width=%279%27/%3E%3Cpath d=%27M40 88h20%27 stroke=%27%23e9ebee%27 stroke-width=%279%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
 <script id="themeBoot">
@@ -13,6 +20,10 @@
     let t = g('theme') || 'grafite';
     if (t === 'sistema') t = matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'grafite';
     document.documentElement.dataset.theme = t;
+    // celular: só assistir, nada por cima do vídeo (o app desktop nunca entra aqui)
+    const ua = navigator.userAgent, H = document.documentElement;
+    if (!/Electron\//.test(ua) && (g('forcePhone') === true || (matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 600))) H.classList.add('phone');
+    if (/iP(hone|od|ad)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) H.classList.add('ios');
     const a = g('accent');
     if (typeof a === 'string' && /^#[0-9a-f]{6}$/i.test(a)){
       const n = parseInt(a.slice(1), 16), L = (0.2126 * (n >> 16) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
@@ -565,6 +576,101 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 .toast{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;
   padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .toast.warn{border-left-color:var(--warn)}.toast.danger{border-left-color:var(--danger)}
+/* ---------- Celular (html.phone): só assistir, e nada fica por cima do vídeo ---------- */
+html.phone #room{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+html.phone #bar{flex-wrap:nowrap;gap:2px;padding:4px 4px 4px 12px}
+html.phone #bar .wm,html.phone #memSum,html.phone #bar .split,html.phone #status,html.phone #live,html.phone #privBtn,html.phone #clipsBtn,html.phone #codePill > span{display:none}
+html.phone #codePill{margin-left:6px;padding:0 10px;min-width:0}
+html.phone #membersBtn{height:44px;padding:0 4px;min-width:0;overflow:hidden}
+html.phone #bar #chatBtn{position:relative;width:44px;height:44px;padding:0;justify-content:center;border:0;font-size:0;flex:none}
+html.phone #bar #chatBtn .badge{position:absolute;top:4px;right:2px;font-size:10px;line-height:16px;min-width:16px}
+html.phone #bar #moreBtn{width:44px;height:44px;border:0;flex:none}
+html.phone #emptyShare,html.phone #pip{display:none}
+html.phone #empty{padding:24px 16px;gap:18px}
+html.phone #empty h2{font-size:22px}
+html.phone #stage{display:flex;flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;align-content:stretch;gap:0;padding:0;overflow-y:auto}
+html.phone #stage > .tile{width:100%;flex:none;border-radius:0;order:2}
+html.phone #stage > .tile.is-main{order:0}
+html.phone #stage > .tile.wait{order:2;width:auto;margin:8px 12px;border-radius:12px;aspect-ratio:auto;min-height:72px}
+html.phone #empty{order:3}
+html.phone .tile .tag,html.phone .tile .tq{display:none}
+html.phone .tile .tbar,html.phone .tile .tinfo,html.phone .tile .reacts{opacity:0;pointer-events:none}
+html.phone .tile.is-main.touched .tbar,html.phone .tile.is-main.touched .tinfo{opacity:1;pointer-events:auto}
+html.phone .tile .tbar{padding:28px 8px 8px}
+html.phone .tile .tbar .float,html.phone .tile .tbar .focus,html.phone .tile .tbar .vol{display:none}
+html.phone .tile .tbar .tgrp button{width:44px;height:44px}
+html.phone .tile .tbar .clip{height:44px}
+html.phone .tile .tinfo{top:8px;right:8px}
+/* as outras telas viram linhas com miniatura (a miniatura pequena já pede vídeo pequeno a quem transmite) */
+html.phone #stage > .tile:not(.is-main):not(.wait){aspect-ratio:auto;height:80px;background:transparent;cursor:pointer}
+html.phone #stage > .tile:not(.is-main):not(.wait) video{position:absolute;left:12px;top:6px;width:120px;height:68px;border-radius:8px}
+html.phone #stage > .tile:not(.is-main):not(.wait) .tag{display:flex;position:absolute;left:144px;top:50%;right:12px;transform:translateY(-50%);max-width:none;
+  flex-direction:column;align-items:flex-start;gap:2px;padding:0;background:none;color:var(--text)}
+html.phone #stage > .tile:not(.is-main):not(.wait) .tag{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;row-gap:2px;align-items:center}
+html.phone #stage > .tile:not(.is-main):not(.wait) .tag .tgame{grid-column:1 / -1}
+html.phone #stage > .tile:not(.is-main):not(.wait) .tag .tgame{color:var(--muted);font-size:12px;max-width:100%}
+html.phone #stage > .tile:not(.is-main) .tmsg,html.phone #stage > .tile:not(.is-main) .clickplay{inset:auto;left:12px;top:6px;width:120px;height:68px;padding:4px;font-size:11px;border-radius:8px}
+html.phone #stage > .tile:not(.is-main) .fx,html.phone #stage > .tile:not(.is-main) .tbar,html.phone #stage > .tile:not(.is-main) .tinfo{display:none}
+html.phone .tile .rx-panel{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-height:60vh;z-index:70;border-radius:16px 16px 0 0;
+  padding-bottom:max(12px,env(safe-area-inset-bottom))}
+#phoneDock{display:none}
+html.phone #phoneDock{order:1;display:flex;flex-direction:column;flex:none}
+html.phone #phoneDock[hidden]{display:none}
+.pd-info{display:flex;align-items:center;gap:10px;padding:8px 6px 8px 14px;border-bottom:1px solid var(--line)}
+.pd-av{display:flex;flex:none}
+.pd-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pd-txt b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pd-sub{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden}
+.pd-sub::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+.pd-sub.warn::before{background:#ffc857}.pd-sub.bad::before{background:#ff6b6b}
+.pd-info button{width:44px;height:44px;flex:none;display:grid;place-items:center;padding:0;background:transparent;border:0;color:var(--text)}
+.pd-info button[hidden]{display:none}
+.pd-info button.pd-fs{background:var(--panel2);border:1px solid var(--line);border-radius:10px}
+.pd-info svg.i{width:20px;height:20px}
+.pd-rx{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.pd-rx::-webkit-scrollbar,.cu-bot::-webkit-scrollbar,.cu-side::-webkit-scrollbar{display:none}
+.pd-rx button{flex:1 0 40px;height:44px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:20px;line-height:1;padding:0;color:var(--text)}
+.pd-rx button.more{flex:0 0 44px;font-size:16px;font-weight:700}
+.pd-rx .stk,.pd-rx img{width:26px;height:26px;object-fit:contain}
+.pd-rx .rx-txt{font-size:11px;font-weight:700}
+.pd-more{padding:14px 14px 4px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.pd-more[hidden]{display:none}
+html.phone #chat{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;height:min(64vh,560px);z-index:40;border-left:0;border-top:1px solid var(--line);
+  border-radius:16px 16px 0 0;box-shadow:0 -12px 32px rgba(0,0,0,.5);padding-bottom:env(safe-area-inset-bottom)}
+html.phone #chatIn{font-size:16px}
+html.phone .chat-foot button{min-height:44px;min-width:44px}
+html.phone #chatClose{width:44px;height:44px}
+@media (orientation:landscape){html.phone #chat{left:auto;top:0;height:auto;width:min(100%,340px);border-radius:0;border-top:0;border-left:1px solid var(--line)}}
+/* tela cheia no celular: a tela escolhida ocupa tudo; no Android vira tela cheia de verdade (e gira), no iPhone fica "modo cinema" */
+html.cinema,html.cinema body{overflow:hidden}
+html.cinema #stage > .tile.cine{position:fixed;inset:0;z-index:50;width:100vw;height:100vh;height:100dvh;aspect-ratio:auto;border-radius:0;background:#000}
+html.cinema #stage > .tile.cine .tbar,html.cinema #stage > .tile.cine .tinfo{display:none}
+html.cinema #chat{z-index:60}
+#cineUi{position:fixed;inset:0;z-index:55;pointer-events:none;opacity:0;transition:opacity .15s;color:#e9ebee}
+#cineUi[hidden]{display:none}
+#cineUi.on{opacity:1}
+#cineUi.on .cu-top,#cineUi.on .cu-side,#cineUi.on .cu-bot{pointer-events:auto}
+.cu-top{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 26px max(14px,env(safe-area-inset-left));
+  background:linear-gradient(rgba(0,0,0,.6),rgba(0,0,0,0))}
+.cu-btn{width:44px;height:44px;flex:none;display:grid;place-items:center;padding:0;background:rgba(13,15,18,.82);border:1px solid rgba(255,255,255,.14);border-radius:50%;color:#e9ebee}
+.cu-btn[hidden]{display:none}
+.cu-btn.txt{width:auto;padding:0 14px;border-radius:999px;font-size:13px}
+.cu-btn svg.i{width:19px;height:19px}
+.cu-txt{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.cu-txt b{font-weight:600}.cu-txt small{color:#c9ced6;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cu-side{position:absolute;right:max(14px,env(safe-area-inset-right));top:76px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-height:calc(100% - 170px);overflow-y:auto}
+.cu-side button{height:40px;padding:0 14px;background:rgba(13,15,18,.86);border:1px solid rgba(255,255,255,.18);border-radius:999px;color:#e9ebee;font-size:13px}
+.cu-bot{position:absolute;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:5px;
+  background:rgba(13,15,18,.86);border:1px solid rgba(255,255,255,.14);border-radius:999px;max-width:calc(100% - 24px);overflow-x:auto;scrollbar-width:none}
+.cu-bot button{width:44px;height:44px;flex:none;background:transparent;border:0;border-radius:50%;font-size:22px;line-height:1;padding:0;color:#e9ebee}
+.cu-bot button.more{font-size:16px;font-weight:700}
+.cu-bot .stk,.cu-bot img{width:28px;height:28px;object-fit:contain}
+.cu-bot .rx-txt{font-size:11px;font-weight:700}
+#cineChat{position:fixed;left:max(14px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));z-index:54;display:flex;flex-direction:column;gap:6px;max-width:min(60%,360px);pointer-events:none}
+html:not(.cinema) #cineChat{display:none}
+#cineChat .cb{align-self:flex-start;padding:6px 10px;background:rgba(13,15,18,.78);border-radius:10px;font-size:13px;color:#e9ebee;transition:opacity .6s}
+#cineChat .cb.fade{opacity:0}
+#cineChat .cb .cstk{display:block;width:56px;height:56px;object-fit:contain;margin-top:4px}
 </style>
 </head>
 <body>
@@ -904,7 +1010,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.16.4';
+const TELAO_VERSION = '1.17.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -914,7 +1020,11 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 13;      // nível do app desktop mais novo (13: camada por cima do jogo desenhada pelo Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.16.4', 'hoje', ['Tirar da sala funciona com quem está numa versão antiga: a sala fecha a conexão dele, ele some da lista de todo mundo e não consegue voltar por 20 min (quem está na 1.16+ continua saindo sozinho e pode voltar quando quiser)',
+  ['1.17.0', 'hoje', ['Celular: interface própria para assistir. A tela fica em cima, na largura toda e sem nada por cima; nome, qualidade, som, tela cheia e reações ficam embaixo; as outras telas viram uma lista (toque para trocar). Um toque no vídeo mostra os botões',
+                      'Celular: deitar o celular põe em tela cheia (no Android vira tela cheia de verdade no primeiro toque; no iPhone o vídeo ocupa a tela, e dá para abrir o player do iPhone). Reações e mensagens do chat aparecem por cima',
+                      'Celular: chat em gaveta embaixo, sem o botão de compartilhar (o navegador do celular não compartilha a tela) e o celular nunca é escolhido para repassar vídeo',
+                      'Dá para adicionar o Telão à tela inicial do celular: abre como app, sem a barra do navegador']],
+  ['1.16.4', '22/10', ['Tirar da sala funciona com quem está numa versão antiga: a sala fecha a conexão dele, ele some da lista de todo mundo e não consegue voltar por 20 min (quem está na 1.16+ continua saindo sozinho e pode voltar quando quiser)',
                       'Ausente e tirado da sala não recebem mais repasse: antes, quando você parava de enviar, outro amigo podia passar a repassar a sua tela para ele',
                       'Ausente continua ausente mesmo se o Telão antigo dele pedir o vídeo de novo']],
   ['1.16.3', '22/10', ['App, captura turbo: a miniatura "Transmitindo" era o que derrubava tudo. Mostrar a imagem da turbo nela fazia a transmissão cair para ~5 fps (pela placa) ou travava a tela do amigo que você assiste (pela memória). Agora a miniatura mostra uma prévia pequena (12 quadros/s) e a turbo segue a 60 com as telas dos amigos lisas']],
@@ -1277,6 +1387,8 @@ const ICON = {
   focus:'<svg class="i" viewBox="0 0 24 24"><path d="M4 4h7v2H6v5H4zM20 20h-7v-2h5v-5h2z"/></svg>',
   clip: '<svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 7.5L20 18M8.5 16.5L20 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   fs:   '<svg class="i" viewBox="0 0 24 24"><path d="M3 3h6v2H5v4H3zM21 3v6h-2V5h-4V3zM3 21v-6h2v4h4v2zM21 21h-6v-2h4v-4h2z"/></svg>',
+  fsOff:'<svg class="i" viewBox="0 0 24 24"><path d="M7 3h2v6H3V7h4zM15 3h2v4h4v2h-6zM3 15h6v6H7v-4H3zM15 15h6v2h-4v4h-2z"/></svg>',
+  chat: '<svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/></svg>',
 };
 
 /* ---------- Estado ---------- */
@@ -1760,6 +1872,7 @@ function showRoom(){
   initPip();
   initPrivate();
   initChat();
+  initPhone();
   initRxEdit();
   initOpts();
   $('#pipChat').onclick = toggleChatOverlay;
@@ -2151,6 +2264,9 @@ function renderEmptyPeople(){
    o jogo foi direcionado no Windows. */
 const AUDIO_NONE = 'none', AUDIO_SYSTEM = 'system', AUDIO_UNLOCK = 'unlock', AUDIO_WINDOW = 'window-audio';
 const DESKTOP = !!window.telaoDesktop;
+if (DESKTOP) document.documentElement.classList.remove('phone');
+const PHONE = !DESKTOP && document.documentElement.classList.contains('phone');   // celular: só assistir (ver "Celular")
+const IOS = document.documentElement.classList.contains('ios');
 const VIRTUAL_RE = /cable|virtual|voicemeeter/i;
 let populating = false;
 
@@ -3634,7 +3750,7 @@ function buildTile(pid){
     '<div class="tq"></div>' +
     '<div class="tinfo"><span class="stats"></span></div>' +
     '<div class="tmsg">Conectando…</div>' +
-    '<div class="clickplay">Clique para assistir</div>' +
+    '<div class="clickplay">' + (PHONE ? 'Toque para assistir' : 'Clique para assistir') + '</div>' +
     '<div class="fx"></div>' +
     '<div class="reacts"></div>' +
     '<div class="rx-panel" hidden><div class="stk-grid"></div><div class="rx-pfoot"><button type="button" class="ghost add">+ Adicionar figurinha</button>' +
@@ -3683,7 +3799,11 @@ function buildTile(pid){
   t.clipBtn.onclick = () => clipTile(pid);
   el.querySelector('.focus').onclick = () => { focusId = focusId === pid ? null : pid; layout(); };
   el.querySelector('.float').onclick = () => toggleFloat(pid);
-  const goFs = () => { const d = el.ownerDocument; if (d.fullscreenElement) d.exitFullscreen(); else el.requestFullscreen().catch(() => {}); };
+  const goFs = () => {
+    if (PHONE){ phoneFs(pid); return; }
+    const d = el.ownerDocument; if (d.fullscreenElement) d.exitFullscreen(); else el.requestFullscreen().catch(() => {});
+  };
+  if (PHONE) el.addEventListener('click', e => phoneTap(pid, e), true);
   el.querySelector('.fs').onclick = goFs;
   t.video.ondblclick = goFs;
   el.querySelector('.clickplay').onclick = () => { t.video.play().then(() => el.classList.remove('needs-click')).catch(() => {}); };
@@ -4230,6 +4350,7 @@ function fillReactButtons(container, pid){
 }
 function renderReactBars(){
   for (const [pid, t] of tiles){ if (t.reactsEl) fillReactButtons(t.reactsEl, pid); }
+  if (PHONE){ dockPid = null; cineUiPid = null; phoneLayout(); }
 }
 // Painel "…" de uma tela: figurinhas do grupo + atalhos
 function toggleRxPanel(pid){
@@ -4375,6 +4496,7 @@ function addChat(m, opts){
       overlaySend(item);
     }
     floatChat(msg);
+    cineChat(msg);
   }
   return true;
 }
@@ -4518,7 +4640,7 @@ function overlaySend(item){
 const RELAY_BW_HOLD = 20000, RELAY_UNREACH_MS = 45000, RELAY_MIN_VER = '1.9.0';
 let myUp = (store.get('upKbps', null) || {}).v || 0;   // maior upload já medido aqui (kbps)
 let myHw = store.get('hwEnc', null);                    // este PC codifica pela placa de vídeo?
-const relayAllowed = () => store.get('relayOk', true) !== false;
+const relayAllowed = () => !PHONE && store.get('relayOk', true) !== false;   // celular nunca repassa (bateria e dados)
 const bulletins = new Map();     // id → {up, hw, ok, sh, w: [ids que recebe direto], d, n, t}
 // lado de quem transmite
 const relayVia = new Map();      // espectador → retransmissor
@@ -5944,6 +6066,204 @@ function requestRecall(pid){
   syncWaits();
 }
 
+/* ---------- Celular ----------
+   No celular o Telão é só para assistir (o navegador do celular não compartilha a tela). Em pé: uma tela em cima, na
+   largura toda e sem nada por cima; abaixo dela nome, qualidade, som, tela cheia e as reações; as outras telas viram
+   linhas com miniatura (toque para trocar). Um toque no vídeo mostra os botões por 3 s.
+   Deitado (ou no botão): "modo cinema", a tela escolhida ocupa tudo. No Android, o primeiro toque vira tela cheia de
+   verdade (girar sozinho não conta como toque, e o navegador só deixa entrar em tela cheia com um toque); no iPhone a
+   página não pode ocupar a tela toda, então fica o modo cinema, com um botão para o player do próprio iPhone. */
+let phoneMain = null, dockPid = null, phoneDock = null, touchTimer = null;
+let cine = null, cineDismissed = false, cineUiPid = null, cineUiTimer = null;
+const landMq = window.matchMedia ? matchMedia('(orientation: landscape)') : {matches: false, addEventListener(){}};
+const canRealFs = () => !IOS && !!document.documentElement.requestFullscreen;
+function phoneVisible(){ return [...$('#stage').children].filter(e => e.classList.contains('tile') && !e.classList.contains('wait') && !e.hidden)
+  .map(e => [...tiles].find(([, t]) => t.el === e)).filter(Boolean).map(([id]) => id); }
+function phoneMainId(){
+  const vis = phoneVisible();
+  if (phoneMain && vis.includes(phoneMain)) return phoneMain;
+  return vis[0] || null;
+}
+function phoneLayout(){
+  if (!PHONE) return;
+  const id = phoneMainId();
+  for (const [pid, t] of tiles){ t.el.classList.toggle('is-main', pid === id); if (pid !== id) t.el.classList.remove('touched'); }
+  renderPhoneDock(id);
+  if (cine){
+    if (!id || $('#room').hidden) exitCine();
+    else if (cine.pid !== id) moveCine(id);
+    else renderCineUi();
+  }
+  onOrient();
+}
+function phoneSub(t){
+  const q = t.tqEl.textContent.trim(), g = t.gameEl.textContent.trim();
+  return {text: [q, g].filter(Boolean).join(' · ') || 'ao vivo', cls: t.el.classList.contains('weak') ? 'bad' : t.tqEl.classList.contains('warn') ? 'warn' : ''};
+}
+function ensureDock(){
+  if (phoneDock) return phoneDock;
+  const d = document.createElement('div'); d.id = 'phoneDock'; d.hidden = true;
+  d.innerHTML = '<div class="pd-info"><span class="pd-av"></span><div class="pd-txt"><b class="pd-name"></b><span class="pd-sub"></span></div>' +
+    '<button type="button" class="pd-mute" aria-label="Som"></button><button type="button" class="pd-fs" aria-label="Tela cheia">' + ICON.fs + '</button></div>' +
+    '<div class="pd-rx"></div><div class="pd-more">Também ao vivo</div>';
+  d.querySelector('.pd-mute').onclick = () => { const t = tiles.get(dockPid); if (t){ t.video.muted = !t.video.muted; t.syncAudio(); renderPhoneDock(dockPid, true); } };
+  d.querySelector('.pd-fs').onclick = () => { if (dockPid) phoneFs(dockPid); };
+  $('#stage').appendChild(d);
+  return phoneDock = d;
+}
+function renderPhoneDock(id, force){
+  const d = ensureDock(), t = id && tiles.get(id);
+  d.hidden = !t;
+  if (!t) { dockPid = null; return; }
+  if (dockPid !== id || force){
+    dockPid = id;
+    const av = d.querySelector('.pd-av'); av.textContent = ''; av.appendChild(avatarNode(id, t.nameEl.textContent, 34));
+    fillReactButtons(d.querySelector('.pd-rx'), id);
+  }
+  d.querySelector('.pd-name').textContent = t.nameEl.textContent;
+  const sub = phoneSub(t), se = d.querySelector('.pd-sub');
+  se.textContent = sub.text; se.className = 'pd-sub' + (sub.cls ? ' ' + sub.cls : '');
+  const mb = d.querySelector('.pd-mute'), has = t.video.srcObject && t.video.srcObject.getAudioTracks().length > 0;
+  mb.hidden = !has; mb.innerHTML = t.video.muted ? ICON.mute : ICON.vol;
+  d.querySelector('.pd-more').hidden = phoneVisible().length < 2;
+}
+// Toque numa tela: linha → passa a ser a principal; principal → mostra/esconde os botões (no cinema, a camada de controles).
+function phoneTap(pid, e){
+  const t = tiles.get(pid); if (!t) return;
+  if (!t.el.classList.contains('is-main')){
+    e.stopPropagation(); e.preventDefault();
+    phoneMain = pid; layout();
+    $('#stage').scrollTop = 0;
+    return;
+  }
+  if (e.target.closest('button, input, .rx-panel, .clickplay')){ if (t.el.classList.contains('touched')) touchFor(t); return; }
+  if (cine){
+    if (canRealFs() && !document.fullscreenElement) realFs(!cine.auto);
+    showCineUi(!$('#cineUi').classList.contains('on'));
+    return;
+  }
+  if (t.el.classList.contains('touched')){ t.el.classList.remove('touched'); clearTimeout(touchTimer); }
+  else touchFor(t);
+}
+function touchFor(t){ t.el.classList.add('touched'); clearTimeout(touchTimer); touchTimer = setTimeout(() => t.el.classList.remove('touched'), 3000); }
+function phoneFs(pid){ if (cine) exitCine(true); else enterCine(pid, {gesture: true}); }
+// lock: entrou pelo botão com o celular em pé → gira para deitado. Entrou deitando: não trava (levantar tem que sair).
+function realFs(lock){
+  const d = document.documentElement;
+  try{
+    d.requestFullscreen({navigationUI: 'hide'}).then(() => {
+      if (lock) try{ if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }catch{}
+    }).catch(() => {});
+  }catch{}
+}
+function enterCine(pid, o){
+  const t = tiles.get(pid); if (!t || !PHONE) return;
+  if (cine) return moveCine(pid);
+  phoneMain = pid;
+  cine = {pid, auto: !!(o && o.auto)};
+  document.documentElement.classList.add('cinema');
+  t.el.classList.add('cine'); t.el.classList.remove('touched');
+  if (o && o.gesture && canRealFs()) realFs(true);
+  if (IOS && !navigator.standalone && !store.get('iosHomeTip', false)){
+    store.set('iosHomeTip', true);
+    toast('Para tirar a barra do Safari da frente: toque em Compartilhar e "Adicionar à Tela de Início". O Telão passa a abrir como app, em tela cheia.', '', 10000);
+  }
+  renderCineUi(); showCineUi(!cine.auto);
+  scheduleRes();
+}
+function moveCine(pid){
+  const old = cine && tiles.get(cine.pid), t = tiles.get(pid); if (!t || !cine) return;
+  if (old) old.el.classList.remove('cine');
+  cine.pid = pid; phoneMain = pid; t.el.classList.add('cine');
+  renderPhoneDock(pid); renderCineUi(); scheduleRes();
+}
+function exitCine(byUser){
+  if (!cine) return;
+  const t = tiles.get(cine.pid); if (t) t.el.classList.remove('cine');
+  cine = null;
+  document.documentElement.classList.remove('cinema');
+  $('#cineUi').classList.remove('on'); $('#cineChat').textContent = '';
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  try{ if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch{}
+  if (byUser && landMq.matches) cineDismissed = true;   // saiu deitado: não volta sozinho até girar de novo
+  scheduleRes();
+}
+function onOrient(){
+  if (!PHONE || $('#room').hidden) return;
+  if (landMq.matches){
+    if (!cine && !cineDismissed){ const id = phoneMainId(); if (id) enterCine(id, {auto: true}); }
+  } else {
+    cineDismissed = false;
+    if (cine && cine.auto) exitCine();
+  }
+}
+function showCineUi(on){
+  const ui = $('#cineUi');
+  ui.classList.toggle('on', !!on);
+  clearTimeout(cineUiTimer);
+  if (on) cineUiTimer = setTimeout(() => ui.classList.remove('on'), 4000);
+}
+function renderCineUi(){
+  if (!cine) return;
+  const t = tiles.get(cine.pid); if (!t) return;
+  const ui = $('#cineUi'); ui.hidden = false;
+  if (cineUiPid !== cine.pid){
+    cineUiPid = cine.pid;
+    const av = ui.querySelector('.cu-av'); av.textContent = ''; av.appendChild(avatarNode(cine.pid, t.nameEl.textContent, 30));
+    fillReactButtons(ui.querySelector('.cu-bot'), cine.pid);
+  }
+  ui.querySelector('.cu-name').textContent = t.nameEl.textContent;
+  ui.querySelector('.cu-sub').textContent = phoneSub(t).text;
+  const has = t.video.srcObject && t.video.srcObject.getAudioTracks().length > 0, mb = ui.querySelector('#cuMute');
+  mb.hidden = !has; mb.innerHTML = t.video.muted ? ICON.mute : ICON.vol;
+  ui.querySelector('#cuIos').hidden = !(IOS && t.video.webkitEnterFullscreen);
+  const side = ui.querySelector('.cu-side'); side.textContent = '';
+  for (const id of phoneVisible()){
+    if (id === cine.pid) continue;
+    const b = document.createElement('button'); b.type = 'button';
+    b.textContent = tiles.get(id).nameEl.textContent; b.setAttribute('aria-label', 'Ver a tela de ' + b.textContent);
+    b.onclick = () => { moveCine(id); showCineUi(true); };
+    side.appendChild(b);
+  }
+}
+function cineChat(m){
+  if (!cine || !$('#chat').hidden) return;
+  const box = $('#cineChat'), b = document.createElement('div'); b.className = 'cb';
+  const who = document.createElement('b'); who.textContent = m.n + ' '; b.appendChild(who);
+  if (m.x){ const s = document.createElement('span'); s.textContent = m.x; b.appendChild(s); }
+  if (m.st) b.appendChild(reactNode({t: 's', v: m.st}, document, 'cstk'));
+  box.appendChild(b);
+  while (box.childElementCount > 4) box.firstChild.remove();
+  setTimeout(() => b.classList.add('fade'), 7000);
+  setTimeout(() => b.remove(), 7700);
+}
+function initPhone(){
+  if (!PHONE) return;
+  const ui = document.createElement('div'); ui.id = 'cineUi'; ui.hidden = true;
+  ui.innerHTML = '<div class="cu-top"><button type="button" class="cu-btn" id="cuExit" aria-label="Sair da tela cheia">' + ICON.fsOff + '</button>' +
+    '<span class="cu-av"></span><span class="cu-txt"><b class="cu-name"></b><small class="cu-sub"></small></span><span class="grow"></span>' +
+    '<button type="button" class="cu-btn txt" id="cuIos" hidden>Player do iPhone</button>' +
+    '<button type="button" class="cu-btn" id="cuMute" aria-label="Som"></button>' +
+    '<button type="button" class="cu-btn" id="cuChat" aria-label="Chat">' + ICON.chat + '</button></div>' +
+    '<div class="cu-side"></div><div class="cu-bot"></div>';
+  document.body.appendChild(ui);
+  const cc = document.createElement('div'); cc.id = 'cineChat'; document.body.appendChild(cc);
+  ui.addEventListener('pointerdown', () => { if (ui.classList.contains('on')) showCineUi(true); });
+  ui.querySelector('#cuExit').onclick = () => exitCine(true);
+  ui.querySelector('#cuMute').onclick = () => { const t = cine && tiles.get(cine.pid); if (t){ t.video.muted = !t.video.muted; t.syncAudio(); renderCineUi(); renderPhoneDock(t === tiles.get(dockPid) ? dockPid : null); } };
+  ui.querySelector('#cuChat').onclick = () => { toggleChat(); showCineUi(false); };
+  ui.querySelector('#cuIos').onclick = () => { const t = cine && tiles.get(cine.pid); if (t && t.video.webkitEnterFullscreen) try{ t.video.webkitEnterFullscreen(); }catch{} };
+  landMq.addEventListener('change', onOrient);
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement){
+      try{ if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch{}
+      if (cine && !cine.auto) exitCine();   // entrou pelo botão: o "voltar" do Android sai de vez
+    }
+    scheduleRes();
+  });
+  setInterval(() => { if (dockPid) renderPhoneDock(dockPid); if (cine) renderCineUi(); }, 1000);
+}
+
 function layout(){
   const visible = [...tiles.keys()].filter(id => !hiddenIds.has(id)).length + waits.size;
   $('#empty').hidden = visible > 0;
@@ -5953,16 +6273,17 @@ function layout(){
     : 'Quem compartilhar a tela aparece aqui na hora. A call de voz continua onde vocês já estão; aqui é só o vídeo.';
   $('#emptyPeople').hidden = allHidden;
   const floating = floatState && floatState.kind === 'doc' ? floatState.pid : null;
-  const focused = !!focusId && tiles.has(focusId) && !hiddenIds.has(focusId) && focusId !== floating && visible > 1;
+  const focused = !PHONE && !!focusId && tiles.has(focusId) && !hiddenIds.has(focusId) && focusId !== floating && visible > 1;
   $('#stage').classList.toggle('focused', focused);
   for (const [id, t] of tiles) t.el.classList.toggle('is-focus', focused && id === focusId);
   fitGrid();
+  phoneLayout();
 }
 // Maior tamanho de tela (16:9) que faz todas caberem na área, testando de 1 a N colunas.
 // As linhas incompletas ficam centralizadas: 3 telas = 2 em cima e 1 no meio embaixo, sem buraco.
 function fitGrid(){
   const st = $('#stage');
-  if (!st || st.classList.contains('focused')) return;
+  if (!st || PHONE || st.classList.contains('focused')) return;
   const n = [...st.children].filter(e => e.classList.contains('tile') && !e.hidden).length;
   if (!n) return;
   const gap = 12, pad = 16;   // os mesmos do CSS de #stage

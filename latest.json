@@ -1,26 +1,27 @@
 {
-  "version": "1.16.4",
+  "version": "1.17.0",
   "minShell": 2,
-  "page": "versoes/telao-1.16.4.html",
-  "sha256": "9f7c24cfa7b969535a3e9db7d85a38c6237f6829c09ae580664acfa4e5dc01c0",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.16.4",
+  "page": "versoes/telao-1.17.0.html",
+  "sha256": "b38597cb6ca97c01cc70bbaef0f9f7fbdf589d2a98f51701d84a3f5f4147312b",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.17.0",
   "notes": [
-    "Tirar da sala funciona com quem está numa versão antiga: a sala fecha a conexão dele, ele some da lista de todo mundo e não consegue voltar por 20 min (quem está na 1.16+ continua saindo sozinho e pode voltar quando quiser)",
-    "Ausente e tirado da sala não recebem mais repasse: antes, quando você parava de enviar, outro amigo podia passar a repassar a sua tela para ele",
-    "Ausente continua ausente mesmo se o Telão antigo dele pedir o vídeo de novo"
+    "Celular: interface própria para assistir. A tela fica em cima, na largura toda e sem nada por cima; nome, qualidade, som, tela cheia e reações ficam embaixo; as outras telas viram uma lista (toque para trocar). Um toque no vídeo mostra os botões",
+    "Celular: deitar o celular põe em tela cheia (no Android vira tela cheia de verdade no primeiro toque; no iPhone o vídeo ocupa a tela, e dá para abrir o player do iPhone). Reações e mensagens do chat aparecem por cima",
+    "Celular: chat em gaveta embaixo, sem o botão de compartilhar (o navegador do celular não compartilha a tela) e o celular nunca é escolhido para repassar vídeo",
+    "Dá para adicionar o Telão à tela inicial do celular: abre como app, sem a barra do navegador"
   ],
   "app": {
-    "version": "1.16.4",
+    "version": "1.17.0",
     "shell": 13,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.16.4/app.asar",
-        "sha256": "724e4c5cbb20d4545e64b9f812a7db91c4f41df0ff5ccabb47d4efe96e13bc97",
-        "size": 496300
+        "path": "versoes/app-1.17.0/app.asar",
+        "sha256": "331fbdd2ee81a7541f0c10016b2dd1cd5bf35eff4e47799f3e750b4eadfe8809",
+        "size": 558222
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.16.4/telao-audio.exe",
+        "path": "versoes/app-1.17.0/telao-audio.exe",
         "sha256": "5f543cc598b34c81baad48eb6a27e6ab617482d8881ee031eb277632d654038e",
         "size": 694784
       }
