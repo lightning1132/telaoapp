@@ -2142,10 +2142,12 @@ static DWORD WINAPI connThread(void* arg){
   }
   if (ok){
     logf("Telão conectado (origem: %s)", c->origin.c_str());
+    // Mensagem grande chega em pedaços (o Chromium divide, por exemplo, um quadro de vídeo grande do motor): junta antes de usar.
+    std::string frag; int fragOp = 0;
     while (c->alive){
       unsigned char h[2];
       if (!recvExact(c->s, (char*)h, 2)) break;
-      int op = h[0] & 0x0F; bool masked = h[1] & 0x80; uint64_t len = h[1] & 0x7F;
+      int op = h[0] & 0x0F; bool fin = (h[0] & 0x80) != 0, masked = h[1] & 0x80; uint64_t len = h[1] & 0x7F;
       if (len == 126){ unsigned char e[2]; if (!recvExact(c->s, (char*)e, 2)) break; len = (e[0] << 8) | e[1]; }
       else if (len == 127){ unsigned char e[8]; if (!recvExact(c->s, (char*)e, 8)) break; len = 0; for (int i = 0; i < 8; i++) len = (len << 8) | e[i]; }
       if (len > (3u << 20)) break;   // até ~3 MB (figurinha + foto de perfil na camada por cima do jogo)
@@ -2156,6 +2158,13 @@ static DWORD WINAPI connThread(void* arg){
       for (size_t i = 0; i < p.size(); i++) p[i] ^= mask[i & 3];
       if (op == 0x8){ wsSend(c, 0x8, nullptr, 0); break; }
       if (op == 0x9){ wsSend(c, 0xA, p.data(), p.size()); continue; }
+      if (op == 0x0){   // continuação
+        if (!fragOp) continue;
+        frag += p;
+        if (frag.size() > (8u << 20)){ frag.clear(); fragOp = 0; continue; }
+        if (!fin) continue;
+        op = fragOp; p.swap(frag); frag.clear(); fragOp = 0;
+      } else if ((op == 0x1 || op == 0x2) && !fin){ fragOp = op; frag.swap(p); continue; }
       if (op == 0x1) handleCommand(c, p);
       else if (op == 0x2) presFrame(c, p);   // quadro do motor para decodificar
     }

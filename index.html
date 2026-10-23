@@ -1038,7 +1038,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.18.3';
+const TELAO_VERSION = '1.18.4';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1048,7 +1048,10 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.18.3', 'hoje', ['Motor de vídeo, quem assiste: o decodificador do Windows não abria ("não entrega NV12") porque precisava saber um tamanho de vídeo antes do primeiro quadro. Agora parte de 1080p e se ajusta no primeiro quadro completo; se ainda não sair imagem, o relatório diz por quê']],
+  ['1.18.4', 'hoje', ['Motor de vídeo, quem assiste: imagem com borrões e blocos coloridos ao abrir menus/mapa. Quadros grandes chegavam ao Telão Audio em pedaços e só o primeiro era usado; agora são juntados',
+                      'Motor: quadro completo a cada 4 s (antes 10 s) e, se algum quadro se perder no caminho, a tela espera o próximo completo em vez de mostrar sujeira',
+                      'Saindo do motor (por exemplo, ligando os clipes), se a imagem não voltar em 4 s, a tela é reconectada sozinha (antes podia ficar preta)']],
+  ['1.18.3', '23/10', ['Motor de vídeo, quem assiste: o decodificador do Windows não abria ("não entrega NV12") porque precisava saber um tamanho de vídeo antes do primeiro quadro. Agora parte de 1080p e se ajusta no primeiro quadro completo; se ainda não sair imagem, o relatório diz por quê']],
   ['1.18.2', '23/10', ['Janela de teste (Opções → Desempenho): abre um segundo Telão neste PC, com outro nome e já na sua sala, para assistir a si mesmo e testar o motor de vídeo sem precisar de outra pessoa']],
   ['1.18.1', '23/10', ['Motor de vídeo: conexão nova não abre mais uma codificação à parte enquanto a internet ainda está sendo medida (cada troca fazia a tela engasgar no começo)',
                       'Motor de vídeo em H.265: o vídeo de mentira passa a ser 640x360 (codificadores H.265 da placa recusam imagem muito pequena)',
@@ -2024,6 +2027,7 @@ function runHub(hp){
       if (!msg || typeof msg !== 'object') return;
       if (msg.t === 'hello'){
         if (banned(conn.peer, String(msg.name || '?').slice(0, 24))){ setTimeout(() => { try{ conn.close(); }catch{} }, 200); return; }
+        if (!mem.has(conn.peer) || mem.get(conn.peer).conn !== conn) netLog('hub: ' + conn.peer.slice(-6) + ' se apresentou' + (conn.metadata && conn.metadata.telaoReverse ? ' (caminho invertido)' : ''));
         mem.set(conn.peer, {name: String(msg.name || '?').slice(0, 24), sharing: !!msg.sharing, conn, seen: Date.now()});
         send();
         if (chatLog.length) try{ conn.send({t: 'chatlog', list: chatLog}); }catch{}
@@ -5560,6 +5564,12 @@ function tapRecv(tr, rid){
     try{ divert(st, f, ctl); }catch(e){ st.errs = (st.errs || 0) + 1; try{ ctl.enqueue(f); }catch{} }
   }})).pipeTo(tr.writable).catch(() => {});
 }
+// Um quadro não chegou ao Telão Audio: os seguintes dependem dele. Ele espera o próximo quadro completo (sem sujeira) e
+// já pede um a quem transmite.
+function lostOne(st){
+  st.drop++;
+  if (st.mode === 'divert' || st.mode === 'tee'){ send({cmd: 'dkey', id: String(st.rid)}); kreq(st, false); }
+}
 function divert(st, f, ctl){
   const key = f.type === 'key';
   if (isOpen() && ws.bufferedAmount < 8e6){
@@ -5568,8 +5578,8 @@ function divert(st, f, ctl){
     dv.setUint32(0, 0x31464454, true);   // "TDF1"
     dv.setUint32(4, st.rid, true); dv.setUint32(8, key ? 1 : 0, true); dv.setUint32(12, ++st.seq, true); dv.setUint32(16, ts >>> 0, true);
     b.set(d, 24);
-    try{ ws.send(b.buffer); st.sent++; if (key) st.keys++; }catch{ st.drop++; }
-  } else st.drop++;
+    try{ ws.send(b.buffer); st.sent++; if (key) st.keys++; }catch{ lostOne(st); }
+  } else lostOne(st);
   if (st.mode === 'tee'){ ctl.enqueue(f); return; }   // começo: o Chromium continua mostrando até o Telão Audio ter imagem
   f.data = TINY[st.codec].slice().buffer;
   ctl.enqueue(f);
@@ -5697,10 +5707,14 @@ function engineTick(){
 function engineTapWanted(side){ return engineOn() && engine.open && !!engine.caps && (side === 'send' ? !!(engine.caps.enc && engine.caps.enc.h264) : !!(engine.caps.dec && engine.caps.dec.h264)); }
 const videoSenderOf = pc => pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
 // Cada envio de vídeo ganha o "desvio" (no modo normal ele só deixa passar). Precisa entrar antes do vídeo começar.
-function engineTapSend(pid, call){
+function engineTapSend(pid, call, tries){
   if (!engineTapWanted('send') || !call || call.__evid) return;
   const s = videoSenderOf(call.peerConnection);
-  if (!s || s.transform) return;
+  if (!s){   // respondendo a um pedido (caminho invertido) a trilha entra um instante depois
+    if ((tries || 0) < 30 && call.open !== false) setTimeout(() => engineTapSend(pid, call, (tries || 0) + 1), 100);
+    return;
+  }
+  if (s.transform) return;
   const vid = ++engine.vid;
   try{ s.transform = new RTCRtpScriptTransform(engine.w, {side: 'send', vid}); }catch(e){ engineNote('desvio do envio falhou: ' + e.message); return; }
   call.__evid = vid; call.__esnd = s;
@@ -5744,7 +5758,7 @@ async function engageEngine(chosen, stream){
   }
   engine.starts++;
   engine.share = {stream, chosen, tgt, sw: +r.sw || 0, sh: +r.sh || 0, adapter: String(r.adapter || ''), border: !!r.border, t0: Date.now(),
-                  ses: new Map(), links: new Map(), bad: new Map(), badKeys: new Map(), bw: new Map(), lowSt: new Map(), low: false, lowAt: 0, pend: new Map()};
+                  ses: new Map(), links: new Map(), bad: new Map(), badKeys: new Map(), bw: new Map(), lowSt: new Map(), codec: new Map(), low: false, lowAt: 0, pend: new Map()};
   engineNote('motor transmitindo: captura ' + r.sw + 'x' + r.sh + (r.adapter ? ' · ' + r.adapter : ''));
   toast('Motor de vídeo ligado: o jogo é capturado e codificado na placa de vídeo.' + (r.border ? ' Neste Windows aparece uma borda amarela em volta do jogo: ela é só na sua tela.' : ''), '', r.border ? 9000 : 4000);
   engineShareSync();
@@ -5758,9 +5772,9 @@ function engineDesire(pid, c, q, E){
   const hub = isRelayHub(pid);
   if (pausedBy.get(pid) && !hub) return null;
   if ((E.bad.get(pid) || 0) > Date.now()) return null;
-  let p; try{ p = c.__esnd.getParameters(); }catch{ return null; }
-  const cd = p && p.codecs && p.codecs[0];
-  if (!cd) return null;
+  // o formato em uso de verdade (das estatísticas do envio); a lista de getParameters nem sempre vem na ordem da negociação
+  const cd = E.codec.get(pid);
+  if (!cd || cd.call !== c) return null;
   const mime = String(cd.mimeType || '').toLowerCase(), fmtp = String(cd.sdpFmtpLine || '');
   let codec, profile;
   if (mime === 'video/h264'){
@@ -5973,7 +5987,16 @@ async function engineBw(){
   try{
     for (const [pid, c] of outCalls){
       const pc = c.peerConnection; if (!pc || pc.connectionState !== 'connected') continue;
-      try{ (await pc.getStats()).forEach(r => { if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded' && r.availableOutgoingBitrate) E.bw.set(pid, Math.round(r.availableOutgoingBitrate / 1000)); }); }catch{}
+      try{
+        const rep = await pc.getStats(), cs = {}; let out = null;
+        rep.forEach(r => {
+          if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded' && r.availableOutgoingBitrate) E.bw.set(pid, Math.round(r.availableOutgoingBitrate / 1000));
+          if (r.type === 'codec') cs[r.id] = r;
+          if (r.type === 'outbound-rtp' && r.kind === 'video') out = r;
+        });
+        const cd = out && cs[out.codecId];
+        if (cd) E.codec.set(pid, {call: c, mimeType: cd.mimeType, sdpFmtpLine: cd.sdpFmtpLine || ''});
+      }catch{}
     }
   } finally { E.bwBusy = false; }
 }
@@ -6018,7 +6041,22 @@ function engineViewBlock(pid, t, codec){
   if (t.el.classList.contains('needs-click')) return 'esperando clique';
   return '';
 }
+const engineFrames = t => { try{ return t.video.getVideoPlaybackQuality().totalVideoFrames || 0; }catch{ return 0; } };
+// Saiu do motor e o Chromium não voltou a mostrar imagem (o decodificador dele ficou ruim depois dos quadros minúsculos):
+// pede a tela de novo, numa conexão nova (decodificador novo).
+function engineLeftCheck(pid, t){
+  const L = t.natLeft;
+  if (!L || t.nat) return;
+  if (t.call !== L.call || t.el.hidden || hiddenIds.has(pid) || amAway){ t.natLeft = null; return; }
+  const now = Date.now(), f = engineFrames(t);
+  if (f > L.frames + 10){ t.natLeft = null; return; }
+  if (now - L.at < 4000) return;
+  t.natLeft = null;
+  engineNote('motor: a tela de ' + nameOf(pid) + ' não voltou a aparecer no Chromium; reconectando');
+  pullFrom(pid, true);
+}
 function engineViewSync(){
+  for (const [pid, t] of tiles) engineLeftCheck(pid, t);
   for (const [pid, t] of tiles){
     const codec = t.mime === 'H264' ? 'h264' : t.mime === 'H265' ? 'h265' : '';
     const n = t.nat;
@@ -6078,6 +6116,7 @@ function engineViewStop(pid, t, why, bad){
   t.nat = null; engine.views.delete(n.id);
   if (engine.w){ engine.w.postMessage({t: 'rmode', rid: n.id, mode: 'pass'}); engineCmd({cmd: 'dclose', id: String(n.id)}); }
   engineNatUi(t, false);
+  if (n.state === 'on' || n.state === 'tee') t.natLeft = {at: Date.now(), call: t.call, frames: engineFrames(t)};   // o Chromium tem que voltar a mostrar
   engineNote('motor ✕ tela de ' + nameOf(pid) + ': ' + why);
   if (bad){
     t.natBad = Date.now() + 10 * 60000;

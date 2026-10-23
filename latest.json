@@ -1,26 +1,28 @@
 {
-  "version": "1.18.3",
+  "version": "1.18.4",
   "minShell": 2,
-  "page": "versoes/telao-1.18.3.html",
-  "sha256": "889bb93513cae530a4e6d32d4cd2483ed9c9ec091141221bcd18613bd696f226",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.18.3",
+  "page": "versoes/telao-1.18.4.html",
+  "sha256": "d7500187a3df3fc07c4fb4d55f0201ac565c904357804bc4586a52066a294ccf",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.18.4",
   "notes": [
-    "Motor de vídeo, quem assiste: o decodificador do Windows não abria (\"não entrega NV12\") porque precisava saber um tamanho de vídeo antes do primeiro quadro. Agora parte de 1080p e se ajusta no primeiro quadro completo; se ainda não sair imagem, o relatório diz por quê"
+    "Motor de vídeo, quem assiste: imagem com borrões e blocos coloridos ao abrir menus/mapa. Quadros grandes chegavam ao Telão Audio em pedaços e só o primeiro era usado; agora são juntados",
+    "Motor: quadro completo a cada 4 s (antes 10 s) e, se algum quadro se perder no caminho, a tela espera o próximo completo em vez de mostrar sujeira",
+    "Saindo do motor (por exemplo, ligando os clipes), se a imagem não voltar em 4 s, a tela é reconectada sozinha (antes podia ficar preta)"
   ],
   "app": {
-    "version": "1.18.3",
+    "version": "1.18.4",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.18.3/app.asar",
-        "sha256": "218483645c70054ec6c2da10f12cd908f9ba99b38754747ec58f0b7d1f4b2f3a",
-        "size": 625802
+        "path": "versoes/app-1.18.4/app.asar",
+        "sha256": "298c1e8d6c018402eaf18247c774ddc0807b3a631ee8a776a456f80d756b4aa1",
+        "size": 628518
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.18.3/telao-audio.exe",
-        "sha256": "15e35fef3408e9233eb2a042f8d551b78162460edceb24f45640ff2aa8c4df03",
-        "size": 801792
+        "path": "versoes/app-1.18.4/telao-audio.exe",
+        "sha256": "843ef8943756dcf7471151d91984a52f7277442978885b0df3ca4b6ff3ef917e",
+        "size": 802304
       }
     }
   }
