@@ -1038,7 +1038,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.18.5';
+const TELAO_VERSION = '1.18.6';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1048,7 +1048,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.18.5', 'hoje', ['Transmitindo pelo motor: quem assiste no navegador (ou sem o motor) via engasgos e atraso. Cada quadro agora leva o horário em que o jogo foi capturado (antes, o de quando a página o repassava, e qualquer demora virava rajada)',
+  ['1.18.6', 'hoje', ['Atualização do app: quem já tinha baixado uma versão e verificava de novo antes de reiniciar via "Não consegui verificar agora (ENOENT…)" e ficava sem atualizar. Corrigido']],
+  ['1.18.5', '23/10', ['Transmitindo pelo motor: quem assiste no navegador (ou sem o motor) via engasgos e atraso. Cada quadro agora leva o horário em que o jogo foi capturado (antes, o de quando a página o repassava, e qualquer demora virava rajada)',
                       'Motor: a taxa do vídeo acompanha o que a internet de quem assiste aguenta naquele momento, como o caminho normal faz (antes podia mandar mais do que cabia e o atraso ia crescendo)']],
   ['1.18.4', '23/10', ['Motor de vídeo, quem assiste: imagem com borrões e blocos coloridos ao abrir menus/mapa. Quadros grandes chegavam ao Telão Audio em pedaços e só o primeiro era usado; agora são juntados',
                       'Motor: quadro completo a cada 4 s (antes 10 s) e, se algum quadro se perder no caminho, a tela espera o próximo completo em vez de mostrar sujeira',

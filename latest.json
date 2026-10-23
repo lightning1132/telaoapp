@@ -1,25 +1,24 @@
 {
-  "version": "1.18.5",
+  "version": "1.18.6",
   "minShell": 2,
-  "page": "versoes/telao-1.18.5.html",
-  "sha256": "f29fe699c25af5f7383b75a210faf3771f2317ea627f14b750df0195d541affb",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.18.5",
+  "page": "versoes/telao-1.18.6.html",
+  "sha256": "a499b72d4cddd764fca3ee567d0a656e8bd8067d394bd00289a37ca15df948d0",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.18.6",
   "notes": [
-    "Transmitindo pelo motor: quem assiste no navegador (ou sem o motor) via engasgos e atraso. Cada quadro agora leva o horário em que o jogo foi capturado (antes, o de quando a página o repassava, e qualquer demora virava rajada)",
-    "Motor: a taxa do vídeo acompanha o que a internet de quem assiste aguenta naquele momento, como o caminho normal faz (antes podia mandar mais do que cabia e o atraso ia crescendo)"
+    "Atualização do app: quem já tinha baixado uma versão e verificava de novo antes de reiniciar via \"Não consegui verificar agora (ENOENT…)\" e ficava sem atualizar. Corrigido"
   ],
   "app": {
-    "version": "1.18.5",
+    "version": "1.18.6",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.18.5/app.asar",
-        "sha256": "5bbd0427ea68d61885c54e704dae65d879f3a75a537c7f57fe07ea1cbf272bcd",
-        "size": 629608
+        "path": "versoes/app-1.18.6/app.asar",
+        "sha256": "47d1a7cbf2b712a3d023d8e0d0b99d36e58d7c4ea8c8a122614bfb9a1f3d5433",
+        "size": 630043
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.18.5/telao-audio.exe",
+        "path": "versoes/app-1.18.6/telao-audio.exe",
         "sha256": "843ef8943756dcf7471151d91984a52f7277442978885b0df3ca4b6ff3ef917e",
         "size": 802304
       }

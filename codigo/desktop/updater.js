@@ -16,6 +16,8 @@ const os = require('os');
 const {spawn} = require('child_process');
 const path = require('path');
 const fs = require('fs');
+// app.asar é um arquivo comum para a atualização: com o fs do Electron, ler "app.asar" vira "ler uma pasta" e dá ENOENT
+const ofs = (() => { try{ return require('original-fs'); }catch{ return fs; } })();
 const crypto = require('crypto');
 
 // Nível de compatibilidade do "casco" do app (main.js, preload.js, Telão Audio).
@@ -182,11 +184,11 @@ class Updater {
       for (const name of files){
         const f = a.files[name], target = path.join(staging, name);
         if (!f || !/^[0-9a-f]{64}$/i.test(f.sha256 || '')) throw new Error('manifesto sem sha256 para ' + name);
-        if (fs.existsSync(target) && sha256(fs.readFileSync(target)) === f.sha256.toLowerCase()) continue;   // já baixado
+        try{ if (ofs.existsSync(target) && sha256(ofs.readFileSync(target)) === f.sha256.toLowerCase()) continue; }catch{}   // já baixado
         const buf = await fetchBuf(new URL(f.path, this.url).toString(), 120000);
         if (f.size && buf.length !== f.size) throw new Error(name + ': tamanho não confere');
         if (sha256(buf) !== f.sha256.toLowerCase()) throw new Error(name + ': arquivo não confere (sha256)');
-        fs.writeFileSync(target + '.tmp', buf); fs.renameSync(target + '.tmp', target);
+        ofs.writeFileSync(target + '.tmp', buf); ofs.renameSync(target + '.tmp', target);
       }
     }catch(e){ return {status: 'erro', error: e.message}; }
     this.appStaged = {version: a.version, staging, files};
@@ -222,7 +224,7 @@ class Updater {
     // limpa downloads de versões já instaladas
     try{
       for (const v of fs.readdirSync(path.join(ud, 'app-update')))
-        if (isVersion(v) && cmpVer(v, app.getVersion()) <= 0) fs.rmSync(path.join(ud, 'app-update', v), {recursive: true, force: true});
+        if (isVersion(v) && cmpVer(v, app.getVersion()) <= 0) ofs.rmSync(path.join(ud, 'app-update', v), {recursive: true, force: true});
     }catch{}
   }
 
