@@ -1036,7 +1036,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.18.0';
+const TELAO_VERSION = '1.18.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1046,7 +1046,10 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.18.0', 'hoje', ['Motor de vídeo (app 1.18): transmitindo, o Telão Audio captura e codifica o jogo direto na placa de vídeo; assistindo, ele decodifica na placa e desenha a tela numa janela própria. Bem menos memória e processador do que pelo Chromium. Ligado por padrão',
+  ['1.18.1', 'hoje', ['Motor de vídeo: conexão nova não abre mais uma codificação à parte enquanto a internet ainda está sendo medida (cada troca fazia a tela engasgar no começo)',
+                      'Motor de vídeo em H.265: o vídeo de mentira passa a ser 640x360 (codificadores H.265 da placa recusam imagem muito pequena)',
+                      'Medição de uso real e "Ao vivo" mostram os números de verdade do motor (resolução, ritmo, codificador do Telão Audio) em vez dos do vídeo de mentira']],
+  ['1.18.0', '23/10', ['Motor de vídeo (app 1.18): transmitindo, o Telão Audio captura e codifica o jogo direto na placa de vídeo; assistindo, ele decodifica na placa e desenha a tela numa janela própria. Bem menos memória e processador do que pelo Chromium. Ligado por padrão',
                       'Assistindo pelo motor: nome, qualidade e botões ficam numa faixa embaixo do vídeo; "Reagir" abre as reações. Na tela cheia, as reações e o "sair" aparecem ao mexer o mouse',
                       'Se o motor falhar, a transmissão ou a tela volta sozinha para o caminho normal, sem cortar. Dá para desligar em Opções → Desempenho',
                       'Precisa do app 1.18 (atualiza sozinho). Quem assiste no navegador ou em versão antiga continua vendo normalmente']],
@@ -5506,6 +5509,7 @@ function tapSend(tr, vid){
   snd.set(vid, st);
   tr.readable.pipeThrough(new TransformStream({transform(f, ctl){
     if (st.mode !== 'swap'){ ctl.enqueue(f); return; }
+    st.seen = (st.seen || 0) + 1;
     try{
       if (f.type === 'key'){ if (st.fresh) st.fresh = false; else if (st.sid){ st.plis++; askKey(st.sid, false); } }
       const x = st.q.shift();
@@ -5525,7 +5529,7 @@ function onEnc(buf){
     const st = snd.get(vid);
     if (!st || st.mode !== 'swap' || st.sid !== sid) continue;
     // fila crescendo = o Chromium não está consumindo: descarta e recomeça de um quadro completo
-    if (st.q.length >= 4 || (st.q.length && t - st.q[0].at > 400)){ st.q.length = 0; st.needKey = true; st.resets++; }
+    if (st.q.length >= 6 || (st.q.length && t - st.q[0].at > 600)){ st.q.length = 0; st.needKey = true; st.resets++; }
     if (st.needKey){ if (!key){ askKey(sid, false); continue; } st.needKey = false; }
     st.q.push({d: buf.slice(24), at: t});
     postMessage({t: 'dummy', vid});
@@ -5584,7 +5588,7 @@ onmessage = e => {
     if (m.rid) rcv.delete(m.rid);
   }
   else if (m.t === 'stats'){
-    postMessage({t: 'stats', snd: [...snd.values()].map(s => ({vid: s.vid, mode: s.mode, sid: s.sid, q: s.q.length, out: s.out, starve: s.starve, resets: s.resets, plis: s.plis, bytes: s.bytes})),
+    postMessage({t: 'stats', snd: [...snd.values()].map(s => ({vid: s.vid, mode: s.mode, sid: s.sid, q: s.q.length, out: s.out, starve: s.starve, resets: s.resets, plis: s.plis, bytes: s.bytes, nk: s.needKey, seen: s.seen || 0, errs: s.errs || 0})),
                  rcv: [...rcv.values()].map(s => ({rid: s.rid, mode: s.mode, sent: s.sent, keys: s.keys, drop: s.drop, kreqs: s.kreqs})), buf: ws ? ws.bufferedAmount : 0});
   }
 };
@@ -5704,7 +5708,10 @@ function engineTapRecv(call){
 }
 
 /* --- quem transmite --- */
-const ENGINE_DUMMY = (() => { const b = new Uint8Array(256 * 144 * 3 / 2); b.fill(16, 0, 256 * 144); b.fill(128, 256 * 144); return b; })();
+// Vídeo de mentira: 256x144 no H.264 (o Chromium usa o codificador do processador, quase de graça). No H.265 só existe o
+// codificador da placa, e alguns não aceitam imagem tão pequena: lá vai 640x360.
+const engineBlank = (w, h) => { const b = new Uint8Array(w * h * 3 / 2); b.fill(16, 0, w * h); b.fill(128, w * h); return {b, w, h}; };
+const ENGINE_DUMMY = {h264: engineBlank(256, 144), h265: engineBlank(640, 360)};
 const ENGINE_STEPS = [360, 480, 540, 720, 900, 1080, 1440, 2160];
 const engineLinked = pid => !!(engine.share && engine.share.links.has(pid));
 async function engageEngine(chosen, stream){
@@ -5721,7 +5728,7 @@ async function engageEngine(chosen, stream){
   }
   engine.starts++;
   engine.share = {stream, chosen, tgt, sw: +r.sw || 0, sh: +r.sh || 0, adapter: String(r.adapter || ''), border: !!r.border, t0: Date.now(),
-                  ses: new Map(), links: new Map(), bad: new Map(), badKeys: new Map(), bw: new Map(), low: false, lowAt: 0, pend: new Map()};
+                  ses: new Map(), links: new Map(), bad: new Map(), badKeys: new Map(), bw: new Map(), lowSt: new Map(), low: false, lowAt: 0, pend: new Map()};
   engineNote('motor transmitindo: captura ' + r.sw + 'x' + r.sh + (r.adapter ? ' · ' + r.adapter : ''));
   toast('Motor de vídeo ligado: o jogo é capturado e codificado na placa de vídeo.' + (r.border ? ' Neste Windows aparece uma borda amarela em volta do jogo: ela é só na sua tela.' : ''), '', r.border ? 9000 : 4000);
   engineShareSync();
@@ -5747,13 +5754,20 @@ function engineDesire(pid, c, q, E){
   } else if (mime === 'video/h265' && engine.caps && engine.caps.enc && engine.caps.enc.h265){ codec = 'h265'; profile = 'main'; }
   else return null;
   const plan = planFor(q, q.h, hub ? 0 : wantH.get(pid), wantHz.get(pid));
-  const bw = E.bw.get(pid) || 0;
-  const low = !!bw && bw * 0.85 < plan.kbps * 0.75;   // internet desse espectador não dá conta: vai num vídeo à parte, menor
-  let h = Math.round(q.h / plan.scale);
-  if (low) h = Math.min(h, bw < 1500 ? 480 : bw < 3000 ? 720 : q.h);
-  h = Math.min(q.h, ENGINE_STEPS.find(x => x >= h) || q.h);
-  const kbps = low ? Math.max(500, Math.round(bw * 0.85 / 100) * 100) : plan.kbps;
-  return {group: codec + '|' + profile + (low ? '|L' : ''), codec, profile, h, fps: plan.fps, kbps, low};
+  // internet apertada: só conta depois de firmar. Toda conexão nova começa com a estimativa baixa e vai subindo; reagir a
+  // isso abria e fechava codificações (cada troca = espera por quadro completo = engasgo).
+  const bw = E.bw.get(pid) || 0, now = Date.now();
+  let st = E.lowSt.get(pid);
+  if (!st || st.call !== c) E.lowSt.set(pid, st = {call: c, since: now, low: false, flip: 0});
+  const cap = bw ? Math.max(500, Math.round(bw * 0.85 / 100) * 100) : Infinity;
+  if (now - st.since > 10000 && bw){
+    const want = st.low ? !(bw * 0.85 > plan.kbps * 0.9) : bw * 0.85 < plan.kbps * 0.6;
+    if (want !== st.low){ if (!st.flip) st.flip = now; else if (now - st.flip > (st.low ? 10000 : 6000)){ st.low = want; st.flip = 0; } }
+    else st.flip = 0;
+  }
+  let h = Math.min(q.h, ENGINE_STEPS.find(x => x >= Math.round(q.h / plan.scale)) || q.h);
+  const hLow = Math.min(h, cap < 1500 ? 480 : cap < 3000 ? 720 : q.h);
+  return {base: codec + '|' + profile, codec, profile, h, hLow, fps: plan.fps, kbps: plan.kbps, cap, low: st.low};
 }
 function engineShareSync(){
   const E = engine.share;
@@ -5762,16 +5776,23 @@ function engineShareSync(){
   if (!engine.open){ engineShareEnd('o Telão Audio fechou', true); return; }
   const q = QUALITY[currentQ()], now = Date.now();
   const desired = new Map();
-  for (const [pid, c] of outCalls){ const d = engineDesire(pid, c, q, E); if (d && !(E.badKeys.get(d.group) > now)) desired.set(pid, d); }
-  // grupos: cada um é UMA codificação no Telão Audio (o maior tamanho pedido; o vídeo à parte usa a menor internet)
+  for (const [pid, c] of outCalls){ const d = engineDesire(pid, c, q, E); if (d) desired.set(pid, d); }
+  // Grupos: cada um é UMA codificação no Telão Audio, no maior tamanho pedido. Quem tem a internet apertada só vai para um
+  // vídeo à parte (menor) se no mesmo formato houver quem aguente o vídeo cheio; sozinho, a codificação só baixa a taxa.
+  const bases = new Map();
+  for (const d of desired.values()){ const b = bases.get(d.base) || {hi: 0, lo: 0}; if (d.low) b.lo++; else b.hi++; bases.set(d.base, b); }
+  for (const d of desired.values()) d.group = d.base + (d.low && bases.get(d.base).hi ? '|L' : '');
+  for (const [pid, d] of [...desired]) if (E.badKeys.get(d.group) > now) desired.delete(pid);
   const groups = new Map();
   for (const [pid, d] of desired){
     let g = groups.get(d.group);
-    if (!g) groups.set(d.group, g = {group: d.group, codec: d.codec, profile: d.profile, low: d.low, h: 0, fps: 0, kbps: d.low ? Infinity : 0, pids: []});
-    g.h = Math.max(g.h, d.h); g.fps = Math.max(g.fps, d.fps); g.kbps = d.low ? Math.min(g.kbps, d.kbps) : Math.max(g.kbps, d.kbps);
+    const split = d.group.endsWith('|L');
+    if (!g) groups.set(d.group, g = {group: d.group, codec: d.codec, profile: d.profile, low: split, h: 0, fps: 0, kbps: 0, cap: Infinity, pids: []});
+    g.h = Math.max(g.h, split ? d.hLow : d.h); g.fps = Math.max(g.fps, d.fps); g.kbps = Math.max(g.kbps, d.kbps);
+    if (d.low) g.cap = Math.min(g.cap, d.cap);
     g.pids.push(pid);
   }
-  for (const g of groups.values()) g.w = Math.round(q.w * g.h / q.h / 2) * 2;
+  for (const g of groups.values()){ g.kbps = Math.min(g.kbps, g.cap); g.w = Math.round(q.w * g.h / q.h / 2) * 2; }
   // quem não deve mais ir pelo motor volta para o caminho normal
   for (const [pid, L] of [...E.links]) if (!desired.has(pid) || outCalls.get(pid) !== L.call) engineUnlink(pid, desired.has(pid) ? 'conexão nova' : 'caminho normal', false);
   for (const g of groups.values()){
@@ -5848,7 +5869,7 @@ async function engineLink(pid, ses){
   let gen, writer;
   try{ gen = new MediaStreamTrackGenerator({kind: 'video'}); writer = gen.writable.getWriter(); }catch(e){ engineNote('motor: gerador indisponível (' + e.message + ')'); return; }
   try{ gen.contentHint = 'motion'; }catch{}
-  L = {pid, call: c, vid: c.__evid, sender: c.__esnd, gen, writer, sid: ses.id, at: Date.now(), ts: 0, writes: 0, inflight: 0, last: null, idle: 0, plis: []};
+  L = {pid, call: c, vid: c.__evid, sender: c.__esnd, gen, writer, sid: ses.id, codec: ses.codec, at: Date.now(), ts: 0, writes: 0, inflight: 0, last: null, idle: 0, plis: []};
   E.links.set(pid, L); engine.byVid.set(L.vid, L);
   engine.w.postMessage({t: 'swap', vid: L.vid, sid: ses.id});
   try{ await L.sender.replaceTrack(gen); }
@@ -5862,7 +5883,8 @@ function engineDummy(vid){
   const L = engine.byVid.get(vid);
   if (!L || !L.writer) return;
   const ts = Math.max(L.ts + 1000, Math.round(performance.now() * 1000)); L.ts = ts;
-  let f; try{ f = new VideoFrame(ENGINE_DUMMY, {format: 'I420', codedWidth: 256, codedHeight: 144, timestamp: ts}); }catch{ return; }
+  const D = ENGINE_DUMMY[L.codec] || ENGINE_DUMMY.h264;
+  let f; try{ f = new VideoFrame(D.b, {format: 'I420', codedWidth: D.w, codedHeight: D.h, timestamp: ts}); }catch{ return; }
   L.inflight++;
   L.writer.write(f).then(() => { L.inflight--; L.writes++; }, () => { L.inflight--; try{ f.close(); }catch{} });
 }
@@ -5896,7 +5918,11 @@ function engineLinkHealth(){
     L.idle = s.out === prev.out && sesOut >= 5 ? L.idle + 1 : 0;
     L.plis.push(s.plis - prev.plis); if (L.plis.length > 8) L.plis.shift();
     const plis = L.plis.reduce((a, b) => a + b, 0);
-    if (L.idle >= 4) engineUnlink(pid, 'nenhum quadro saindo', true);
+    if (L.idle >= 4){
+      const S2 = E.ses.get(L.sid);
+      engineUnlink(pid, 'nenhum quadro saindo (vídeo de mentira: escritos ' + L.writes + ', na fila ' + L.inflight + ', codificados pelo Chromium ' + (s.seen || 0) + ' · sem quadro ' + s.starve + ' · esperando quadro completo ' + (s.nk ? 'sim' : 'não') +
+                   ' · recomeços ' + s.resets + (s.errs ? ' · erros ' + s.errs : '') + (S2 && S2.stat ? ' · codificação: ' + S2.stat.out + ' fps, ' + S2.stat.keys + ' completos' : '') + ')', true);
+    }
     else if (L.plis.length >= 8 && plis >= 12) engineUnlink(pid, 'quem assiste pede quadro completo sem parar (' + plis + ' em 8 s)', true);
   }
 }
@@ -7502,6 +7528,12 @@ async function renderLive(){
       const cd = cs[o.codecId] || {}, mime = (cd.mimeType || '').replace(/^video\//i, '');
       const neg = /h264/i.test(mime) ? ' (H.264 oferecido: ' + h264Order(pc.localDescription && pc.localDescription.type === 'offer' ? pc.localDescription.sdp : pc.remoteDescription && pc.remoteDescription.sdp) +
         ' · combinado: ' + h264Order(pc.localDescription && pc.localDescription.type === 'answer' ? pc.localDescription.sdp : pc.remoteDescription && pc.remoteDescription.sdp) + ')' : '';
+      const eL = engine.share && engine.share.links.get(pid), eS = eL && engine.share.ses.get(eL.sid);
+      if (eS){   // no motor: o que o Chromium codifica é o vídeo de mentira; o de verdade sai do Telão Audio
+        rows.push(who + ': ' + mime + (/h264/i.test(mime) ? ' ' + h264Name(cd.sdpFmtpLine) : '') + neg + ' · MOTOR ' + eS.w + 'x' + eS.h + ' ' + Math.round(eS.stat ? +eS.stat.out || 0 : 0) + 'fps · placa de vídeo · Telão Audio (' + (eS.enc || '?') + ')' +
+          (pausedBy.get(pid) ? ' · pausado (ocultou)' : '') + ' · vídeo de mentira: ' + (o.frameHeight || '?') + 'p ' + impl);
+        continue;
+      }
       rows.push(who + ': ' + mime + (/h264/i.test(mime) ? ' ' + h264Name(cd.sdpFmtpLine) : '') + neg + ' ' + (o.frameHeight || '?') + 'p ' +
         Math.round(o.framesPerSecond || 0) + 'fps · ' + (hw === true ? 'placa de vídeo' : hw === false ? 'processador' : 'não revelado') +
         (pausedBy.get(pid) ? ' · pausado (ocultou)' : '') + (o.qualityLimitationReason && o.qualityLimitationReason !== 'none' ? ' · gargalo: ' + o.qualityLimitationReason : '') +
@@ -7612,8 +7644,8 @@ async function pcSnap(pc){
 // lista das conexões que existem agora: o que eu mando, o que eu recebo e o que eu repasso
 function perfConns(){
   const list = [];
-  for (const [pid, c] of outCalls) list.push({key: 'out:' + pid, kind: 'out', who: nameOf(pid), pc: c.peerConnection, paused: () => !!pausedBy.get(pid) && !isRelayHub(pid)});
-  for (const [pid, t] of tiles) if (t.call) list.push({key: 'in:' + pid, kind: 'in', who: nameOf(pid), via: t.via ? nameOf(t.via) : '', pc: t.call.peerConnection, hidden: () => t.el.hidden});
+  for (const [pid, c] of outCalls) list.push({key: 'out:' + pid, kind: 'out', pid, who: nameOf(pid), pc: c.peerConnection, paused: () => !!pausedBy.get(pid) && !isRelayHub(pid)});
+  for (const [pid, t] of tiles) if (t.call) list.push({key: 'in:' + pid, kind: 'in', pid, who: nameOf(pid), via: t.via ? nameOf(t.via) : '', pc: t.call.peerConnection, hidden: () => t.el.hidden});
   for (const ent of relayOut.values()) list.push({key: 'rly:' + ent.s + '|' + ent.v, kind: 'rly', who: nameOf(ent.s) + ' → ' + nameOf(ent.v), pc: ent.call && ent.call.peerConnection, paused: () => ent.paused});
   return list;
 }
@@ -7663,6 +7695,23 @@ function perfDelta(kind, cur, prev, dt){
   }
   return s;
 }
+// Conexões no motor: os números do Chromium são do vídeo de mentira (144p, processador); os de verdade vêm do Telão Audio.
+function enginePerf(c, d){
+  if (c.kind === 'out'){
+    const E = engine.share, L = E && E.links.get(c.pid), S = L && E.ses.get(L.sid);
+    if (!S) return;
+    d.motor = true; d.h = S.h; d.hw = true; d.impl = 'Telão Audio (' + (S.enc || '?') + ')';
+    d.encMs = S.stat ? +S.stat.lat || null : null; if (d.encMs == null) delete d.encMs;
+    if (S.stat) d.capFps = +S.stat.in || 0;
+    d.codec = (d.codec || S.codec.toUpperCase()) + ' · motor';
+  } else if (c.kind === 'in'){
+    const t = tiles.get(c.pid), n = t && t.nat;
+    if (!n || n.state !== 'on' || !n.stat) return;
+    d.motor = true; d.fps = +n.stat.pres || 0; d.h = n.h; d.hw = true; d.impl = 'Telão Audio (' + (n.dec || '?') + ')';
+    d.decMs = +n.stat.ms || 0; d.drop = 0; d.freezes = Math.max(d.freezes || 0, +n.stat.freezes || 0);
+    d.codec = (d.codec || n.codec.toUpperCase()) + ' · motor';
+  }
+}
 // fluidez da interface: tempo entre quadros desenhados nos últimos ~1,5 s e tarefas longas
 let perfLong = 0;
 try{ new PerformanceObserver(l => { perfLong += l.getEntries().length; }).observe({entryTypes: ['longtask']}); }catch{}
@@ -7677,7 +7726,7 @@ function uiFrames(){
 async function runPerf(){
   if (perfRun) return;
   const secs = window.__perfSecs || PERF_SECS;
-  const run = perfRun = {t0: Date.now(), secs, samples: [], conns: new Map(), procs: [], ui: [], turbo: [], gpu: [], ctx: perfContext()};
+  const run = perfRun = {t0: Date.now(), secs, samples: [], conns: new Map(), procs: [], ui: [], turbo: [], motor: [], gpu: [], ctx: perfContext()};
   syncPerfUi();
   let prev = new Map(), prevT = performance.now();
   if (DESKTOP && window.telaoDesktop.metrics) try{ await window.telaoDesktop.metrics(); }catch{}   // zera a contagem de processador
@@ -7695,6 +7744,7 @@ async function runPerf(){
       let e = run.conns.get(c.key);
       if (!e){ e = {kind: c.kind, who: c.who, via: c.via || '', samples: []}; run.conns.set(c.key, e); }
       const d = perfDelta(c.kind, snap, prev.get(c.key), dt);
+      enginePerf(c, d);
       d.off = c.paused ? c.paused() : (c.hidden ? c.hidden() : false);
       e.samples.push(d);
     }
@@ -7703,6 +7753,7 @@ async function runPerf(){
     askGpu();
     { const g = gpuFresh(); if (g && !g.none && (!run.gpu.length || run.gpu[run.gpu.length - 1].at !== g.at)) run.gpu.push(g); else if (g && g.none) run.gpuNone = g.none; }
     if (turboActive() && turboShare.ses.stat){ const x = turboShare.ses, st = x.stat; run.turbo.push({win: st.win, out: st.out, ms: st.ms, p95: st.p95, cpu: st.cpu, size: x.w + 'x' + x.h, mode: x.mode}); }
+    if (engine.share) for (const S of engine.share.ses.values()) if (S.state === 'ok' && S.stat) run.motor.push({key: S.id + ' ' + S.codec.toUpperCase() + ' ' + S.w + 'x' + S.h + '@' + S.fps + ' (' + (S.enc || '?') + ')', in: +S.stat.in || 0, out: +S.stat.out || 0, lat: +S.stat.lat || 0, kbps: +S.stat.kbps || 0, target: S.kbps});
     if (!document.hidden) run.ui.push(...(await uiFrames()));
     run.long = perfLong - long0;
     syncPerfUi();
@@ -7793,6 +7844,17 @@ function perfSummary(run){
       W.push('A captura turbo passou adiante só ' + f0(avg(out)) + ' de ' + f0(Math.min(target, avg(win))) + ' quadros/s: ' + why + '.');
     }
   }
+  // motor de vídeo: cada codificação do Telão Audio
+  if (run.motor && run.motor.length){
+    L.push('');
+    L.push('MOTOR DE VÍDEO (Telão Audio capturando e codificando na placa)');
+    for (const k of [...new Set(run.motor.map(x => x.key))]){
+      const M = run.motor.filter(x => x.key === k), inn = nums(M, 'in'), out = nums(M, 'out');
+      L.push('  codificação ' + k + ': captura ' + f0(avg(inn)) + ' fps (mín ' + f0(Math.min(...inn)) + ') · sai ' + f0(avg(out)) + ' fps (mín ' + f0(Math.min(...out)) + ') · ' +
+             f1(avg(nums(M, 'lat'))) + ' ms por quadro · ' + f1(avg(nums(M, 'kbps')) / 1000) + ' Mbps (alvo ' + f1(avg(nums(M, 'target')) / 1000) + ')');
+      if (avg(out) < target * 0.8 && avg(inn) < target * 0.8) W.push('O motor recebeu só ' + f0(avg(inn)) + ' quadros/s do Windows (meta: ' + target + '): é o ritmo do próprio jogo na tela, ou a placa está toda com o jogo.');
+    }
+  }
   // conexões
   for (const [, e] of run.conns){
     const live = e.samples.filter(s => !s.off);
@@ -7812,7 +7874,7 @@ function perfSummary(run){
       if (enc.length) L.push('  codificação: ' + f1(avg(enc)) + ' ms por quadro (95% abaixo de ' + f1(pct(enc, 0.95)) + ' ms)');
       L.push('  limitado pelo processador ' + pc1(limCpu) + ' do tempo · pela rede ' + pc1(limBw) +
         ' · perda ' + pc1(avg(nums(live, 'loss'))) + ' · reenvio ' + pc1(avg(nums(live, 'retx'))) + ' · atraso ' + f0(avg(nums(live, 'rtt'))) + ' ms');
-      if (e.kind === 'out' && cap.length && avg(cap) < target * 0.8 && !turboSaid) W.push('Captura da tela abaixo do esperado (' + f0(avg(cap)) + ' de ' + target + ' fps). ' + (c.turbo ? 'A captura turbo já está ligada: confira se o próprio jogo está abaixo disso.'
+      if (e.kind === 'out' && cap.length && avg(cap) < target * 0.8 && !turboSaid && !live.some(x => x.motor) && !(run.motor && run.motor.length)) W.push('Captura da tela abaixo do esperado (' + f0(avg(cap)) + ' de ' + target + ' fps). ' + (c.turbo ? 'A captura turbo já está ligada: confira se o próprio jogo está abaixo disso.'
         : turboAvailable() ? 'Experimente a "Captura turbo" no seletor de tela (dá pra comparar antes em Diagnóstico → Testar captura turbo); também acontece se o próprio jogo estiver abaixo disso.'
         : 'No Windows 10, experimente o "Modo rápido" no seletor; também acontece se o próprio jogo estiver abaixo disso.'));
       if (limCpu > 0.2) W.push('Envio para ' + e.who + ' limitado pelo processador em ' + pc1(limCpu) + ' do tempo. Use H.264 (placa de vídeo) ou uma qualidade menor.');
