@@ -1,27 +1,25 @@
 {
-  "version": "1.19.0",
+  "version": "1.20.0",
   "minShell": 2,
-  "page": "versoes/telao-1.19.0.html",
-  "sha256": "0fce1c2f8cdb269249229944cf717bf6c6a4ec2b60e2a9c046e26f2d5696df6f",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.19.0",
+  "page": "versoes/telao-1.20.0.html",
+  "sha256": "36c417206f2a67066b85efc559f8c18b7f4c5c68cc3c2444a399e3a1969218c1",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.20.0",
   "notes": [
-    "Estatísticas e conquistas: horas transmitidas e assistidas pelos amigos, maior plateia, maior transmissão, top 10 de jogos, quem você mais assiste, noites no Telão, semanas seguidas e mais. Em \"quem está na sala\" → \"Minhas estatísticas e conquistas\"",
-    "16 conquistas com 4 níveis (Bronze, Prata, Ouro e Estrela). Ao desbloquear aparece um aviso e os amigos veem no chat. \"Copiar cartão\" gera uma imagem da conquista para mandar no grupo",
-    "Clicando em alguém na lista da sala, você vê as estatísticas e as melhores conquistas da pessoa",
-    "Tudo começa do zero nesta versão. Fica guardado no seu aparelho e uma cópia fica com os amigos da sala: se formatar o PC, use o código de recuperação (no seu painel) para recebê-las de volta"
+    "Transmitindo pelo motor de vídeo: quando todo mundo está assistindo pelo motor, o Telão fecha a captura do Chromium (que ficava aberta só para a miniatura) e economiza memória e placa de vídeo. A miniatura avisa \"prévia pausada\"; se alguém sair do motor, a captura reabre sozinha em meio segundo",
+    "Nova opção experimental em Opções → Desempenho: \"Economia de memória\". Junta a rede e o som no processo principal do app e desliga o que o Telão não usa (corretor ortográfico, aba de reserva). Vale ao reiniciar o app; no teste caiu de 485 para 361 MB. Ligue, use uma noite e compare na medição de uso real"
   ],
   "app": {
-    "version": "1.19.0",
+    "version": "1.20.0",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.19.0/app.asar",
-        "sha256": "b211c6c24e585d733a58eed41fc12d80bf8abc0e87523e79c1ac5478202ccc9b",
-        "size": 663023
+        "path": "versoes/app-1.20.0/app.asar",
+        "sha256": "5551135700c8593e39daee188cb86118a7a536d08e379130993f6c18267aca0e",
+        "size": 670988
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.19.0/telao-audio.exe",
+        "path": "versoes/app-1.20.0/telao-audio.exe",
         "sha256": "843ef8943756dcf7471151d91984a52f7277442978885b0df3ca4b6ff3ef917e",
         "size": 802304
       }

@@ -29,7 +29,14 @@ if (config.ignoreGpuBlocklist) app.commandLine.appendSwitch('ignore-gpu-blocklis
 //  - WebRtcAV1HWEncode: permite AV1 pela placa (RTX 40/50, Radeon 7000+, Intel Arc)
 // Pode ser desligado no painel de diagnóstico caso cause problema.
 const GPU_FEATURES = 'PlatformH264CbpEncoding,WebRtcAV1HWEncode';
-if (!config.disableGpuWebrtcFeatures) app.commandLine.appendSwitch('enable-features', GPU_FEATURES);
+// Economia de memória (experimental, Opções → Desempenho; vale ao reiniciar): os serviços de rede e de áudio rodam
+// dentro do processo principal em vez de um processo cada (cada processo tem uma base fixa de memória; medido no
+// Electron 44: 485 → 361 MB numa janela simples), sem o processo de reserva para abas e sem o cache de voltar página.
+// O custo: se um desses serviços travar, leva o app junto (separados, o Chromium só os reinicia).
+const MEM_SAVE = !!config.memSave;
+const ENABLE = [...(config.disableGpuWebrtcFeatures ? [] : [GPU_FEATURES]), ...(MEM_SAVE ? ['NetworkServiceInProcess2'] : [])];
+if (ENABLE.length) app.commandLine.appendSwitch('enable-features', ENABLE.join(','));
+if (MEM_SAVE) app.commandLine.appendSwitch('disable-features', 'AudioServiceOutOfProcess,SpareRendererForSitePerProcess,BackForwardCache');
 
 // Com o jogo em primeiro plano, o Telão fica atrás/minimizado: não deixar o Chromium "dormir".
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
@@ -113,6 +120,7 @@ function createWindow(){
       contextIsolation: true,
       nodeIntegration: false,
       backgroundThrottling: false,
+      spellcheck: !MEM_SAVE,
       additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION, '--telao-main-pid=' + process.pid,
                             '--telao-wco=' + (wco ? WCO_H : 0), ...(PROFILE ? ['--telao-perfil=' + PROFILE, '--telao-sala=' + ((process.argv.find(a => a.startsWith('--telao-sala=')) || '').split('=')[1] || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40)] : [])],
     },
@@ -348,14 +356,15 @@ app.whenReady().then(() => {
         name: d.deviceString || '', driver: d.driverVersion || '', vendor: d.driverVendor || '',
       })),
       config: readConfig(),
-      features: app.commandLine.getSwitchValue('enable-features') || '(nenhuma)',
+      features: (app.commandLine.getSwitchValue('enable-features') || '(nenhuma)') + (app.commandLine.hasSwitch('disable-features') ? ' · sem: ' + app.commandLine.getSwitchValue('disable-features') : ''),
+      memSave: MEM_SAVE,
       versions: {app: app.getVersion(), shell: SHELL_VERSION, page: updater && updater.loaded ? updater.loaded.version + (updater.loaded.cached ? ' (atualizada)' : ' (instalada)') : '?',
                  electron: process.versions.electron, chrome: process.versions.chrome},
       platform: process.platform + ' ' + require('os').release(),
     };
   });
   ipcMain.handle('telao:setConfig', (_e, key, value) => {
-    if (key !== 'ignoreGpuBlocklist' && key !== 'disableGpuWebrtcFeatures') return false;
+    if (key !== 'ignoreGpuBlocklist' && key !== 'disableGpuWebrtcFeatures' && key !== 'memSave') return false;
     const c = readConfig(); c[key] = !!value;
     return writeConfig(c);
   });

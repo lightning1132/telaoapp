@@ -433,6 +433,8 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 #pip .pbar .primary{flex:none}
 #pip .pdiag{padding:0 10px 8px;font-size:11px;line-height:1.35;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
 #pip .pdiag:empty{display:none}
+#pip .pnote{padding:0 10px 8px;font-size:11.5px;line-height:1.35;color:var(--muted)}
+#pip.mini .pnote{display:none}
 #privBtn.on,#pip .pbar #pipPriv.on{background:var(--warn);color:var(--warn-ink);border-color:var(--warn)}
 #pip.private{border-color:var(--warn)}
 #pipPrivBox{display:flex;flex-direction:column;gap:4px;padding:0 10px 8px;font-size:11px;color:var(--warn)}
@@ -890,6 +892,7 @@ html:not(.cinema) #cineChat{display:none}
     <button class="ghost" id="pipMin" title="Minimizar / expandir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
     <button class="primary stop" id="pipStop">Parar</button></div>
   <div id="pipPrivBox" hidden><span>Tela privada ligada · seus amigos veem:</span><input id="pipPrivMsg" maxlength="80" placeholder="Volto já"></div>
+  <div class="pnote" id="pipNote" hidden></div>
   <div class="pdiag" id="pipDiag" title=""></div>
 </div>
 
@@ -1011,6 +1014,9 @@ html:not(.cinema) #cineChat{display:none}
         <p class="muted dg-p" style="margin-top:6px">Abre um segundo Telão neste PC, com outro nome, para você entrar na mesma sala e assistir a si mesmo (bom para testar o motor sem precisar de outra pessoa). Abaixe o volume da sua tela nela, senão o som do jogo sai duas vezes.</p></div></div>
         <div id="optNativeOvBox"><label class="chk"><input type="checkbox" id="optNativeOv"> Reações e chat por cima do jogo desenhados pelo Telão Audio</label>
         <p class="muted dg-p" style="margin-top:6px">Mais leve: não disputa a placa de vídeo com a captura turbo (com a camada antiga, spam de reações travava a transmissão). Desligue só se as reações não aparecerem direito por cima do jogo.</p></div>
+        <div id="optMemBox" hidden><label class="chk" style="margin-top:10px"><input type="checkbox" id="optMem"> Economia de memória <span class="muted">(experimental)</span></label>
+        <p class="muted dg-p" style="margin-top:6px">Junta partes do app que hoje rodam em processos separados (rede e som) e desliga coisas que o Telão não usa (corretor ortográfico, aba de reserva). Num teste, o app caiu de 485 para 361 MB. Em troca, se uma dessas partes travar, o app inteiro fecha em vez de só ela reiniciar. Vale depois de reiniciar o app; compare com a medição de uso real ligada e desligada.</p>
+        <button type="button" class="ghost" id="optMemRestart" hidden style="margin-top:4px">Reiniciar o app agora</button></div>
         <label class="chk" style="margin-top:10px"><input type="checkbox" id="optGpuPrio"> Prioridade do Telão na placa de vídeo <span class="muted">(experimental)</span></label>
         <p class="muted dg-p" style="margin-top:6px">Com o jogo usando a placa quase toda, a captura e a codificação ficam na fila atrás dele e a transmissão engasga. Ligado, o Telão pede ao Windows prioridade na placa enquanto você transmite (o jogo pode perder poucos FPS). Se o Windows recusar, nada muda; o resultado aparece na medição de uso real.</p>
       </section>
@@ -1067,7 +1073,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.19.0';
+const TELAO_VERSION = '1.20.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1077,7 +1083,9 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.19.0', 'hoje', ['Estatísticas e conquistas: horas transmitidas e assistidas pelos amigos, maior plateia, maior transmissão, top 10 de jogos, quem você mais assiste, noites no Telão, semanas seguidas e mais. Em "quem está na sala" → "Minhas estatísticas e conquistas"',
+  ['1.20.0', 'hoje', ['Transmitindo pelo motor de vídeo: quando todo mundo está assistindo pelo motor, o Telão fecha a captura do Chromium (que ficava aberta só para a miniatura) e economiza memória e placa de vídeo. A miniatura avisa "prévia pausada"; se alguém sair do motor, a captura reabre sozinha em meio segundo',
+                      'Nova opção experimental em Opções → Desempenho: "Economia de memória". Junta a rede e o som no processo principal do app e desliga o que o Telão não usa (corretor ortográfico, aba de reserva). Vale ao reiniciar o app; no teste caiu de 485 para 361 MB. Ligue, use uma noite e compare na medição de uso real']],
+  ['1.19.0', '24/10', ['Estatísticas e conquistas: horas transmitidas e assistidas pelos amigos, maior plateia, maior transmissão, top 10 de jogos, quem você mais assiste, noites no Telão, semanas seguidas e mais. Em "quem está na sala" → "Minhas estatísticas e conquistas"',
                       '16 conquistas com 4 níveis (Bronze, Prata, Ouro e Estrela). Ao desbloquear aparece um aviso e os amigos veem no chat. "Copiar cartão" gera uma imagem da conquista para mandar no grupo',
                       'Clicando em alguém na lista da sala, você vê as estatísticas e as melhores conquistas da pessoa',
                       'Tudo começa do zero nesta versão. Fica guardado no seu aparelho e uma cópia fica com os amigos da sala: se formatar o PC, use o código de recuperação (no seu painel) para recebê-las de volta']],
@@ -3077,6 +3085,7 @@ const PIP_TURBO_PREVIEW = {w: 480, h: 270, fps: 12};
 function pipTrack(){
   if (privateOn && privateTrack) return privateTrack;
   if (!localStream) return null;
+  if (engine.share && engine.share.off) return null;
   if (turboShare && turboActive()){
     const sb = turboShare.standby;
     return sb && sb.readyState === 'live' ? sb : null;
@@ -3088,6 +3097,9 @@ function syncPipVideo(){
   const cur = v.srcObject && v.srcObject.getVideoTracks()[0];
   if (cur !== tr) v.srcObject = tr ? new MediaStream([tr]) : null;
   $('#pip').classList.toggle('noprev', !tr);
+  const off = !privateOn && engine.share && engine.share.off;
+  $('#pipNote').hidden = !off;
+  if (off) $('#pipNote').textContent = 'Prévia pausada para economizar memória: todo mundo está assistindo pelo motor. A transmissão segue normal.';
 }
 function syncPrivateUi(){
   const on = privateOn && !!localStream;
@@ -5490,6 +5502,22 @@ function initStats(){
 }
 
 /* ---------- Opções ---------- */
+/* Economia de memória (experimental): é uma opção do app (main.js lê na partida), não da página. memSaveState.on é o
+   que está valendo agora; .want é o que vale ao reiniciar. App antigo não responde memSave: a opção fica escondida. */
+let memSaveState = null;
+async function loadMemSave(){
+  if (!DESKTOP || typeof window.telaoDesktop.gpu !== 'function') return;
+  try{
+    const g = await window.telaoDesktop.gpu();
+    if (g && typeof g.memSave === 'boolean') memSaveState = {on: g.memSave, want: g.config && typeof g.config.memSave === 'boolean' ? g.config.memSave : g.memSave};
+  }catch{}
+}
+function syncMemOpt(){
+  $('#optMemBox').hidden = !memSaveState;
+  if (!memSaveState) return;
+  $('#optMem').checked = memSaveState.want;
+  $('#optMemRestart').hidden = memSaveState.want === memSaveState.on;
+}
 function syncOpts(){
   $('#optRelay').checked = relayAllowed();
   $('#optH265').checked = h265Auto();
@@ -5500,6 +5528,7 @@ function syncOpts(){
   $('#optEngineBox').hidden = !engineAllowed();
   $('#optEngine').checked = store.get('engine', true) !== false;
   $('#optTestBox').hidden = !(DESKTOP && typeof window.telaoDesktop.openTest === 'function' && !window.telaoDesktop.profile);
+  syncMemOpt();
   $('#optPrivMsg').value = privateMsg();
   renderThemeOpts();
   renderLobbyAvatar();
@@ -5524,6 +5553,18 @@ function initOpts(){
     if ($('#optEngine').checked){ engineInit(); toast('Motor de vídeo ligado: vale para as próximas telas e a próxima transmissão.'); }
     engineTick();
   };
+  $('#optMem').onchange = async () => {
+    const want = $('#optMem').checked;
+    let ok = false; try{ ok = await window.telaoDesktop.setConfig('memSave', want); }catch{}
+    if (!ok){ $('#optMem').checked = !want; toast('Não consegui salvar a opção.', 'warn'); return; }
+    memSaveState.want = want; syncMemOpt();
+    if (want !== memSaveState.on) toast('Economia de memória ' + (want ? 'ligada' : 'desligada') + ': vale quando o app reiniciar.', '', 6000);
+  };
+  $('#optMemRestart').onclick = () => {
+    if (localStream && !confirmRestart()) return;
+    window.telaoDesktop.restart();
+  };
+  loadMemSave().then(() => { if (!$('#opts').hidden) syncMemOpt(); });
   $('#optGpuPrio').onchange = () => { store.set('gpuPrio', $('#optGpuPrio').checked); if (localStream) syncGpuPrio(); };
   $('#optPrivMsg').oninput = () => { store.set('privateMsg', $('#optPrivMsg').value.slice(0, 80)); if (privateOn) drawPrivate(); };
   $('#optRx').onclick = () => { $('#opts').hidden = true; openRxEdit(); };
@@ -6110,7 +6151,7 @@ async function engineFlags(){
     if (!r.ok) return;
     const j = await r.json(), m = j && j.motor;
     if (!m || typeof m !== 'object') return;
-    const nr = {on: m.on !== false, send: m.envio !== false, view: m.tela !== false};
+    const nr = {on: m.on !== false, send: m.envio !== false, view: m.tela !== false, capOff: m.fecharCaptura !== false};
     if (JSON.stringify(nr) !== JSON.stringify(engine.remote)) engineNote('interruptor remoto: ' + JSON.stringify(nr));
     engine.remote = nr; store.set('engineRemote', nr);
     engineTick();
@@ -6429,16 +6470,57 @@ function engineSyncStandby(){
     if (E.links.has(pid)) inEngine++; else normal++;
   }
   const wantLow = !normal && inEngine > 0 && !privateOn, now = Date.now();
+  if (!wantLow && E.off){ engineCapOn(E, privateOn ? 'tela privada' : normal ? 'alguém fora do motor' : 'ninguém no motor'); return; }
   if (!wantLow){
     E.lowAt = 0;
     if (E.low){ E.low = false; const q = QUALITY[currentQ()]; vt.applyConstraints({width: {ideal: q.w, max: q.w}, height: {ideal: q.h, max: q.h}, frameRate: {ideal: q.fps, max: q.fps}}).catch(() => {}); }
     return;
   }
-  if (E.low) return;
+  if (E.low){ if (!E.off && engineCapOffOk() && now - E.lowAt >= (window.__capOffMs || ENGINE_CAP_OFF_MS) && now - (E.capOnAt || 0) >= 60000) engineCapOff(E); return; }
   if (!E.lowAt){ E.lowAt = now; return; }
   if (now - E.lowAt < 4000) return;
   E.low = true;
   vt.applyConstraints({width: {max: PIP_TURBO_PREVIEW.w}, height: {max: PIP_TURBO_PREVIEW.h}, frameRate: {max: PIP_TURBO_PREVIEW.fps}}).catch(() => {});
+}
+/* Captura do Chromium fechada: com todo mundo no motor por um tempo, ninguém vê a captura normal (só a miniatura), mas
+   ela segue aberta no Chromium, com os quadros passando pelo processo de vídeo e ocupando memória. Ela fecha e uma trilha
+   preta de 1 quadro/s guarda o lugar dela. Alguém fora do motor, tela privada ou motor parando: reabre (leva ~0,5 s). */
+const ENGINE_CAP_OFF_MS = 20000;
+const engineCapOffOk = () => engine.remote.capOff !== false && !window.__capOffOff && typeof MediaStreamTrackGenerator === 'function' && typeof VideoFrame === 'function';
+function engineCapOff(E){
+  const vt = localStream && localStream.getVideoTracks()[0];
+  if (!vt || localStream !== E.stream || vt instanceof MediaStreamTrackGenerator) return;
+  let gen, writer;
+  try{ gen = new MediaStreamTrackGenerator({kind: 'video'}); writer = gen.writable.getWriter(); }catch{ return; }
+  const W = 64, H = 36, buf = new Uint8Array(W * H * 3 / 2);
+  buf.fill(16, 0, W * H); buf.fill(128, W * H);
+  const put = () => { let f; try{ f = new VideoFrame(buf, {format: 'I420', codedWidth: W, codedHeight: H, timestamp: Math.round(performance.now() * 1000)}); }catch{ return; } writer.write(f).catch(() => { try{ f.close(); }catch{} }); };
+  put();
+  E.off = {gen, writer, timer: setInterval(put, 1000), at: Date.now(), busy: false};
+  vt.removeEventListener('ended', stopShare);
+  localStream.removeTrack(vt); localStream.addTrack(gen);
+  try{ vt.stop(); }catch{}
+  engine.capOffs = (engine.capOffs || 0) + 1;
+  engineNote('captura do Chromium fechada (todo mundo no motor)');
+  swapOutgoingVideo();
+}
+function engineCapDrop(E){
+  const off = E && E.off; if (!off) return null;
+  E.off = null;
+  clearInterval(off.timer);
+  try{ off.writer.releaseLock(); }catch{}
+  engine.capOffSecs = (engine.capOffSecs || 0) + (Date.now() - off.at) / 1000;
+  return off;
+}
+async function engineCapOn(E, why){
+  const off = E && E.off; if (!off || off.busy) return;
+  off.busy = true;
+  engineNote('captura do Chromium reaberta: ' + why);
+  E.low = false; E.lowAt = 0; E.capOnAt = Date.now();   // reabriu: só fecha de novo depois de 1 min (sem vai-e-volta)
+  await normalCaptureAgain(E.stream, E.chosen);   // troca a trilha preta pela captura nova (ou encerra, se não der)
+  engineCapDrop(E);
+  try{ off.gen.stop(); }catch{}
+  if (localStream) syncPipVideo();
 }
 // Internet disponível até cada espectador (o WebRTC mede): espectador apertado vai para o vídeo à parte.
 async function engineBw(){
@@ -6465,15 +6547,21 @@ function engineShareEnd(why, fallback){
   engine.share = null;
   engine.last = {at: Date.now(), reason: why, secs: Math.round((Date.now() - E.t0) / 1000), ses: [...E.ses.values()].map(s => s.codec + ' ' + s.w + 'x' + s.h + '@' + s.fps + ' ' + (s.enc || ''))};
   engineNote('motor parou: ' + why);
+  const off = E.off;
   for (const pid of [...E.links.keys()]) engineUnlink(pid, why, false, null, E);
   engineCmd({cmd: 'estop'});
-  if (E.low && localStream === E.stream && !turboShare){
+  let reopen = Promise.resolve();
+  if (off){
+    if (fallback && localStream === E.stream){ E.off = off; reopen = engineCapOn(E, 'motor parou'); }
+    else { engineCapDrop(E); try{ off.gen.stop(); }catch{} }
+  }
+  else if (E.low && localStream === E.stream && !turboShare){
     const vt = localStream.getVideoTracks()[0], q = QUALITY[currentQ()];
     if (vt) vt.applyConstraints({width: {ideal: q.w, max: q.w}, height: {ideal: q.h, max: q.h}, frameRate: {ideal: q.fps, max: q.fps}}).catch(() => {});
   }
   if (fallback && localStream === E.stream){
     toast('O motor de vídeo parou (' + why + '). A transmissão continua pelo caminho normal.', 'warn', 8000);
-    if (DESKTOP && turboAvailable() && turboOn() && !turboShare) engageTurbo(E.chosen, E.stream).catch(() => {});
+    reopen.then(() => { if (localStream === E.stream && DESKTOP && turboAvailable() && turboOn() && !turboShare) return engageTurbo(E.chosen, E.stream); }).catch(() => {});
   }
 }
 // Parâmetros do envio para quem está no motor: sem reduzir o vídeo de mentira e com folga de taxa para o vídeo de verdade.
@@ -6704,10 +6792,11 @@ function engineReport(){
     (store.get('engine', true) === false ? 'DESLIGADO nas Opções' : engine.remote.on === false ? 'DESLIGADO remotamente' : 'ligado') +
     ' · Telão Audio ' + (engine.open ? 'conectado' : 'desconectado') + (c ? ' · codifica ' + (['h264', 'h265'].filter(k => c.enc[k]).join('+') || 'nada') + ' · decodifica ' + (['h264', 'h265'].filter(k => c.dec[k]).join('+') || 'nada') : ' · sem resposta do motor (Telão Audio antigo?)') +
     (engine.remote.send === false ? ' · envio desligado remotamente' : '') + (engine.remote.view !== false ? '' : ' · tela desligada remotamente') + (engine.hwnd ? '' : ' · sem janela do app')));
+  if (engine.capOffs) L.push('  captura do Chromium fechada ' + engine.capOffs + 'x nesta sessão (' + Math.round((engine.capOffSecs || 0) + (engine.share && engine.share.off ? (Date.now() - engine.share.off.at) / 1000 : 0)) + ' s no total)' + (engineCapOffOk() ? '' : ' · desligado'));
   if (c && (c.encNames || c.decNames)) L.push('  componentes: ' + c.encNames + (c.decNames ? ' · H.265: ' + c.decNames : ''));
   const E = engine.share;
   if (E){
-    L.push('  transmitindo pelo motor há ' + Math.round((Date.now() - E.t0) / 1000) + ' s · captura ' + E.sw + 'x' + E.sh + ' · ' + E.adapter + (E.low ? ' · reserva pequena' : ''));
+    L.push('  transmitindo pelo motor há ' + Math.round((Date.now() - E.t0) / 1000) + ' s · captura ' + E.sw + 'x' + E.sh + ' · ' + E.adapter + (E.off ? ' · captura do Chromium FECHADA há ' + Math.round((Date.now() - E.off.at) / 1000) + ' s' : E.low ? ' · reserva pequena' : ''));
     for (const s of E.ses.values()) L.push('  codificação ' + s.id + ' ' + s.group + ' ' + s.w + 'x' + s.h + '@' + s.fps + ' ' + s.kbps + ' kbps ' + s.state + ' (' + (s.enc || '?') + ')' +
       (s.stat ? ' · entra ' + s.stat.in + ' sai ' + s.stat.out + ' fps · ocupado ' + s.stat.busy + '/s · ' + s.stat.kbps + ' kbps · ' + s.stat.lat + ' ms · ' + s.stat.keys + ' quadros completos' : ''));
     for (const [pid, Lk] of E.links){
@@ -6723,6 +6812,7 @@ function engineReport(){
     else L.push('  tela de ' + nameOf(pid) + ': caminho normal' + (t.natWhy ? ' (' + t.natWhy + ')' : ''));
   }
   for (const x of engine.log.slice(-14)) L.push('  ' + x);
+  L.push('Economia de memória (experimental): ' + (!memSaveState ? 'app sem a opção' : memSaveState.on ? 'LIGADA' : 'desligada') + (memSaveState && memSaveState.want !== memSaveState.on ? ' (muda para ' + (memSaveState.want ? 'ligada' : 'desligada') + ' ao reiniciar)' : ''));
   return L;
 }
 
