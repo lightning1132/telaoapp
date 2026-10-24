@@ -371,6 +371,34 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 @media (max-width:1100px){.tile.nat .tstrip .nstat{display:none}}
 @media (max-width:900px){.tile.nat .tstrip .tag .tgame,.tile.nat .tstrip .tbar .clip{display:none}}
 
+/* estatísticas e conquistas */
+.st-card{width:min(1200px,calc(100vw - 32px));height:min(800px,calc(100vh - 40px));display:flex;flex-direction:column;padding:0;overflow:hidden}
+.st-head{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.st-nm{display:flex;flex-direction:column;gap:3px;min-width:0}.st-nm b{font-size:20px;font-weight:600}.st-nm small{color:var(--muted)}
+.st-x{width:36px;height:36px;padding:0}
+.st-body{flex:1;min-height:0;display:grid;grid-template-columns:400px 1fr}
+.st-left{display:flex;flex-direction:column;gap:18px;padding:16px 20px;border-right:1px solid var(--line);overflow:auto}
+.st-left h3,.st-right h3{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.st-big{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.st-big div{padding:10px 12px;background:var(--panel2);border-radius:10px}.st-big b{display:block;font-size:22px;font-weight:600}.st-big span{color:var(--muted);font-size:12px}
+.st-kv{display:grid;grid-template-columns:1fr auto;row-gap:5px;column-gap:12px;font-size:13px}.st-kv b{font-weight:600;text-align:right}
+.st-game{display:flex;align-items:center;gap:10px;padding:3px 8px;font-size:13px}.st-game span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-game.top{padding:8px;background:var(--panel2);border-radius:10px;margin-bottom:4px}.st-game img{width:92px;height:43px;object-fit:cover;border-radius:6px;flex:none}
+.st-rec p{margin:0 0 8px;font-size:12px}.st-coderow{display:flex;gap:8px;margin-top:6px}.st-coderow code{flex:1;padding:7px 10px;background:var(--panel2);border-radius:8px;font-size:14px;letter-spacing:.05em}
+.st-coderow input{flex:1;min-width:0}
+.st-right{padding:16px 20px;overflow:auto}.st-rh{display:flex;align-items:baseline;gap:10px}.st-rh small{color:var(--muted)}
+.st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.st-ach{display:grid;grid-template-columns:34px 1fr;grid-template-rows:auto auto auto;column-gap:10px;row-gap:7px;align-items:center;text-align:left;padding:12px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:12px;color:var(--text);font:inherit;cursor:pointer}
+.st-at{display:flex;flex-direction:column;min-width:0}.st-at b{font-weight:600}.st-at small{color:var(--tier,var(--muted));font-size:12px}
+.st-bar{grid-column:1 / -1;position:relative;height:6px;border-radius:3px;background:var(--line);overflow:hidden}.st-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--tier,#5c6575)}
+.st-next{grid-column:1 / -1;color:var(--muted);font-size:12px}
+.st-ach.off{background:transparent;border-style:dashed}.st-ach.off .st-at b{color:var(--muted)}
+.st-ach.sel{border-color:var(--tier,var(--accent));box-shadow:0 0 0 1px var(--tier,var(--accent))}
+.toast.ach{display:flex;align-items:center;gap:12px;border:1px solid var(--tier)}.toast.ach span{display:flex;flex-direction:column}.toast.ach small{opacity:.8}
+.cmsg.csys{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}.cmsg.csys b{color:var(--text)}
+.mmedals{display:flex;gap:2px;margin-top:2px}.mrow.clk{cursor:pointer}
+@media (max-width:860px){.st-body{grid-template-columns:1fr;overflow:auto}.st-left{border-right:0;overflow:visible}.st-right{overflow:visible}}
 #empty{width:100%;max-width:680px;margin:auto;display:flex;flex-direction:column;align-items:center;gap:26px;text-align:center;color:var(--muted);padding:32px 16px}
 #empty h2{color:var(--text);margin:0 0 8px;font-size:30px;font-weight:700;letter-spacing:-.5px}
 #empty p{margin:0;font-size:15px}
@@ -1028,6 +1056,7 @@ html:not(.cinema) #cineChat{display:none}
   </div>
 </div>
 
+<div id="statsBox" class="modal" hidden><div class="pk-card st-card" role="dialog" aria-label="Estatísticas e conquistas"></div></div>
 <div id="toasts"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -1038,7 +1067,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.18.6';
+const TELAO_VERSION = '1.19.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1048,7 +1077,11 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.18.6', 'hoje', ['Atualização do app: quem já tinha baixado uma versão e verificava de novo antes de reiniciar via "Não consegui verificar agora (ENOENT…)" e ficava sem atualizar. Corrigido']],
+  ['1.19.0', 'hoje', ['Estatísticas e conquistas: horas transmitidas e assistidas pelos amigos, maior plateia, maior transmissão, top 10 de jogos, quem você mais assiste, noites no Telão, semanas seguidas e mais. Em "quem está na sala" → "Minhas estatísticas e conquistas"',
+                      '16 conquistas com 4 níveis (Bronze, Prata, Ouro e Estrela). Ao desbloquear aparece um aviso e os amigos veem no chat. "Copiar cartão" gera uma imagem da conquista para mandar no grupo',
+                      'Clicando em alguém na lista da sala, você vê as estatísticas e as melhores conquistas da pessoa',
+                      'Tudo começa do zero nesta versão. Fica guardado no seu aparelho e uma cópia fica com os amigos da sala: se formatar o PC, use o código de recuperação (no seu painel) para recebê-las de volta']],
+  ['1.18.6', '23/10', ['Atualização do app: quem já tinha baixado uma versão e verificava de novo antes de reiniciar via "Não consegui verificar agora (ENOENT…)" e ficava sem atualizar. Corrigido']],
   ['1.18.5', '23/10', ['Transmitindo pelo motor: quem assiste no navegador (ou sem o motor) via engasgos e atraso. Cada quadro agora leva o horário em que o jogo foi capturado (antes, o de quando a página o repassava, e qualquer demora virava rajada)',
                       'Motor: a taxa do vídeo acompanha o que a internet de quem assiste aguenta naquele momento, como o caminho normal faz (antes podia mandar mais do que cabia e o atraso ia crescendo)']],
   ['1.18.4', '23/10', ['Motor de vídeo, quem assiste: imagem com borrões e blocos coloridos ao abrir menus/mapa. Quadros grandes chegavam ao Telão Audio em pedaços e só o primeiro era usado; agora são juntados',
@@ -1640,6 +1673,7 @@ function initLobby(){
   helperConnect();
   setInterval(() => helperSend({cmd: 'list'}), 5000);
   engineInit();
+  initStats();
 
   const warn = [];
   if (typeof Peer === 'undefined') warn.push('Não consegui carregar a biblioteca de conexão (sem internet ou bloqueio de rede).');
@@ -1774,8 +1808,10 @@ async function resolveGame(name){
 }
 async function noteSharedGame(chosen, stream){
   const name = gameNameFrom(chosen, stream);
+  statsGame = name ? {name: name.slice(0, 80), id: 0} : null;   // estatísticas: horas por jogo
   if (!name) return;
   const g = await resolveGame(name);
+  if (g && localStream === stream) statsGame = {name: g.name.slice(0, 80), id: g.id};
   if (g){ g.by = myName; g.at = Date.now(); addGroupGame(g); broadcastGame(g); }
   else if (!DESKTOP) for (const m of members) if (me && m.id !== me.id) hubSend({t: 'relay', to: m.id, data: {k: 'gamename', n: name}});   // alguém com o app procura
 }
@@ -2223,6 +2259,7 @@ function announceTo(pid){
   hubSend({t:'relay', to: pid, data: {k:'hi', v: TELAO_VERSION, d: DESKTOP, ph: PHONE, av: myAvatar || '', aw: amAway}});
   sendStickersTo(pid);
   sendGamesTo(pid);
+  statsSendTo(pid);
 }
 function syncVersions(){
   if (!me) return;
@@ -2309,6 +2346,13 @@ function renderMemPop(){
     else if (m.sharing){ st.appendChild(document.createElement('i')); st.append('ao vivo'); } else st.textContent = 'assistindo';
     if (isAway(m.id)) row.classList.add('away');
     row.append(avatarNode(isMe ? '__me' : m.id, m.name, 32), nm, st);
+    { const ps = isMe ? stats : (peerStats.get(m.id) || {}).d;   // conquistas: as 3 melhores, e clique abre as estatísticas
+      if (ps){
+        const best = ACH.map(a => [a, achLevel(a, ps)]).filter(x => x[1]).sort((x, y) => y[1] - x[1]).slice(0, 3);
+        if (best.length){ const md = document.createElement('span'); md.className = 'mmedals'; md.innerHTML = best.map(([, l]) => medalSvg(TIERS[l - 1].c, 18)).join(''); md.title = best.map(([a, l]) => a.n + ' · ' + TIERS[l - 1].n).join('\n'); nm.appendChild(md); }
+        row.classList.add('clk'); row.title = 'Ver as estatísticas e conquistas de ' + (isMe ? 'você' : m.name);
+        row.onclick = e => { if (!e.target.closest('button')) openStats(isMe ? null : m.id); };
+      } }
     const wrap = document.createElement('div'); wrap.className = 'mrow-wrap'; wrap.appendChild(row);
     if (!isMe && me && m.id){
       const more = document.createElement('button'); more.type = 'button'; more.className = 'mmore'; more.title = 'Ausente / tirar da sala';
@@ -2338,7 +2382,10 @@ function renderMemPop(){
   call.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Chamar alguém (copia o convite)';
   call.onclick = () => { closePop(); copyInvite(); };
   const sep = document.createElement('div'); sep.className = 'sep';
-  box.append(sep, call);
+  const mine = document.createElement('button'); mine.type = 'button'; mine.className = 'mi'; mine.id = 'memStats';
+  mine.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="6"/><path d="M8.5 3h3l1 5M15.5 3h-3"/></svg>Minhas estatísticas e conquistas';
+  mine.onclick = () => openStats(null);
+  box.append(sep, mine, call);
   // Quem segura a sala: é o PC a que todo mundo se conecta para entrar. Se ele estiver longe ou numa rede difícil,
   // quem não consegue chegar nele não entra; dá para passar a sala para outro PC.
   if (me && hubOwner !== me.id){
@@ -2937,6 +2984,7 @@ async function startShare(){
 
 function stopShare(){
   if (!localStream) return;
+  statsSave(); statsGame = null;
   engineShareEnd('transmissão parou', false);
   stopTurboShare();
   localStream.getTracks().forEach(t => t.stop());
@@ -3679,6 +3727,7 @@ document.addEventListener('fullscreenchange', scheduleRes);
 function onRelay(from, data){
   if (!from || !data) return;
   if (data.k === 'react'){ onReact(from, data); return; }
+  if (data.k === 'stats' || data.k === 'statsWant' || data.k === 'ach'){ onStatsMsg(from, data); return; }
   if (data.k === 'chat'){ onChat(from, data); return; }
   if (data.k === 'stk'){ onStickers(from, data); return; }
   if (data.k === 'breq'){ onBlobReq(from, data.h); return; }
@@ -4582,6 +4631,7 @@ function sendReact(streamerId, item){
   const data = {k: 'react', e: legacy, x: {t: item.t, v: item.v}, s: streamerId, n: myName};
   for (const m of members) if (m.id !== me.id) hubSend({t: 'relay', to: m.id, data});
   showReact(streamerId, item, myName, me.id);   // retorno imediato pra quem clicou
+  statsCount('ra');
 }
 function onReact(from, data){
   if (typeof data.s !== 'string') return;
@@ -4594,6 +4644,7 @@ function onReact(from, data){
   const now = Date.now();
   if (now - (reactSeen.get(from) || 0) < 250) return;
   reactSeen.set(from, now);
+  if (me && data.s === me.id && localStream) statsCount('rr');
   const who = (members.find(m => m.id === from) || {}).name || String(data.n || '').slice(0, 24) || 'alguém';
   if (item.t === 's' && !blobs.has(item.v)){
     // figurinha que ainda não chegou aqui: pede e mostra assim que chegar (até 4 s)
@@ -4620,6 +4671,7 @@ function validChat(m){
 function addChat(m, opts){
   if (!validChat(m) || chatIds.has(m.id)) return false;
   const msg = {id: m.id, from: String(m.from || ''), n: String(m.n || '?').slice(0, 24), x: String(m.x || ''), st: m.st && validHash(m.st) ? m.st : '', at: +m.at || Date.now()};
+  if (m.sys === 'ach'){ msg.sys = 'ach'; msg.lv = Math.max(1, Math.min(4, +m.lv || 1)); }
   chatIds.add(msg.id); chatMsgs.push(msg);
   chatMsgs.sort((a, b) => a.at - b.at);
   while (chatMsgs.length > 200){ chatIds.delete(chatMsgs.shift().id); }
@@ -4627,7 +4679,7 @@ function addChat(m, opts){
   if (msg.from && msg.from !== (me && me.id)) wantAvatarFor(msg.from);
   renderChat();
   if (!(opts && opts.history)){
-    if ($('#chat').hidden && msg.from !== (me && me.id)){ chatUnread++; syncChatBtn(); }
+    if ($('#chat').hidden && msg.from !== (me && me.id) && !msg.sys){ chatUnread++; syncChatBtn(); }   // conquista de amigo não acende o contador
     if (msg.from !== (me && me.id)){
       const item = {kind: 'chat', who: msg.n, text: msg.x, av: blobs.get(avatarOf(msg.from)) || ''};
       if (msg.st){
@@ -4655,6 +4707,7 @@ function sendChat(text, st){
   for (const p of members) if (p.id !== me.id) hubSend({t: 'relay', to: p.id, data: {k: 'chat', m}});
   hubSend({t: 'chatkeep', m});   // histórico com quem segura a sala
   addChat(m);
+  statsCount('ms');
 }
 function onChat(from, d){
   const m = d.m; if (!m) return;
@@ -4664,6 +4717,13 @@ function onChat(from, d){
 function fmtTime(t){ const d = new Date(t), z = n => String(n).padStart(2, '0'); return z(d.getHours()) + ':' + z(d.getMinutes()); }
 let chatRenderTimer = null, chatShown = [], chatFull = true;
 function chatRow(m, prev){
+  if (m.sys === 'ach'){   // conquista desbloqueada
+    const row = document.createElement('div'); row.className = 'cmsg csys'; row.dataset.id = m.id;
+    row.innerHTML = medalSvg(TIERS[(m.lv || 1) - 1].c, 22);
+    const t = document.createElement('span'); const b = document.createElement('b'); b.textContent = m.n; t.append(b, ' ' + m.x);
+    row.appendChild(t);
+    return row;
+  }
   const row = document.createElement('div'); row.className = 'cmsg' + (me && m.from === me.id ? ' mine' : '');
   row.dataset.id = m.id;
   const same = prev && prev.from === m.from && m.at - prev.at < 120000;
@@ -5039,6 +5099,394 @@ function renderRelayBar(){
     never.onclick = () => { store.set('relayOk', false); syncOpts(); for (const x of [...bySrc.keys()]) relayStopFor(x, true); toast('Ok: você não vai mais retransmitir. Dá pra religar em Opções.'); };
     row.append(txt, stop, never); bar.appendChild(row);
   }
+}
+
+
+/* ---------- Estatísticas e conquistas ----------
+   Tudo é contado aqui, a cada 2 s, em cima do que o Telão já sabe (quem assiste, qualidade, jogo, reações...). Fica guardado
+   neste aparelho e uma cópia vai para os amigos da sala: quem formatar o PC recupera as suas com o código de recuperação.
+   Ninguém confere os números (entre amigos, tudo bem). */
+const STATS_KEY = 'stats', STATS_PEERS = 'statsPeers';
+const HRS = h => h * 3600000;
+const statsBlank = () => ({v: 1, s: Date.now(), st: 0, va: 0, ma: 0, lg: 0, hq: 0, tb: 0, rr: 0, bs: 0, wa: 0, ra: 0, cl: 0, ni: 0, nd: [], wk: [], ms: 0, rl: 0, la: 0, g: {}, w: {}, lv: {}});
+function statsClean(x){
+  const b = statsBlank(); if (!x || typeof x !== 'object') return b;
+  for (const k of Object.keys(b)){
+    if (typeof b[k] === 'number') b[k] = Number.isFinite(+x[k]) && +x[k] >= 0 ? +x[k] : b[k];
+  }
+  if (Number.isFinite(+x.s) && +x.s > 1.6e12) b.s = +x.s;
+  b.nd = Array.isArray(x.nd) ? x.nd.filter(d => typeof d === 'string' && /^\d{4}-\d\d-\d\d$/.test(d)).slice(-60) : [];
+  b.wk = Array.isArray(x.wk) ? [...new Set(x.wk.filter(n => Number.isInteger(n) && n > 2000 && n < 9000))].sort((a, c) => a - c).slice(-300) : [];
+  const map = (o, max, withId) => {
+    const out = {}; if (!o || typeof o !== 'object') return out;
+    for (const [k, v] of Object.entries(o).slice(0, 200)){
+      const name = String(k).slice(0, 80); if (!name) continue;
+      if (withId){ const ms = Array.isArray(v) ? +v[0] : +v, id = Array.isArray(v) ? +v[1] || 0 : 0; if (ms > 0) out[name] = [ms, Number.isInteger(id) && id > 0 && id < 1e8 ? id : 0]; }
+      else if (+v > 0) out[name] = +v;
+    }
+    const keys = Object.keys(out).sort((a, c) => (withId ? out[c][0] - out[a][0] : out[c] - out[a])).slice(0, max);
+    const r = {}; for (const k of keys) r[k] = out[k]; return r;
+  };
+  b.g = map(x.g, 50, true); b.w = map(x.w, 30, false);
+  b.lv = x.lv && typeof x.lv === 'object' ? Object.fromEntries(Object.entries(x.lv).filter(([, v]) => Number.isInteger(v) && v >= 0 && v <= 4)) : {};
+  return b;
+}
+let stats = statsClean(store.get(STATS_KEY, null));
+let statsDirty = false, statsSavedAt = Date.now(), statsLast = 0, statsLiveT0 = 0, statsGame = null, statsRoomDay = {k: '', ms: 0};
+function statsSave(){ statsDirty = false; statsSavedAt = Date.now(); store.set(STATS_KEY, stats); }
+addEventListener('beforeunload', () => { if (statsDirty) statsSave(); });
+
+// A "noite" vai das 6h às 6h (jogar até as 2h conta para a noite anterior); a semana começa na segunda.
+const nightOf = t => { const d = new Date(t - 6 * 3600000); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const weekOf = t => { const d = new Date(t - 6 * 3600000); const days = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000); return Math.floor((days + 3) / 7); };
+const lateOf = t => { const d = new Date(t); return ((d.getHours() + 18) % 24) * 60 + d.getMinutes(); };   // minutos desde as 6h
+function statsStreak(s){
+  const wk = s.wk; let best = 0, run = 0, prev = null;
+  for (const w of wk){ run = prev != null && w === prev + 1 ? run + 1 : 1; best = Math.max(best, run); prev = w; }
+  const now = weekOf(Date.now()), last = wk[wk.length - 1];
+  const cur = last != null && last >= now - 1 ? run : 0;
+  return {cur, best};
+}
+function statsAudience(){
+  let n = 0;
+  for (const [pid, c] of outCalls){
+    const pc = c.peerConnection;
+    if (!pc || pc.connectionState !== 'connected') continue;
+    if (pausedBy.get(pid) && !isRelayHub(pid)) continue;
+    n++;
+  }
+  for (const v of relayVia.keys()) if (members.some(m => m.id === v) && !outCalls.has(v)) n++;
+  return n;
+}
+function statsTick(){
+  const now = Date.now(), raw = statsLast ? now - statsLast : 0;
+  statsLast = now;
+  if (!me || me.destroyed || !room || raw <= 0 || raw > 15000) return;   // fora da sala, ou o PC dormiu
+  const dt = raw * (window.__statsSpeed || 1);   // (testes: acelera o relógio)
+  const s = stats;
+  // sala: noites (30 min numa noite) e semanas seguidas
+  const nk = nightOf(now);
+  if (statsRoomDay.k !== nk) statsRoomDay = {k: nk, ms: s.nd.includes(nk) ? HRS(1) : 0};
+  statsRoomDay.ms += dt;
+  if (statsRoomDay.ms >= 30 * 60000 && !s.nd.includes(nk)){
+    s.nd.push(nk); s.nd = s.nd.slice(-60); s.ni++;
+    const w = weekOf(now); if (!s.wk.includes(w)){ s.wk.push(w); s.wk.sort((a, c) => a - c); }
+  }
+  // transmitindo
+  if (localStream){
+    statsLiveT0 += dt;   // tempo desta transmissão (sem parar)
+    s.lg = Math.max(s.lg, statsLiveT0);
+    const n = statsAudience();
+    if (n > 0){
+      s.st += dt; s.va += dt * n; s.ma = Math.max(s.ma, n);
+      const q = QUALITY[currentQ()];
+      if (q && q.h >= 1080 && q.fps >= 60) s.hq += dt;
+      if (turboActive() || (engine.share && engine.share.links.size)) s.tb += dt;
+      s.la = Math.max(s.la, lateOf(now));
+      const gname = statsGame && statsGame.name;
+      if (gname){ const e = s.g[gname] || [0, 0]; e[0] += dt; if (statsGame.id) e[1] = statsGame.id; s.g[gname] = e; }
+    }
+    if (sendInfo && now - sendInfo.at < 4000) for (const v of sendInfo.viewers) if (!v.paused) s.bs += (v.mbps || 0) * dt / 8000;   // MB
+  } else statsLiveT0 = 0;
+  // assistindo
+  let watching = false;
+  if (!amAway) for (const [pid, t] of tiles){
+    if (t.el.hidden || hiddenIds.has(pid) || !t.firstFrame) continue;
+    watching = true;
+    const nm = nameOf(pid); s.w[nm] = (s.w[nm] || 0) + dt;
+  }
+  if (watching) s.wa += dt;
+  if (relayOut.size) s.rl += dt;
+  statsDirty = true;
+  statsCheckUnlocks();
+  if (now - statsSavedAt > 30000) statsSave();
+}
+const statsCount = k => { stats[k] = (stats[k] || 0) + 1; statsDirty = true; statsCheckUnlocks(); };
+
+// Conquistas: 4 níveis cada (Bronze, Prata, Ouro, Estrela).
+const TIERS = [{n: 'Bronze', c: '#d0905f'}, {n: 'Prata', c: '#b4bfcd'}, {n: 'Ouro', c: '#f2c14e'}, {n: 'Estrela', c: '#8ab4ff'}];
+const fmtH = ms => { const h = ms / 3600000; if (h < 1) return Math.round(ms / 60000) + ' min'; return (h < 10 ? (Math.round(h * 10) / 10).toString().replace('.', ',') : Math.round(h).toString()) + ' h'; };
+const fmtN = n => Math.round(n).toLocaleString('pt-BR');
+const fmtLate = m => m <= 0 ? '–' : String(Math.floor((m / 60 + 6) % 24)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+const ACH = [
+  {id: 'tx', n: 'Transmissor', d: 'transmitidas', v: s => s.st, t: [5, 20, 50, 100].map(HRS), f: fmtH},
+  {id: 'pl', n: 'Plateia', d: 'assistidas pelos amigos', v: s => s.va, t: [10, 50, 150, 400].map(HRS), f: fmtH},
+  {id: 'lo', n: 'Lotação', d: 'assistindo ao mesmo tempo', v: s => s.ma, t: [2, 3, 4, 5], f: n => n + (n === 1 ? ' pessoa' : ' pessoas')},
+  {id: 'mt', n: 'Maratona', d: 'transmitindo sem parar', v: s => s.lg, t: [2, 4, 6, 8].map(HRS), f: fmtH},
+  {id: 'hd', n: 'Alta definição', d: 'transmitindo em 1080p60', v: s => s.hq, t: [5, 20, 50, 100].map(HRS), f: fmtH},
+  {id: 'tb', n: 'Turbinado', d: 'com o motor ou a captura turbo', v: s => s.tb, t: [5, 20, 50, 100].map(HRS), f: fmtH},
+  {id: 'ap', n: 'Aplaudido', d: 'reações recebidas', v: s => s.rr, t: [100, 500, 3000, 10000], f: fmtN},
+  {id: 'es', n: 'Espectador', d: 'assistindo os amigos', v: s => s.wa, t: [5, 20, 50, 100].map(HRS), f: fmtH},
+  {id: 'fa', n: 'Fã de carteirinha', d: 'assistindo um mesmo amigo', v: s => Math.max(0, ...Object.values(s.w)), t: [5, 20, 50, 100].map(HRS), f: fmtH},
+  {id: 'an', n: 'Animador', d: 'reações enviadas', v: s => s.ra, t: [100, 500, 3000, 10000], f: fmtN},
+  {id: 'ci', n: 'Cinegrafista', d: 'clipes salvos', v: s => s.cl, t: [5, 50, 200, 500], f: fmtN},
+  {id: 'fr', n: 'Frequentador', d: 'noites no Telão', v: s => s.ni, t: [5, 15, 40, 100], f: fmtN},
+  {id: 'fi', n: 'Fiel', d: 'semanas seguidas (recorde)', v: s => statsStreak(s).best, t: [2, 4, 8, 16], f: fmtN},
+  {id: 'tg', n: 'Tagarela', d: 'mensagens e figurinhas', v: s => s.ms, t: [100, 1000, 5000, 15000], f: fmtN},
+  {id: 'sn', n: 'Salvou a noite', d: 'retransmitindo para amigos', v: s => s.rl, t: [1, 5, 20, 50].map(HRS), f: fmtH},
+  {id: 'co', n: 'Coruja', d: 'transmitindo até tarde', v: s => s.la, t: [19 * 60, 21 * 60, 23 * 60, 23 * 60 + 30], f: fmtLate},
+];
+const achLevel = (a, s) => { const v = a.v(s); let l = 0; while (l < 4 && v >= a.t[l]) l++; return l; };
+function statsCheckUnlocks(quiet){
+  for (const a of ACH){
+    const l = achLevel(a, stats), was = stats.lv[a.id] || 0;
+    if (l <= was) continue;
+    stats.lv[a.id] = l; statsDirty = true;
+    if (!quiet) statsUnlocked(a, l);
+  }
+}
+function statsUnlocked(a, l){
+  const T = TIERS[l - 1];
+  const d = document.createElement('div'); d.className = 'toast ach'; d.style.setProperty('--tier', T.c);
+  d.innerHTML = medalSvg(T.c, 36);
+  const tx = document.createElement('span');
+  const b = document.createElement('b'); b.textContent = 'Conquista: ' + a.n + ' · ' + T.n;
+  const sm = document.createElement('small'); sm.textContent = a.f(a.t[l - 1]) + ' ' + a.d;
+  tx.append(b, sm);
+  const go = document.createElement('button'); go.type = 'button'; go.className = 'ghost'; go.textContent = 'Ver';
+  go.onclick = () => { d.remove(); openStats(null, a.id); };
+  d.append(tx, go);
+  $('#toasts').appendChild(d);
+  setTimeout(() => d.remove(), 9000);
+  // os amigos veem no chat; e a cópia deles das minhas estatísticas fica em dia
+  const text = 'desbloqueou ' + a.n + ' · ' + T.n;
+  const m = {id: 'ach' + Date.now().toString(36) + a.id, from: me ? me.id : '', n: myName, x: text, sys: 'ach', lv: l, at: Date.now()};
+  if (me) for (const p of members) if (p.id !== me.id) hubSend({t: 'relay', to: p.id, data: {k: 'ach', m}});
+  addChat(m, {history: true});
+  statsBroadcast();
+}
+const medalSvg = (c, size) => '<svg class="medal" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h3l1 5-3 1zM16 2h-3l-1 5 3 1z" fill="#4a5262"/><circle cx="12" cy="15" r="7" fill="' + c +
+  '"/><path d="M12 11.5l1.1 2.2 2.4.3-1.8 1.7.5 2.4-2.2-1.2-2.2 1.2.5-2.4-1.8-1.7 2.4-.3z" fill="#161920"/></svg>';
+const medalOff = size => '<svg class="medal" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h3l1 5-3 1zM16 2h-3l-1 5 3 1z" fill="#3a414d"/><circle cx="12" cy="15" r="7" fill="#2a303a"/><path d="M9.5 15h5M12 12.5v5" stroke="#5c6575" stroke-width="1.6" stroke-linecap="round"/></svg>';
+
+/* --- cópia nos amigos (para recuperar) --- */
+let statsPub = '';   // identificador público (resumo do código de recuperação)
+async function sha16(s){ const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].slice(0, 8).map(x => x.toString(16).padStart(2, '0')).join(''); }
+function statsCode(){
+  let c = store.get('statsCode', '');
+  if (!/^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/.test(c)){
+    const A = 'abcdefghjkmnpqrstuvwxyz23456789', r = crypto.getRandomValues(new Uint8Array(12));
+    c = [...r].map(x => A[x % A.length]).join('').replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3');
+    store.set('statsCode', c);
+  }
+  return c;
+}
+async function statsInitId(){ try{ statsPub = await sha16('telao-stats:' + statsCode()); }catch{ statsPub = ''; } }
+const statsWire = () => { const x = Object.assign({}, stats); delete x.lv; return x; };
+function statsSendTo(pid){ if (statsPub) hubSend({t: 'relay', to: pid, data: {k: 'stats', id: statsPub, d: statsWire()}}); }
+function statsBroadcast(){ if (me) for (const p of members) if (p.id !== me.id) statsSendTo(p.id); }
+const peerStats = new Map();   // id na sala → {id, d}
+function statsPeers(){ const p = store.get(STATS_PEERS, {}); return p && typeof p === 'object' ? p : {}; }
+function onStatsMsg(from, data){
+  if (data.k === 'stats'){
+    if (typeof data.id !== 'string' || !/^[0-9a-f]{16}$/.test(data.id)) return;
+    const d = statsClean(data.d);
+    if (data.id === statsPub && data.back){ statsMerge(d); return; }   // as minhas, de volta
+    peerStats.set(from, {id: data.id, d});
+    const all = statsPeers();
+    all[data.id] = {n: nameOf(from), at: Date.now(), d: Object.assign({}, d, {lv: {}})};
+    const ids = Object.keys(all).sort((a, b) => all[b].at - all[a].at).slice(0, 40);
+    store.set(STATS_PEERS, Object.fromEntries(ids.map(k => [k, all[k]])));
+    if (openStatsFor === from) renderStats();
+    return;
+  }
+  if (data.k === 'statsWant' && typeof data.c === 'string' && /^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/.test(data.c)){
+    // alguém recuperando: confere que o código bate com o identificador antes de devolver
+    sha16('telao-stats:' + data.c).then(id => { const x = statsPeers()[id]; if (x && x.d) hubSend({t: 'relay', to: from, data: {k: 'stats', id, back: true, d: x.d}}); }).catch(() => {});
+    return;
+  }
+  if (data.k === 'ach' && data.m && typeof data.m === 'object'){
+    const m = data.m;
+    addChat({id: String(m.id || '').slice(0, 40), from, n: nameOf(from), x: String(m.x || '').slice(0, 120), sys: 'ach', lv: Math.max(1, Math.min(4, +m.lv || 1)), at: Date.now()});
+  }
+}
+// Junta o que veio dos amigos com o daqui (maior de cada número: nada conta duas vezes).
+function statsMerge(d){
+  const s = stats;
+  for (const k of Object.keys(statsBlank())) if (typeof s[k] === 'number' && k !== 'v') s[k] = k === 's' ? Math.min(s[k], d[k] || s[k]) : Math.max(s[k], d[k] || 0);
+  s.nd = [...new Set([...s.nd, ...d.nd])].sort().slice(-60);
+  s.wk = [...new Set([...s.wk, ...d.wk])].sort((a, b) => a - b);
+  for (const [k, v] of Object.entries(d.g)){ const e = s.g[k]; s.g[k] = [Math.max(e ? e[0] : 0, v[0]), (e && e[1]) || v[1]]; }
+  for (const [k, v] of Object.entries(d.w)) s.w[k] = Math.max(s.w[k] || 0, v);
+  stats = statsClean(s);
+  statsCheckUnlocks(true);
+  statsSave();
+  if (openStatsFor === '__me') renderStats();
+  toast('Estatísticas recuperadas dos amigos da sala.', 'ok', 6000);
+}
+async function statsRecover(code){
+  code = String(code || '').trim().toLowerCase();
+  if (!/^[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}$/.test(code)){ toast('Código inválido: são 12 letras/números, no formato xxxx-xxxx-xxxx.', 'warn'); return; }
+  store.set('statsCode', code);
+  await statsInitId();
+  if (me) for (const p of members) if (p.id !== me.id) hubSend({t: 'relay', to: p.id, data: {k: 'statsWant', c: code}});
+  toast('Pedindo suas estatísticas aos amigos da sala… (quem estiver com uma cópia manda de volta)', 'ok', 6000);
+}
+
+/* --- painel --- */
+let openStatsFor = null, statsSel = null;
+function openStats(pid, sel){
+  openStatsFor = pid || '__me'; statsSel = sel || null;
+  if (typeof closePop === 'function') try{ closePop(); }catch{}
+  renderStats();
+  $('#statsBox').hidden = false;
+}
+function statsOf(who){
+  if (who === '__me') return {s: stats, name: myName, av: '__me', mine: true};
+  const p = peerStats.get(who);
+  return {s: p ? p.d : null, name: nameOf(who), av: who, mine: false};
+}
+function renderStats(){
+  const box = $('#statsBox .st-card'); if (!box) return;
+  const {s, name, av, mine} = statsOf(openStatsFor);
+  box.textContent = '';
+  const head = document.createElement('div'); head.className = 'st-head';
+  const nm = document.createElement('div'); nm.className = 'st-nm';
+  const b = document.createElement('b'); b.textContent = name;
+  const sm = document.createElement('small');
+  sm.textContent = s ? 'Contando desde ' + new Date(s.s).toLocaleDateString('pt-BR') + (mine ? ' · guardado neste aparelho e com os amigos da sala' : '') : 'Ainda sem estatísticas (precisa do Telão 1.19 ou mais novo)';
+  nm.append(b, sm);
+  const grow = document.createElement('span'); grow.style.flex = '1';
+  head.append(avatarNode(av, name, 56), nm, grow);
+  if (s){
+    const copy = document.createElement('button'); copy.type = 'button'; copy.className = 'primary'; copy.textContent = 'Copiar cartão';
+    copy.title = 'Copia a imagem da conquista escolhida (cole no Discord ou no WhatsApp)';
+    copy.onclick = () => statsCard(s, name, false);
+    const save = document.createElement('button'); save.type = 'button'; save.className = 'ghost'; save.textContent = 'Salvar';
+    save.onclick = () => statsCard(s, name, true);
+    head.append(copy, save);
+  }
+  const x = document.createElement('button'); x.type = 'button'; x.className = 'ghost st-x'; x.setAttribute('aria-label', 'Fechar'); x.textContent = '✕';
+  x.onclick = () => { $('#statsBox').hidden = true; openStatsFor = null; };
+  head.appendChild(x);
+  box.appendChild(head);
+  if (!s) return;
+  const body = document.createElement('div'); body.className = 'st-body';
+  const left = document.createElement('div'); left.className = 'st-left';
+  const sec = (title, rows, big) => {
+    const se = document.createElement('section');
+    const h = document.createElement('h3'); h.textContent = title; se.appendChild(h);
+    if (big){ const g = document.createElement('div'); g.className = 'st-big'; for (const [v, l] of big){ const c = document.createElement('div'); const bb = document.createElement('b'); bb.textContent = v; const ll = document.createElement('span'); ll.textContent = l; c.append(bb, ll); g.appendChild(c); } se.appendChild(g); }
+    const kv = document.createElement('div'); kv.className = 'st-kv';
+    for (const [l, v] of rows){ const a = document.createElement('span'); a.textContent = l; const bb = document.createElement('b'); bb.textContent = v; kv.append(a, bb); }
+    se.appendChild(kv); left.appendChild(se);
+  };
+  const fav = Object.entries(s.w).sort((a, c) => c[1] - a[1])[0];
+  const stk = statsStreak(s);
+  sec('Transmitindo', [['Em alta qualidade (1080p60 ou mais)', fmtH(s.hq)], ['Com o motor ou a captura turbo', fmtH(s.tb)], ['Reações recebidas', fmtN(s.rr)], ['Internet enviada', s.bs >= 1024 ? (s.bs / 1024).toFixed(1).replace('.', ',') + ' GB' : Math.round(s.bs) + ' MB']],
+      [[fmtH(s.st), 'transmitidas'], [fmtH(s.va), 'assistidas pelos amigos'], [String(s.ma), 'maior plateia'], [fmtH(s.lg), 'maior transmissão']]);
+  sec('Assistindo', [['Horas assistindo', fmtH(s.wa)], ['Quem ' + (mine ? 'você' : name) + ' mais assiste', fav ? fav[0] + ' · ' + fmtH(fav[1]) : '–'], ['Reações enviadas', fmtN(s.ra)], ['Clipes salvos', fmtN(s.cl)]]);
+  sec('Sala e grupo', [['Noites no Telão', fmtN(s.ni)], ['Semanas seguidas', stk.cur + ' · recorde ' + stk.best], ['Mensagens e figurinhas', fmtN(s.ms)], ['Retransmitindo para amigos', fmtH(s.rl)], ['Transmitiu mais tarde', fmtLate(s.la)]]);
+  // top 10 de jogos
+  const games = Object.entries(s.g).sort((a, c) => c[1][0] - a[1][0]).slice(0, 10);
+  const gs = document.createElement('section'); const gh = document.createElement('h3'); gh.textContent = 'Jogos mais transmitidos'; gs.appendChild(gh);
+  if (!games.length){ const p = document.createElement('p'); p.className = 'muted'; p.textContent = 'Ainda nenhum (conta quando alguém está assistindo).'; gs.appendChild(p); }
+  games.forEach(([gname, [ms, id]], i) => {
+    const r = document.createElement('div'); r.className = 'st-game' + (i === 0 ? ' top' : '');
+    if (i === 0 && id){ const im = document.createElement('img'); im.alt = ''; im.src = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/' + id + '/header.jpg'; im.onerror = () => im.remove(); r.appendChild(im); }
+    const a = document.createElement('span'); a.textContent = (i + 1) + '. ' + gname; const bb = document.createElement('b'); bb.textContent = fmtH(ms);
+    r.append(a, bb); gs.appendChild(r);
+  });
+  left.appendChild(gs);
+  if (mine){
+    const rs = document.createElement('section'); rs.className = 'st-rec';
+    const h = document.createElement('h3'); h.textContent = 'Código de recuperação'; rs.appendChild(h);
+    const p = document.createElement('p'); p.className = 'muted';
+    p.textContent = 'Os amigos da sala guardam uma cópia das suas estatísticas. Se formatar o PC ou trocar de aparelho, use este código para recebê-las de volta. Não mande para ninguém.';
+    const row = document.createElement('div'); row.className = 'st-coderow';
+    const code = document.createElement('code'); code.textContent = statsCode();
+    const cp = document.createElement('button'); cp.type = 'button'; cp.className = 'ghost'; cp.textContent = 'Copiar';
+    cp.onclick = () => navigator.clipboard.writeText(statsCode()).then(() => toast('Código copiado. Guarde num lugar seguro.'), () => toast('Código: ' + statsCode()));
+    row.append(code, cp);
+    const rec = document.createElement('div'); rec.className = 'st-coderow';
+    const inp = document.createElement('input'); inp.placeholder = 'xxxx-xxxx-xxxx'; inp.maxLength = 14; inp.setAttribute('aria-label', 'Código de recuperação');
+    const go = document.createElement('button'); go.type = 'button'; go.className = 'ghost'; go.textContent = 'Recuperar';
+    go.onclick = () => statsRecover(inp.value);
+    rec.append(inp, go);
+    rs.append(p, row, rec); left.appendChild(rs);
+  }
+  // conquistas
+  const right = document.createElement('div'); right.className = 'st-right';
+  const done = ACH.filter(a => achLevel(a, s) > 0).length;
+  const rh = document.createElement('div'); rh.className = 'st-rh';
+  const h3 = document.createElement('h3'); h3.textContent = 'Conquistas';
+  const cnt = document.createElement('small'); cnt.textContent = done + ' de ' + ACH.length + ' · clique numa para escolher o cartão';
+  rh.append(h3, cnt); right.appendChild(rh);
+  const grid = document.createElement('div'); grid.className = 'st-grid';
+  const order = [...ACH].sort((a, c) => achLevel(c, s) - achLevel(a, s));
+  if (!statsSel || !ACH.some(a => a.id === statsSel)) statsSel = (order[0] && achLevel(order[0], s) ? order[0] : ACH[0]).id;
+  for (const a of order){
+    const l = achLevel(a, s), v = a.v(s), T = l ? TIERS[l - 1] : null;
+    const c = document.createElement('button'); c.type = 'button'; c.className = 'st-ach' + (l ? '' : ' off') + (a.id === statsSel ? ' sel' : '');
+    if (T) c.style.setProperty('--tier', T.c);
+    c.innerHTML = l ? medalSvg(T.c, 34) : medalOff(34);
+    const tx = document.createElement('span'); tx.className = 'st-at';
+    const bb = document.createElement('b'); bb.textContent = a.n;
+    const lv = document.createElement('small'); lv.textContent = (T ? T.n + ' · ' : 'ainda não · ') + a.f(v) + ' ' + a.d;
+    tx.append(bb, lv);
+    const bar = document.createElement('span'); bar.className = 'st-bar';
+    const prev = l ? a.t[l - 1] : 0, next = l < 4 ? a.t[l] : null;
+    const fill = document.createElement('i'); fill.style.width = (next == null ? 100 : Math.max(2, Math.min(100, (v - prev) / (next - prev) * 100))) + '%';
+    bar.appendChild(fill);
+    const nx = document.createElement('small'); nx.className = 'st-next';
+    nx.textContent = next == null ? 'nível máximo' : TIERS[l].n + ': ' + a.f(next);
+    c.append(tx, bar, nx);
+    c.onclick = () => { statsSel = a.id; renderStats(); };
+    grid.appendChild(c);
+  }
+  right.appendChild(grid);
+  body.append(left, right);
+  box.appendChild(body);
+}
+// Cartão quadrado da conquista escolhida (imagem para mandar no grupo).
+async function statsCard(s, name, save){
+  const a = ACH.find(x => x.id === statsSel) || ACH[0], l = achLevel(a, s), T = l ? TIERS[l - 1] : {n: 'em andamento', c: '#5c6575'};
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
+  const g = c.getContext('2d');
+  g.fillStyle = '#12151a'; g.fillRect(0, 0, 1080, 1080);
+  const F = (w, px) => w + ' ' + px + 'px "Segoe UI", system-ui, sans-serif';
+  g.fillStyle = '#7cf29a'; g.strokeStyle = '#7cf29a'; g.lineWidth = 4;
+  g.strokeRect(74, 80, 40, 28); g.beginPath(); g.moveTo(84, 118); g.lineTo(104, 118); g.stroke();
+  g.fillStyle = '#e9ebee'; g.font = F(700, 32); g.textBaseline = 'middle'; g.fillText('telão', 130, 96);
+  g.fillStyle = '#8a93a2'; g.font = F(400, 22); g.textAlign = 'right';
+  g.fillText(new Date().toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'}), 1006, 96);
+  g.textAlign = 'center';
+  // medalha
+  const cx = 540, cy = 380;
+  g.fillStyle = '#4a5262'; g.beginPath(); g.moveTo(cx - 50, cy - 170); g.lineTo(cx - 10, cy - 170); g.lineTo(cx + 5, cy - 90); g.lineTo(cx - 35, cy - 75); g.fill();
+  g.beginPath(); g.moveTo(cx + 50, cy - 170); g.lineTo(cx + 10, cy - 170); g.lineTo(cx - 5, cy - 90); g.lineTo(cx + 35, cy - 75); g.fill();
+  g.fillStyle = T.c; g.beginPath(); g.arc(cx, cy, 105, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#12151a'; g.beginPath();
+  for (let i = 0; i < 10; i++){ const r = i % 2 ? 22 : 52, ang = -Math.PI / 2 + i * Math.PI / 5; g.lineTo(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r); }
+  g.closePath(); g.fill();
+  g.fillStyle = T.c; g.font = F(600, 30); g.fillText((a.n + ' · ' + T.n).toUpperCase(), 540, 560);
+  g.fillStyle = '#e9ebee'; g.font = F(700, 96); g.fillText(a.f(a.v(s)), 540, 660);
+  g.fillStyle = '#c9ced6'; g.font = F(400, 34); g.fillText(a.d, 540, 740);
+  // rodapé
+  g.fillStyle = '#1e222a'; if (g.roundRect){ g.beginPath(); g.roundRect(72, 860, 936, 148, 18); g.fill(); } else g.fillRect(72, 860, 936, 148);
+  g.fillStyle = '#4a6b3b'; g.beginPath(); g.arc(140, 934, 34, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#e9ebee'; g.font = F(700, 28); g.fillText((name || '?').slice(0, 1).toUpperCase(), 140, 936);
+  g.textAlign = 'left'; g.font = F(600, 30); g.fillText(name, 196, 914);
+  const top = Object.entries(s.g).sort((x, y) => y[1][0] - x[1][0])[0];
+  g.fillStyle = '#a7b0bd'; g.font = F(400, 22);
+  g.fillText(fmtH(s.st) + ' transmitidas · maior plateia ' + s.ma + (top ? ' · mais jogado: ' + top[0].slice(0, 28) : ''), 196, 956);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  if (!blob) return toast('Não consegui gerar o cartão.', 'warn');
+  if (!save){
+    try{ await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]); toast('Cartão copiado: cole no Discord ou no WhatsApp.'); return; }
+    catch{ toast('Não consegui copiar; salvando o arquivo.', 'warn'); }
+  }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a'); link.href = url; link.download = 'Telao - ' + a.n + ' - ' + (name || 'eu').replace(/[\\/:*?"<>|]+/g, '') + '.png';
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+function initStats(){
+  statsInitId();
+  setInterval(statsTick, 2000);
+  setInterval(() => { if (me && room) statsBroadcast(); }, 120000);
+  $('#statsBox').onclick = e => { if (e.target === $('#statsBox')){ $('#statsBox').hidden = true; openStatsFor = null; } };
+  statsCheckUnlocks(true);   // conquistas que já estavam garantidas não fazem barulho
 }
 
 /* ---------- Opções ---------- */
@@ -6840,10 +7288,12 @@ function clipTile(pid){
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
     toast('Clipe de ' + Math.round(c.seconds) + ' s salvo nos Downloads: ' + name);
+    statsCount('cl');
   }), 700);
 }
 function clipSaved(info, seconds){
   if (!info || !info.ok){ toast('Não consegui salvar o clipe' + (info && info.error ? ' (' + info.error + ')' : '') + '.', 'warn'); return; }
+  statsCount('cl');
   const d = document.createElement('div'); d.className = 'toast';
   d.textContent = 'Clipe de ' + Math.round(seconds) + ' s salvo em Vídeos\\Telão: ' + info.name + ' ';
   const b = document.createElement('button'); b.className = 'linkish'; b.textContent = 'Abrir pasta';
