@@ -1073,7 +1073,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.20.0';
+const TELAO_VERSION = '1.20.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1083,7 +1083,10 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.20.0', 'hoje', ['Transmitindo pelo motor de vídeo: quando todo mundo está assistindo pelo motor, o Telão fecha a captura do Chromium (que ficava aberta só para a miniatura) e economiza memória e placa de vídeo. A miniatura avisa "prévia pausada"; se alguém sair do motor, a captura reabre sozinha em meio segundo',
+  ['1.20.1', 'hoje', ['Transmitindo pelo motor: quem recebia pelo caminho invertido (quando a conexão direta não fecha) ficava fora do motor, em VP8 pelo processador, vendo a captura do Chromium, que com o jogo em tela cheia no primeiro plano congela. Agora vai no formato certo e entra no motor como os outros',
+                      'Assistindo pelo motor: quando uma tela fechava (quem transmitia parou, ou a conexão foi refeita), a janela de vídeo do Telão Audio dela ficava aberta por trás. Agora fecha junto',
+                      'Medição de uso real: mostra quem está no caminho invertido e avisa quando a captura do Chromium para para quem está fora do motor']],
+  ['1.20.0', '24/10', ['Transmitindo pelo motor de vídeo: quando todo mundo está assistindo pelo motor, o Telão fecha a captura do Chromium (que ficava aberta só para a miniatura) e economiza memória e placa de vídeo. A miniatura avisa "prévia pausada"; se alguém sair do motor, a captura reabre sozinha em meio segundo',
                       'Nova opção experimental em Opções → Desempenho: "Economia de memória". Junta a rede e o som no processo principal do app e desliga o que o Telão não usa (corretor ortográfico, aba de reserva). Vale ao reiniciar o app; no teste caiu de 485 para 361 MB. Ligue, use uma noite e compare na medição de uso real']],
   ['1.19.0', '24/10', ['Estatísticas e conquistas: horas transmitidas e assistidas pelos amigos, maior plateia, maior transmissão, top 10 de jogos, quem você mais assiste, noites no Telão, semanas seguidas e mais. Em "quem está na sala" → "Minhas estatísticas e conquistas"',
                       '16 conquistas com 4 níveis (Bronze, Prata, Ouro e Estrela). Ao desbloquear aparece um aviso e os amigos veem no chat. "Copiar cartão" gera uma imagem da conquista para mandar no grupo',
@@ -3875,11 +3878,30 @@ function onPullCall(call){
   failCount.delete(pid);
   const pc = call.peerConnection;
   watchPc(pc, state => {
-    if (state === 'connected') applyQuality(pc, pid);
+    if (state === 'connected') pinSendCodec(pc, codec, myHighHw()).finally(() => { if (outCalls.get(pid) === call) applyQuality(pc, pid); });
     if ((state === 'failed' || state === 'closed') && outCalls.get(pid) === call) outCalls.delete(pid);
   });
   const forget = () => { if (outCalls.get(pid) === call) outCalls.delete(pid); };
   call.on('close', forget); call.on('error', forget);
+}
+
+/* Na chamada invertida quem transmite RESPONDE, e quem responde envia no primeiro formato da oferta (a de quem assiste,
+   com VP8 na frente): reordenar a resposta não muda nada, e o vídeo ia em VP8 pelo processador, fora do motor e da placa.
+   Escolhe o formato direto no envio, sem renegociar (o Chromium troca o codificador na hora). */
+async function pinSendCodec(pc, codec, hi){
+  try{
+    const snd = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+    if (!snd) return false;
+    const p = snd.getParameters();
+    if (!p.codecs || !p.encodings || !p.encodings.length) return false;
+    const list = p.codecs.filter(c => c.mimeType.toUpperCase() === 'VIDEO/' + codec);
+    if (codec === 'H264') list.sort((a, b) => h264Score(b.sdpFmtpLine, hi) - h264Score(a.sdpFmtpLine, hi));
+    if (!list.length) return false;
+    if (p.encodings.every(e => e.codec && e.codec.mimeType === list[0].mimeType && e.codec.sdpFmtpLine === list[0].sdpFmtpLine)) return true;
+    p.encodings.forEach(e => { e.codec = list[0]; });
+    await snd.setParameters(p);
+    return true;
+  }catch{ return false; }
 }
 
 /* Quem assiste: pede o vídeo pelo caminho invertido. */
@@ -7477,6 +7499,8 @@ function removeTile(pid){
   if (!t) return;
   relayStopFor(pid, false);   // eu repassava esta tela: os repasses acabam junto
   if (floatState && floatState.pid === pid) closeFloat();
+  if (t.nat) engineViewStop(pid, t, 'tela fechou', false);   // sem isso a janela de vídeo do Telão Audio ficava aberta
+  t.natLeft = null;
   try{ t.call && t.call.close(); }catch{}
   t.video.srcObject = null;
   if (resObserver) resObserver.unobserve(t.el);
@@ -8251,7 +8275,7 @@ async function pcSnap(pc){
 // lista das conexões que existem agora: o que eu mando, o que eu recebo e o que eu repasso
 function perfConns(){
   const list = [];
-  for (const [pid, c] of outCalls) list.push({key: 'out:' + pid, kind: 'out', pid, who: nameOf(pid), pc: c.peerConnection, paused: () => !!pausedBy.get(pid) && !isRelayHub(pid)});
+  for (const [pid, c] of outCalls) list.push({key: 'out:' + pid, kind: 'out', pid, who: nameOf(pid), pull: !!(c.metadata && c.metadata.pull), pc: c.peerConnection, paused: () => !!pausedBy.get(pid) && !isRelayHub(pid)});
   for (const [pid, t] of tiles) if (t.call) list.push({key: 'in:' + pid, kind: 'in', pid, who: nameOf(pid), via: t.via ? nameOf(t.via) : '', pc: t.call.peerConnection, hidden: () => t.el.hidden});
   for (const ent of relayOut.values()) list.push({key: 'rly:' + ent.s + '|' + ent.v, kind: 'rly', who: nameOf(ent.s) + ' → ' + nameOf(ent.v), pc: ent.call && ent.call.peerConnection, paused: () => ent.paused});
   return list;
@@ -8350,6 +8374,7 @@ async function runPerf(){
       if (!prev.has(c.key)) continue;
       let e = run.conns.get(c.key);
       if (!e){ e = {kind: c.kind, who: c.who, via: c.via || '', samples: []}; run.conns.set(c.key, e); }
+      if (c.pull) e.pull = true;
       const d = perfDelta(c.kind, snap, prev.get(c.key), dt);
       enginePerf(c, d);
       d.off = c.paused ? c.paused() : (c.hidden ? c.hidden() : false);
@@ -8474,7 +8499,7 @@ function perfSummary(run){
       if (!live.length){ L.push(title + ': pausado (ocultou a tela)'); continue; }
       const fps = nums(live, 'fps'), enc = nums(live, 'encMs'), cap = nums(live, 'capFps');
       const limCpu = avg(live.map(s => s.lim_cpu || 0)), limBw = avg(live.map(s => s.lim_bandwidth || 0));
-      L.push(title + ' (' + (last.codec || '?') + ' · ' + (last.hw === true ? 'placa de vídeo' : last.hw === false ? 'processador' : (last.impl || '?')) + (last.path ? ' · ' + last.path : '') + ')');
+      L.push(title + ' (' + (last.codec || '?') + ' · ' + (last.hw === true ? 'placa de vídeo' : last.hw === false ? 'processador' : (last.impl || '?')) + (last.path ? ' · ' + last.path : '') + (e.pull ? ' · caminho invertido' : '') + ')');
       if (cap.length && e.kind === 'out') L.push('  captura: ' + f0(avg(cap)) + ' fps (mín ' + f0(Math.min(...cap)) + ')');
       L.push('  envio: ' + f0(avg(fps)) + ' fps (mín ' + f0(Math.min(...fps)) + ') · ' + f0(avg(nums(live, 'h'))) + 'p · ' + f1(avg(nums(live, 'kbps')) / 1000) + ' Mbps' +
         (nums(live, 'avail').length ? ' (a rede aguentaria ~' + f1(avg(nums(live, 'avail')) / 1000) + ' Mbps)' : ''));
@@ -8484,6 +8509,10 @@ function perfSummary(run){
       if (e.kind === 'out' && cap.length && avg(cap) < target * 0.8 && !turboSaid && !live.some(x => x.motor) && !(run.motor && run.motor.length)) W.push('Captura da tela abaixo do esperado (' + f0(avg(cap)) + ' de ' + target + ' fps). ' + (c.turbo ? 'A captura turbo já está ligada: confira se o próprio jogo está abaixo disso.'
         : turboAvailable() ? 'Experimente a "Captura turbo" no seletor de tela (dá pra comparar antes em Diagnóstico → Testar captura turbo); também acontece se o próprio jogo estiver abaixo disso.'
         : 'No Windows 10, experimente o "Modo rápido" no seletor; também acontece se o próprio jogo estiver abaixo disso.'));
+      // motor ligado, mas esta pessoa está no caminho normal: ela vê a captura do Chromium, que com jogo em tela cheia no
+      // primeiro plano pode parar (o motor, que captura pelo Telão Audio, segue normal)
+      if (e.kind === 'out' && cap.length && avg(cap) < target * 0.5 && !live.some(x => x.motor) && run.motor && run.motor.length)
+        W.push('A captura do Chromium entregou só ' + f0(avg(cap)) + ' de ' + target + ' quadros/s para ' + e.who + ', que está fora do motor de vídeo: para ' + e.who + ' a tela fica congelada. Costuma acontecer com o jogo em tela cheia no primeiro plano (quem está no motor não é afetado).');
       if (limCpu > 0.2) W.push('Envio para ' + e.who + ' limitado pelo processador em ' + pc1(limCpu) + ' do tempo. Use H.264 (placa de vídeo) ou uma qualidade menor.');
       if (limBw > 0.2) W.push('Envio para ' + e.who + ' limitado pela internet em ' + pc1(limBw) + ' do tempo (upload). Uma qualidade menor ajuda; com 2+ pessoas assistindo, a retransmissão pode entrar sozinha.');
       if (enc.length && pct(enc, 0.95) > 1000 / Math.max(30, target) * 0.85) W.push('Codificação lenta para ' + e.who + ' (' + f1(pct(enc, 0.95)) + ' ms por quadro): o codificador não está dando conta de ' + target + ' fps.');

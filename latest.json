@@ -1,25 +1,26 @@
 {
-  "version": "1.20.0",
+  "version": "1.20.1",
   "minShell": 2,
-  "page": "versoes/telao-1.20.0.html",
-  "sha256": "36c417206f2a67066b85efc559f8c18b7f4c5c68cc3c2444a399e3a1969218c1",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.20.0",
+  "page": "versoes/telao-1.20.1.html",
+  "sha256": "d9a3470c2393812efbeb29e93a4abd7393c12604d6f4653250122dca4e5d8944",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.20.1",
   "notes": [
-    "Transmitindo pelo motor de vídeo: quando todo mundo está assistindo pelo motor, o Telão fecha a captura do Chromium (que ficava aberta só para a miniatura) e economiza memória e placa de vídeo. A miniatura avisa \"prévia pausada\"; se alguém sair do motor, a captura reabre sozinha em meio segundo",
-    "Nova opção experimental em Opções → Desempenho: \"Economia de memória\". Junta a rede e o som no processo principal do app e desliga o que o Telão não usa (corretor ortográfico, aba de reserva). Vale ao reiniciar o app; no teste caiu de 485 para 361 MB. Ligue, use uma noite e compare na medição de uso real"
+    "Transmitindo pelo motor: quem recebia pelo caminho invertido (quando a conexão direta não fecha) ficava fora do motor, em VP8 pelo processador, vendo a captura do Chromium, que com o jogo em tela cheia no primeiro plano congela. Agora vai no formato certo e entra no motor como os outros",
+    "Assistindo pelo motor: quando uma tela fechava (quem transmitia parou, ou a conexão foi refeita), a janela de vídeo do Telão Audio dela ficava aberta por trás. Agora fecha junto",
+    "Medição de uso real: mostra quem está no caminho invertido e avisa quando a captura do Chromium para para quem está fora do motor"
   ],
   "app": {
-    "version": "1.20.0",
+    "version": "1.20.1",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.20.0/app.asar",
-        "sha256": "5551135700c8593e39daee188cb86118a7a536d08e379130993f6c18267aca0e",
-        "size": 670988
+        "path": "versoes/app-1.20.1/app.asar",
+        "sha256": "25e33eecaa9ce5f47ab150a400eb04b0535e67ad68fc823cfccc648032cdf711",
+        "size": 673777
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.20.0/telao-audio.exe",
+        "path": "versoes/app-1.20.1/telao-audio.exe",
         "sha256": "843ef8943756dcf7471151d91984a52f7277442978885b0df3ca4b6ff3ef917e",
         "size": 802304
       }
