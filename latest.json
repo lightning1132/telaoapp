@@ -1,29 +1,24 @@
 {
-  "version": "1.21.0",
+  "version": "1.21.1",
   "minShell": 2,
-  "page": "versoes/telao-1.21.0.html",
-  "sha256": "ac4bd5c500fd97497163d26f96960f4c95fa6e6cc3d39710ea9689f32f362a42",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.21.0",
+  "page": "versoes/telao-1.21.1.html",
+  "sha256": "586e96a0dd6ce28a59cf23426591076e6c110118da2bdc3ab92d6ccbcf70ed26",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.21.1",
   "notes": [
-    "Transmissões com mais qualidade: as taxas de cada qualidade quase dobraram (1080p60 foi de 8 para 14 Mbps; 720p60, de 4,5 para 8). Elas eram baixas para imagem de jogo",
-    "Quem assiste recebe sempre o tamanho da qualidade escolhida, mesmo com a tela pequena na grade (antes 1080p virava 540p). Só tela bem pequena, como celular, recebe a metade. Ampliar não espera mais uma codificação nova",
-    "A conexão já começa perto da taxa da qualidade, em vez de começar em 2,5 Mbps e subir devagar",
-    "Quem nunca escolheu a qualidade e tem placa que codifica pelo motor começa em Máximo (1080p60)",
-    "Diagnóstico → \"Teste padrão\": transmite uma cena de teste para uma janela de teste neste PC e dá uma nota para a imagem que chega, com FPS e taxa. É como vamos comparar as próximas melhorias",
-    "Medição de uso real: mostra quanto da taxa pedida o codificador do motor entrega e avisa quando fica muito abaixo"
+    "Teste padrão: o resultado diz se o motor entrou e, se não entrou, por quê; os quadros que chegam são contados pelo que foi decodificado (janela de teste coberta não conta menos); mostra quando o Chromium reduziu a imagem por falta de processador"
   ],
   "app": {
-    "version": "1.21.0",
+    "version": "1.21.1",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.21.0/app.asar",
-        "sha256": "153b401ef808d4a5e0dacf2b10530be57b682ca44cb376bc7fb7d7531c315afd",
-        "size": 696806
+        "path": "versoes/app-1.21.1/app.asar",
+        "sha256": "51a4f6da1236818fcd9222c3e0d139b7da295c4ed7ccd7b66f530953a9ed72ab",
+        "size": 698371
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.21.0/telao-audio.exe",
+        "path": "versoes/app-1.21.1/telao-audio.exe",
         "sha256": "59cc333c3ae54dd7ebe6e1c07276f64c6af6e421b20cb59a1e3e70a7cba3d538",
         "size": 807936
       }

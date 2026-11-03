@@ -932,7 +932,7 @@ html:not(.cinema) #cineChat{display:none}
       </section>
       <section id="tpSec" hidden>
         <h3>Teste padrão</h3>
-        <p class="muted dg-p">Transmite sempre a mesma cena de teste, na qualidade escolhida, para uma janela de teste neste PC e dá uma nota para a imagem que chega do outro lado (de 0 a 1; acima de 0,95 é muito boa), com FPS e taxa. Serve para comparar versões e qualidades no mesmo PC. Precisa estar numa sala e sem transmitir; leva uns 90 s e abre duas janelas, que fecham sozinhas. Quem estiver na sala também recebe a cena durante o teste.</p>
+        <p class="muted dg-p">Transmite sempre a mesma cena de teste, na qualidade escolhida, para uma janela de teste neste PC e dá uma nota para a imagem que chega do outro lado (de 0 a 1), com FPS e taxa. A cena é difícil de propósito (textura com ruído rolando, como grama e folhagem): a nota serve para comparar versões e qualidades no mesmo PC, não como valor absoluto. Precisa estar numa sala e sem transmitir; leva uns 90 s e abre duas janelas, que fecham sozinhas. Quem estiver na sala também recebe a cena durante o teste.</p>
         <div class="dg-row"><button type="button" class="primary" id="tpRun">Teste padrão (60 s)</button><span id="tpMsg" class="muted"></span><span class="grow"></span><button type="button" class="ghost" id="tpCopy" hidden>Copiar resultado</button></div>
         <div id="tpOut" class="pf-out" hidden></div>
       </section>
@@ -1079,7 +1079,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.21.0';
+const TELAO_VERSION = '1.21.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1089,7 +1089,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.21.0', 'hoje', ['Transmissões com mais qualidade: as taxas de cada qualidade quase dobraram (1080p60 foi de 8 para 14 Mbps; 720p60, de 4,5 para 8). Elas eram baixas para imagem de jogo',
+  ['1.21.1', 'hoje', ['Teste padrão: o resultado diz se o motor entrou e, se não entrou, por quê; os quadros que chegam são contados pelo que foi decodificado (janela de teste coberta não conta menos); mostra quando o Chromium reduziu a imagem por falta de processador']],
+  ['1.21.0', '03/11', ['Transmissões com mais qualidade: as taxas de cada qualidade quase dobraram (1080p60 foi de 8 para 14 Mbps; 720p60, de 4,5 para 8). Elas eram baixas para imagem de jogo',
                       'Quem assiste recebe sempre o tamanho da qualidade escolhida, mesmo com a tela pequena na grade (antes 1080p virava 540p). Só tela bem pequena, como celular, recebe a metade. Ampliar não espera mais uma codificação nova',
                       'A conexão já começa perto da taxa da qualidade, em vez de começar em 2,5 Mbps e subir devagar',
                       'Quem nunca escolheu a qualidade e tem placa que codifica pelo motor começa em Máximo (1080p60)',
@@ -8424,19 +8425,23 @@ async function tpStart(){
 // Uma amostra por segundo do lado de quem transmite.
 function tpSample(R){
   const E = engine.share, S = E && [...E.ses.values()].find(x => x.state === 'ok' && x.stat);
+  // por que (não) está no motor, para o resultado
+  R.eng = E ? 'ligado · ' + E.links.size + ' no motor · ' + E.ses.size + ' codificação(ões)' : 'não ligou' + (engine.last && engine.last.at >= R.t0 ? ' (' + engine.last.reason + ')' : '') +
+          (!engineSendOk() ? ' · motor indisponível para transmitir' : '');
+  R.engLog = engine.log.slice(-4);
   if (S) R.samples.push({motor: true, inFps: +S.stat.in || 0, outFps: +S.stat.out || 0, kbps: +S.stat.kbps || 0, target: S.kbps, lat: +S.stat.lat || 0,
                          codec: S.codec.toUpperCase(), size: S.w + 'x' + S.h, enc: S.enc || ''});
   else if (sendInfo && Date.now() - sendInfo.at < 3000 && sendInfo.worst){
     const v = (sendInfo.viewers || []).find(x => !x.paused) || {};
     R.samples.push({motor: false, inFps: sendInfo.capFps || 0, outFps: sendInfo.worst.fps || 0, kbps: (v.mbps || 0) * 1000, target: QUALITY[R.q].kbps, lat: 0,
-                    codec: sendInfo.worst.codec || '?', size: sendInfo.worst.h ? sendInfo.worst.h + 'p' : '', enc: sendInfo.worst.impl || ''});
+                    codec: sendInfo.worst.codec || '?', size: sendInfo.worst.h ? sendInfo.worst.h + 'p' : '', enc: sendInfo.worst.impl || '', lim: sendInfo.worst.reason || ''});
   }
 }
 function tpResult(R){
   const r = R.res, live = R.samples.slice(-R.secs), avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0, q = QUALITY[R.q];
   const last = live[live.length - 1] || {};
   const kb = avg(live.map(x => x.kbps)), tg = avg(live.map(x => x.target));
-  const o = {at: Date.now(), ver: TELAO_VERSION, q: q.label, path: r.path, codec: last.codec || r.codec || '?', size: last.size || r.size || '', enc: last.enc || '',
+  const o = {at: Date.now(), ver: TELAO_VERSION, q: q.label, path: r.path, codec: last.codec || r.codec || '?', size: last.size || r.size || '', enc: last.enc || '', lim: last.lim || '',
     ssim: +r.ssim || 0, ssimMin: +r.ssimMin || 0, n: r.n || 0, recvFps: +r.fps || 0, freezes: r.freezes || 0,
     capFps: avg(live.map(x => x.inFps)), sendFps: avg(live.map(x => x.outFps)), kbps: kb, target: tg, lat: avg(live.map(x => x.lat))};
   o.ssimTxt = o.ssim.toFixed(3).replace('.', ',');
@@ -8445,7 +8450,10 @@ function tpResult(R){
     'Qualidade: ' + o.q + ' · ' + (o.path === 'motor' ? 'motor' : 'caminho normal') + ' · ' + o.codec + (o.size ? ' ' + o.size : '') + (o.enc ? ' (' + o.enc + ')' : ''),
     'Nota da imagem (SSIM): ' + o.ssimTxt + ' (pior ' + o.ssimMin.toFixed(3).replace('.', ',') + ', ' + o.n + ' amostras)',
     'Quadros: captura ' + Math.round(o.capFps) + ' · enviados ' + Math.round(o.sendFps) + ' · chegando ' + Math.round(o.recvFps) + ' fps · travadas ' + o.freezes,
-    'Taxa: ' + (o.kbps / 1000).toFixed(1).replace('.', ',') + ' de ' + (o.target / 1000).toFixed(1).replace('.', ',') + ' Mbps (' + Math.round(100 * o.kbps / Math.max(1, o.target)) + '% do alvo) · codificação ' + o.lat.toFixed(1).replace('.', ',') + ' ms por quadro'].join('\n');
+    'Taxa: ' + (o.kbps / 1000).toFixed(1).replace('.', ',') + ' de ' + (o.target / 1000).toFixed(1).replace('.', ',') + ' Mbps (' + Math.round(100 * o.kbps / Math.max(1, o.target)) + '% do alvo)' +
+      (o.lat > 0 ? ' · codificação ' + o.lat.toFixed(1).replace('.', ',') + ' ms por quadro' : '') + (o.lim && o.lim !== 'none' ? ' · Chromium limitado por ' + ({cpu: 'processador', bandwidth: 'rede', other: 'outro motivo'}[o.lim] || o.lim) : ''),
+    'Motor: quem transmite ' + (R.eng || '?') + ' · janela de teste: ' + (r.why || (o.path === 'motor' ? 'no motor' : '?')),
+    ...(o.path !== 'motor' && R.engLog && R.engLog.length ? ['  ' + R.engLog.join('\n  ')] : [])].join('\n');
   return o;
 }
 function tpShow(o){
@@ -8471,7 +8479,8 @@ async function tpView(from, W, H, secs){
   hubSend({t: 'relay', to: from, data: {k: 'tpres', started: true}});
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const cg = cv.getContext('2d', {willReadFrequently: true});
-  const fr0 = engineFrames(t), ts0 = Date.now();
+  const decoded = async () => { try{ let n = 0; (await t.call.peerConnection.getStats()).forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'video') n = r.framesDecoded || 0; }); return n; }catch{ return 0; } };
+  const fr0 = await decoded(), ts0 = Date.now();
   for (let i = 0; i < secs && tiles.get(from) === t; i++){
     const tick = Date.now();
     let y = null;
@@ -8491,11 +8500,11 @@ async function tpView(from, W, H, secs){
     }
     await sleep(Math.max(50, 1000 - (Date.now() - tick)));
   }
-  const secsDone = (Date.now() - ts0) / 1000, fps = V.path === 'motor' && V.fps.length ? V.fps.reduce((a, b) => a + b, 0) / V.fps.length : (engineFrames(t) - fr0) / Math.max(1, secsDone);
+  const secsDone = (Date.now() - ts0) / 1000, fps = V.path === 'motor' && V.fps.length ? V.fps.reduce((a, b) => a + b, 0) / V.fps.length : ((await decoded()) - fr0) / Math.max(1, secsDone);
   const fz = V.path === 'motor' && t.nat && t.nat.stat && V.freezes0 != null ? Math.max(0, (+t.nat.stat.freezes || 0) - V.freezes0) : 0;
   const avg = V.ssim.length ? V.ssim.reduce((a, b) => a + b, 0) / V.ssim.length : 0;
   hubSend({t: 'relay', to: from, data: {k: 'tpres', done: true, n: V.ssim.length, ssim: +avg.toFixed(4), ssimMin: +(V.ssim.length ? Math.min(...V.ssim) : 0).toFixed(4),
-    fps: +fps.toFixed(1), freezes: fz, path: V.path, codec: V.codec}});
+    fps: +fps.toFixed(1), freezes: fz, path: V.path, codec: V.codec, why: V.path === 'motor' ? 'no motor' : 'caminho normal (' + (t.natWhy || (engineOn() ? 'motor ligado, sem motivo registrado' : 'motor desligado')) + ')'}});
   tp.view = null;
 }
 function initTp(){
