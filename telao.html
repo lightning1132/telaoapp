@@ -930,6 +930,12 @@ html:not(.cinema) #cineChat{display:none}
           <div id="pfBar" class="pf-bar" hidden><span></span></div><span class="grow"></span><button type="button" class="ghost" id="pfCopy">Copiar medição</button></div>
         <div id="pfOut" class="pf-out" hidden></div>
       </section>
+      <section id="tpSec" hidden>
+        <h3>Teste padrão</h3>
+        <p class="muted dg-p">Transmite sempre a mesma cena de teste, na qualidade escolhida, para uma janela de teste neste PC e dá uma nota para a imagem que chega do outro lado (de 0 a 1; acima de 0,95 é muito boa), com FPS e taxa. Serve para comparar versões e qualidades no mesmo PC. Precisa estar numa sala e sem transmitir; leva uns 90 s e abre duas janelas, que fecham sozinhas. Quem estiver na sala também recebe a cena durante o teste.</p>
+        <div class="dg-row"><button type="button" class="primary" id="tpRun">Teste padrão (60 s)</button><span id="tpMsg" class="muted"></span><span class="grow"></span><button type="button" class="ghost" id="tpCopy" hidden>Copiar resultado</button></div>
+        <div id="tpOut" class="pf-out" hidden></div>
+      </section>
       <section id="dgGpuSec" hidden>
         <h3>Placa de vídeo</h3>
         <div id="dgGpu" class="muted">Carregando…</div>
@@ -1073,7 +1079,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.20.1';
+const TELAO_VERSION = '1.21.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1083,7 +1089,13 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.20.1', 'hoje', ['Transmitindo pelo motor: quem recebia pelo caminho invertido (quando a conexão direta não fecha) ficava fora do motor, em VP8 pelo processador, vendo a captura do Chromium, que com o jogo em tela cheia no primeiro plano congela. Agora vai no formato certo e entra no motor como os outros',
+  ['1.21.0', 'hoje', ['Transmissões com mais qualidade: as taxas de cada qualidade quase dobraram (1080p60 foi de 8 para 14 Mbps; 720p60, de 4,5 para 8). Elas eram baixas para imagem de jogo',
+                      'Quem assiste recebe sempre o tamanho da qualidade escolhida, mesmo com a tela pequena na grade (antes 1080p virava 540p). Só tela bem pequena, como celular, recebe a metade. Ampliar não espera mais uma codificação nova',
+                      'A conexão já começa perto da taxa da qualidade, em vez de começar em 2,5 Mbps e subir devagar',
+                      'Quem nunca escolheu a qualidade e tem placa que codifica pelo motor começa em Máximo (1080p60)',
+                      'Diagnóstico → "Teste padrão": transmite uma cena de teste para uma janela de teste neste PC e dá uma nota para a imagem que chega, com FPS e taxa. É como vamos comparar as próximas melhorias',
+                      'Medição de uso real: mostra quanto da taxa pedida o codificador do motor entrega e avisa quando fica muito abaixo']],
+  ['1.20.1', '30/10', ['Transmitindo pelo motor: quem recebia pelo caminho invertido (quando a conexão direta não fecha) ficava fora do motor, em VP8 pelo processador, vendo a captura do Chromium, que com o jogo em tela cheia no primeiro plano congela. Agora vai no formato certo e entra no motor como os outros',
                       'Assistindo pelo motor: quando uma tela fechava (quem transmitia parou, ou a conexão foi refeita), a janela de vídeo do Telão Audio dela ficava aberta por trás. Agora fecha junto',
                       'Medição de uso real: mostra quem está no caminho invertido e avisa quando a captura do Chromium para para quem está fora do motor']],
   ['1.20.0', '24/10', ['Transmitindo pelo motor de vídeo: quando todo mundo está assistindo pelo motor, o Telão fecha a captura do Chromium (que ficava aberta só para a miniatura) e economiza memória e placa de vídeo. A miniatura avisa "prévia pausada"; se alguém sair do motor, a captura reabre sozinha em meio segundo',
@@ -1332,16 +1344,17 @@ function watchConnPc(c, label){
 
 const PREFIX = 'telao-v1-';
 const QUALITY = {
-  eco30:  {label:'Econômico · 360p 30fps', w:640,  h:360,  fps:30, kbps:800},
-  eco60:  {label:'Econômico · 360p 60fps', w:640,  h:360,  fps:60, kbps:1300},
-  medio30:{label:'Médio · 540p 30fps',     w:960,  h:540,  fps:30, kbps:1500},
-  medio60:{label:'Médio · 540p 60fps',     w:960,  h:540,  fps:60, kbps:2500},
-  leve:   {label:'Leve · 720p 30fps',      w:1280, h:720,  fps:30, kbps:2500},
-  fluido: {label:'Fluido · 720p 60fps',    w:1280, h:720,  fps:60, kbps:4500},
-  nitido: {label:'Nítido · 1080p 30fps',   w:1920, h:1080, fps:30, kbps:5000},
-  maximo: {label:'Máximo · 1080p 60fps',   w:1920, h:1080, fps:60, kbps:8000},
-  ult720: {label:'Ultimate · 720p 120fps (experimental)',  w:1280, h:720,  fps:120, kbps:7000},
-  ult1080:{label:'Ultimate · 1080p 120fps (experimental)', w:1920, h:1080, fps:120, kbps:12000},
+  // 1.21: taxas de jogo (antes 0,8 / 1,3 / 1,5 / 2,5 / 2,5 / 4,5 / 5 / 8 / 7 / 12 Mbps, metade do que imagem de jogo pede)
+  eco30:  {label:'Econômico · 360p 30fps', w:640,  h:360,  fps:30, kbps:1500},
+  eco60:  {label:'Econômico · 360p 60fps', w:640,  h:360,  fps:60, kbps:2500},
+  medio30:{label:'Médio · 540p 30fps',     w:960,  h:540,  fps:30, kbps:3000},
+  medio60:{label:'Médio · 540p 60fps',     w:960,  h:540,  fps:60, kbps:5000},
+  leve:   {label:'Leve · 720p 30fps',      w:1280, h:720,  fps:30, kbps:5000},
+  fluido: {label:'Fluido · 720p 60fps',    w:1280, h:720,  fps:60, kbps:8000},
+  nitido: {label:'Nítido · 1080p 30fps',   w:1920, h:1080, fps:30, kbps:8000},
+  maximo: {label:'Máximo · 1080p 60fps',   w:1920, h:1080, fps:60, kbps:14000},
+  ult720: {label:'Ultimate · 720p 120fps (experimental)',  w:1280, h:720,  fps:120, kbps:12000},
+  ult1080:{label:'Ultimate · 1080p 120fps (experimental)', w:1920, h:1080, fps:120, kbps:22000},
 };
 /* Frequência da tela de quem assiste (Hz). Quem tem monitor de 60 Hz recebe no máximo 60 fps,
    mesmo se quem transmite estiver no Ultimate: não adianta mandar quadros que a tela não mostra. */
@@ -1654,6 +1667,7 @@ function initLobby(){
     const r = cleanCode(window.telaoDesktop.room || '');
     if (r) $('#code').value = r;
     if (!$('#name').value) $('#name').value = 'Teste';
+    tpAutoJoin();
   }
   const t = store.get('turn', {});
   $('#turnUrl').value = t.url || ''; $('#turnUser').value = t.user || ''; $('#turnPass').value = t.pass || '';
@@ -1984,6 +1998,7 @@ function showRoom(){
   initOpts();
   $('#pipChat').onclick = toggleChatOverlay;
   initDiag();
+  initTp();
   $('#leaveBtn').onclick = leave;
   $('#quality').onchange = onQualityChange;
   $('#codec').onchange = () => {
@@ -2739,7 +2754,11 @@ function preferCodec(sdp, codec, hi){
 }
 /* Bitrate inicial: sem isso a conexão começa bem baixa e os primeiros segundos saem borrados. */
 const START_KBPS = 2500;
-function startBitrateSdp(sdp){
+// Quem transmite começa perto da taxa da qualidade (até 8 Mbps); antes toda conexão começava em 2,5 Mbps e subia devagar.
+const startKbps = () => localStream ? Math.min(8000, Math.max(START_KBPS, Math.round(QUALITY[currentQ()].kbps * 0.7))) : START_KBPS;
+const okKb = v => (v = Math.round(+v)) >= 300 && v <= 20000 ? v : 0;
+function startBitrateSdp(sdp, kb){
+  const START = okKb(kb) || startKbps();
   const lines = sdp.split('\r\n');
   const m = lines.findIndex(l => l.startsWith('m=video'));
   if (m < 0) return sdp;
@@ -2755,12 +2774,12 @@ function startBitrateSdp(sdp){
   lines.forEach((l, i) => {
     let x;
     if (i > m && i < end && (x = l.match(/^a=fmtp:(\d+) (.*)$/)) && media.has(x[1]) && !/x-google-start-bitrate/.test(l)){
-      out.push(l + ';x-google-start-bitrate=' + START_KBPS);
+      out.push(l + ';x-google-start-bitrate=' + START);
       return;
     }
     out.push(l);
     if (i > m && i < end && (x = l.match(/^a=rtpmap:(\d+) /)) && media.has(x[1]) && !hasFmtp.has(x[1]))
-      out.push('a=fmtp:' + x[1] + ' x-google-start-bitrate=' + START_KBPS);
+      out.push('a=fmtp:' + x[1] + ' x-google-start-bitrate=' + START);
   });
   return out.join('\r\n');
 }
@@ -2780,7 +2799,7 @@ function h264Order(sdp){
   if (mline) for (const pt of mline.split(' ').slice(3)) if (pt in pts && pts[pt] && !out.includes(pts[pt].slice(0, 4))) out.push(pts[pt].slice(0, 4));
   return out.join(',');
 }
-const makeSdpTransform = (codec, hi, ch) => sdp => { const x = startBitrateSdp(preferCodec(stereoSdp(sdp), codec, hi)); return ch ? toConstrainedHigh(x) : x; };
+const makeSdpTransform = (codec, hi, ch, kb) => sdp => { const x = startBitrateSdp(preferCodec(stereoSdp(sdp), codec, hi), kb); return ch ? toConstrainedHigh(x) : x; };
 
 /* ---------- Seletor de janela/tela (só no app desktop) ---------- */
 let pickerTab = 'window';
@@ -2897,14 +2916,14 @@ function openPicker(){
 }
 
 /* ---------- Transmitir ---------- */
-async function startShare(){
+async function startShare(pre){
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){
     toast('Este navegador não consegue capturar a tela. Use Chrome ou Edge no PC.', 'danger'); return;
   }
   const q = QUALITY[currentQ()];
   let chosen = null;
   if (DESKTOP){
-    chosen = await openPicker();
+    chosen = pre && pre.tp === true ? pre : await openPicker();   // teste padrão: a cena de teste, sem seletor
     if (!chosen) return;
   }
   // No app o som é escolhido junto com a tela; no navegador, pelo seletor da barra.
@@ -2970,7 +2989,7 @@ async function startShare(){
   }
   localStream = s;
   lastChosen = chosen;
-  noteSharedGame(chosen, s).catch(() => {});
+  if (!(chosen && chosen.tp)) noteSharedGame(chosen, s).catch(() => {});
   if (fastCapture) watchFastWindow(fastHwnd, s);
   showOverlay();
   const vt = s.getVideoTracks()[0];
@@ -3132,7 +3151,7 @@ function callPeer(pid){
   const hi = myHighHw();
   // com o motor, AV1 fica de fora (o Telão Audio codifica H.264/H.265) e H.265 só se ele também codifica H.265
   const eng = engineSendOk(), av1 = myAv1Hw() && !eng, h265 = myH265Hw() && (!eng || !!engine.caps.enc.h265);
-  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi, av1, h265, h265all: h265Auto()}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
+  const call = sendOnly(() => me.call(pid, outStream(), {metadata: {name: myName, codec, hi, av1, h265, h265all: h265Auto(), kb: startKbps()}, sdpTransform: makeSdpTransform(codec, hi, hi && codec === 'H264')}));
   if (!call) return;
   outCalls.set(pid, call);
   engineTapSend(pid, call);
@@ -3173,8 +3192,11 @@ function videoPlan(pid){
   const srcH = turboShare && vt === turboShare.ses.track ? turboShare.ses.h : ((vt && vt.getSettings && vt.getSettings().height) || q.h);
   return planFor(q, srcH, wantH.get(pid), wantHz.get(pid));
 }
+/* Tamanho: o da qualidade escolhida, ou a metade quando a tela de quem assiste é bem pequena (celular, miniatura).
+   Até a 1.20 seguia o quadrinho de cada um: em grade, 1080p virava 540p, e ampliar pedia uma codificação nova. */
+const smallWant = (want, srcH) => !!want && want <= srcH * 0.35;
 function planFor(q, srcH, want, hz){
-  const scale = want && srcH > want ? srcH / want : 1;
+  const scale = smallWant(want, srcH) ? 2 : 1;
   // quadros por segundo: até o que a tela de quem assiste mostra (60 Hz → 60 fps)
   const fps = hz && hz >= 50 && hz < q.fps ? Math.max(60, hz) : q.fps;
   // bitrate acompanha a área da imagem e os quadros, com um piso para não ficar borrado
@@ -3183,6 +3205,8 @@ function planFor(q, srcH, want, hz){
   return {scale, kbps, fps: Math.min(fps, q.fps)};
 }
 
+// Chromium 144+: desliga a adaptação interna do WebRTC (sem suporte, a primeira tentativa falha e fica a anterior)
+let degradeFullOk = null;
 async function applyQuality(pc, pid){
   if (!pc) return;
   const plan = videoPlan(pid);
@@ -3190,31 +3214,27 @@ async function applyQuality(pc, pid){
   for (const s of pc.getSenders()){
     if (!s.track) continue;
     const kind = s.track.kind;
-    try{
+    const eq = kind === 'video' ? engineQuality(pid) : null;   // no motor: o vídeo de mentira não é reduzido nem limitado (quem decide é o Telão Audio)
+    const put = async pref => {
       const p = s.getParameters();
-      if (!p.encodings || !p.encodings.length) continue; // ainda negociando; reaplica quando conectar
+      if (!p.encodings || !p.encodings.length) return; // ainda negociando; reaplica quando conectar
       p.encodings.forEach(e => { e.active = active; });
       if (kind === 'video'){
-        const eq = engineQuality(pid);   // no motor: o vídeo de mentira não é reduzido nem limitado (quem decide é o Telão Audio)
         p.encodings[0].maxBitrate = (eq ? eq.kbps : plan.kbps) * 1000;
         p.encodings[0].maxFramerate = eq ? eq.fps : plan.fps;
         p.encodings[0].scaleResolutionDownBy = eq ? 1 : plan.scale;
-        p.degradationPreference = 'maintain-framerate';
-      } else {
-        p.encodings[0].maxBitrate = 128000;
-      }
+        if (pref) p.degradationPreference = pref;
+      } else p.encodings[0].maxBitrate = 128000;
       await s.setParameters(p);
+    };
+    // no motor o vídeo de mentira não pode ser reduzido nem perder quadros por decisão do WebRTC: quem decide é o Telão
+    const full = kind === 'video' && eq && degradeFullOk !== false;
+    try{
+      await put(kind === 'video' ? (full ? 'maintain-framerate-and-resolution' : 'maintain-framerate') : null);
+      if (full) degradeFullOk = true;
     }catch{
-      try{
-        const p = s.getParameters();
-        if (p.encodings && p.encodings.length && kind === 'video'){
-          p.encodings.forEach(e => { e.active = active; });
-          p.encodings[0].maxBitrate = plan.kbps * 1000;
-          p.encodings[0].maxFramerate = plan.fps;
-          p.encodings[0].scaleResolutionDownBy = plan.scale;
-          await s.setParameters(p);
-        }
-      }catch{}
+      if (full && degradeFullOk === null) degradeFullOk = false;
+      try{ await put(null); }catch{}
     }
   }
 }
@@ -3744,6 +3764,7 @@ function onRelay(from, data){
   if (data.k === 'react'){ onReact(from, data); return; }
   if (data.k === 'stats' || data.k === 'statsWant' || data.k === 'ach'){ onStatsMsg(from, data); return; }
   if (data.k === 'chat'){ onChat(from, data); return; }
+  if (data.k === 'tp' || data.k === 'tphere' || data.k === 'tpres'){ onTpMsg(from, data); return; }
   if (data.k === 'stk'){ onStickers(from, data); return; }
   if (data.k === 'breq'){ onBlobReq(from, data.h); return; }
   if (data.k === 'bpart'){ onBlobPart(from, data); return; }
@@ -3936,7 +3957,7 @@ function onIncomingCall(call){
     return;
   }
   const sender = call.metadata && CODECS[call.metadata.codec] ? call.metadata.codec : null;
-  call.answer(undefined, {sdpTransform: makeSdpTransform(viewerCodec(sender, call.metadata), call.metadata && call.metadata.hi === true)});
+  call.answer(undefined, {sdpTransform: makeSdpTransform(viewerCodec(sender, call.metadata), call.metadata && call.metadata.hi === true, false, call.metadata && call.metadata.kb)});
   attachIncoming(call, call.peer);
 }
 
@@ -5196,6 +5217,7 @@ function statsTick(){
   const now = Date.now(), raw = statsLast ? now - statsLast : 0;
   statsLast = now;
   if (!me || me.destroyed || !room || raw <= 0 || raw > 15000) return;   // fora da sala, ou o PC dormiu
+  if (tp.run || tp.view) return;   // teste padrão não conta
   const dt = raw * (window.__statsSpeed || 1);   // (testes: acelera o relógio)
   const s = stats;
   // sala: noites (30 min numa noite) e semanas seguidas
@@ -5893,7 +5915,7 @@ function turboWantBox(){
     if (pausedBy.get(pid) && !hub) continue;
     n++;
     const w = hub ? 0 : wantH.get(pid);   // quem repassa para outros recebe sempre o tamanho cheio
-    h = Math.max(h, !w || w >= q.h ? q.h : w);
+    h = Math.max(h, smallWant(w, q.h) ? Math.round(q.h / 2) : q.h);
     fps = Math.max(fps, planFor(q, q.h, w, wantHz.get(pid)).fps);
   }
   if (!n) return null;
@@ -6197,6 +6219,8 @@ function engineHelper(m){
   switch (m.type){
     case 'vcaps':
       engine.caps = {mf: !!m.mf, enc: m.enc || {}, dec: m.dec || {}, encNames: String(m.encNames || ''), decNames: String(m.decNames || '')};
+      // quem nunca escolheu a qualidade e tem placa que codifica pelo motor começa em 1080p60
+      if (store.get('quality', null) === null && !localStream && (engine.caps.enc.h264 || engine.caps.enc.h265) && $('#quality').value !== 'maximo'){ $('#quality').value = 'maximo'; if (typeof syncShareUi === 'function') syncShareUi(); }
       engineNote('Telão Audio: codifica ' + ['h264', 'h265'].filter(k => engine.caps.enc[k]).join('+') + ' · decodifica ' + ['h264', 'h265'].filter(k => engine.caps.dec[k]).join('+') +
                  (engine.caps.encNames ? ' · ' + engine.caps.encNames : ''));
       return;
@@ -8190,6 +8214,7 @@ function diagReport(){
     if (diagGpu.features) L.push('flags do app: ' + diagGpu.features);
     L.push('desempenho minimizado: ' + (helper.ready ? helper.boost : 'helper desconectado'));
   }
+  if (tp.last){ L.push(''); L.push(...tp.last.text.split('\n')); }
   try{ const rc = (RTCRtpReceiver.getCapabilities('video') || {}).codecs || [];
     L.push('Este aparelho recebe: ' + [...new Set(rc.map(c => c.mimeType.replace(/^video\//i, '') + (/h264/i.test(c.mimeType) ? ' ' + h264Profile(c.sdpFmtpLine).slice(0, 4) : '')))].filter(x => !/rtx|red|ulpfec|flexfec/i.test(x)).join(', ') +
            ' · no lugar do H.264 pede: ' + (av1Instead() ? 'AV1 (se quem transmite codificar pela placa)' : h265Instead() ? 'H.265 (se quem transmite codificar pela placa)' : 'nada')); }catch{}
@@ -8250,6 +8275,247 @@ function confirmRestart(){
   restartWarned = true;
   toast('Você está transmitindo: reiniciar vai encerrar a transmissão. Clique em "Reiniciar" de novo para confirmar.', 'warn', 7000);
   return false;
+}
+
+/* ---------- Teste padrão (Diagnóstico) ----------
+   A mesma cena sintética (fundo com textura rolando, objetos em movimento, detalhe fino parado e um código com o número
+   do quadro) é transmitida para a janela de teste deste PC. A janela de teste pega 1 miniatura por segundo do que chega
+   (do Telão Audio, se a tela estiver no motor; senão, do <video>), lê o número do quadro, desenha o mesmo quadro da cena
+   e compara as duas (SSIM, em tons de cinza). Quem transmite junta FPS, taxa real × alvo e tempo de codificação. */
+const TP_SECS = 60, TP_FPS = 60;
+const tp = {run: null, view: null, last: null};
+// A cena: função pura do número do quadro (as duas janelas desenham exatamente a mesma coisa). Sem texto (fontes variam).
+function tpDraw(g, W, H, idx, T){
+  const B = Math.round(H / 18), s = H / 1080;
+  // fundo: textura com ruído rolando em diagonal (como o cenário de um jogo andando)
+  const ox = (idx * 7) % 512, oy = (idx * 3) % 512;
+  for (let y = -oy; y < H; y += 512) for (let x = -ox; x < W; x += 512) g.drawImage(T, x, y);
+  // faixas de cor por cima, devagar
+  for (let i = 0; i < 6; i++){
+    const yy = ((i * 211 + idx * (2 + i)) % (H + 200)) - 100;
+    g.fillStyle = 'hsla(' + ((i * 60 + idx) % 360) + ',70%,50%,0.35)'; g.fillRect(0, yy, W, 40 * s);
+  }
+  // objetos rápidos (bolas e quadrados com borda)
+  for (let i = 0; i < 28; i++){
+    const a = idx * (0.013 + i * 0.0021) + i * 1.7, r = (18 + (i % 7) * 9) * s;
+    const x = W / 2 + Math.cos(a * (1 + i % 3)) * (W * 0.42), y = H / 2 + Math.sin(a * 1.3) * (H * 0.38);
+    g.fillStyle = 'hsl(' + ((i * 37) % 360) + ',80%,' + (35 + (i % 4) * 12) + '%)';
+    if (i % 2){ g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+    else { g.fillRect(x - r, y - r, 2 * r, 2 * r); g.strokeStyle = '#fff'; g.lineWidth = 3 * s; g.strokeRect(x - r, y - r, 2 * r, 2 * r); }
+  }
+  // detalhe fino parado (como texto e mapa de um HUD): listras de 1 e 2 px e um xadrez
+  const hx = Math.round(W * 0.66), hy = Math.round(H * 0.70), hw = Math.round(W * 0.30), hh = Math.round(H * 0.25);
+  g.fillStyle = '#111'; g.fillRect(hx, hy, hw, hh);
+  g.fillStyle = '#e8e8e8';
+  for (let x = 0; x < hw / 2; x += 2) g.fillRect(hx + x, hy, 1, hh / 2);
+  for (let y = 0; y < hh / 2; y += 4) g.fillRect(hx + hw / 2, hy + y, hw / 2, 2);
+  const c = Math.max(4, Math.round(6 * s));
+  for (let y = 0; y < hh / 2; y += c) for (let x = 0; x < hw; x += c) if (((x + y) / c) % 2 === 0) g.fillRect(hx + x, hy + hh / 2 + y, c, c);
+  // código do quadro: [branco][preto] + 20 bits, blocos de B×B no canto
+  g.fillStyle = '#fff'; g.fillRect(0, 0, B, B); g.fillStyle = '#000'; g.fillRect(B, 0, B, B);
+  for (let k = 0; k < 20; k++){ g.fillStyle = (idx >> (19 - k)) & 1 ? '#fff' : '#000'; g.fillRect((k + 2) * B, 0, B, B); }
+}
+// Textura do fundo, sempre a mesma (gerador com semente fixa).
+function tpTexture(){
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d'), im = g.createImageData(512, 512);
+  let x = 2463534242;
+  const rnd = () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; };
+  for (let i = 0; i < 512 * 512; i++){
+    const px = i % 512, py = (i / 512) | 0, base = 90 + 60 * Math.sin(px / 23) * Math.cos(py / 31), n = rnd() * 70;
+    im.data[i * 4] = base + n; im.data[i * 4 + 1] = base * 0.8 + n * 0.6; im.data[i * 4 + 2] = 140 - base * 0.4 + n * 0.5; im.data[i * 4 + 3] = 255;
+  }
+  g.putImageData(im, 0, 0);
+  return c;
+}
+function tpSceneHtml(){
+  return '<!doctype html><meta charset="utf-8"><title>Telão — cena de teste</title><style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:100vw;height:100vh}</style>' +
+    '<canvas id="c" width="__W__" height="__H__"></canvas><script>' + tpDraw.toString() + '\n' + tpTexture.toString() +
+    '\nconst c = document.getElementById("c"), g = c.getContext("2d"), T = tpTexture(), t0 = performance.now(); let last = -1;' +
+    '\nconst step = () => { const idx = Math.floor((performance.now() - t0) / (1000 / ' + TP_FPS + ')); if (idx !== last){ last = idx; tpDraw(g, c.width, c.height, idx, T); } requestAnimationFrame(step); }; requestAnimationFrame(step);' +
+    '<\/script>';
+}
+// Lê o número do quadro e devolve a luminância da referência no mesmo tamanho da miniatura.
+function tpReadIdx(y, w, h, W, H){
+  const k = w / W, B = Math.round(H / 18) * k;
+  const at = (cx, cy) => { let s = 0, n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){ s += y[Math.round(cy + dy) * w + Math.round(cx + dx)]; n++; } return s / n; };
+  const white = at(B / 2, B / 2), black = at(B * 1.5, B / 2);
+  if (white - black < 60) return -1;   // código ilegível (quadro preto, tela coberta)
+  const mid = (white + black) / 2; let idx = 0;
+  for (let i = 0; i < 20; i++) idx = idx * 2 + (at((i + 2.5) * B, B / 2) > mid ? 1 : 0);
+  return idx;
+}
+let tpRef = null;
+function tpRefLuma(idx, W, H, w, h){
+  if (!tpRef || tpRef.W !== W || tpRef.H !== H){
+    const big = document.createElement('canvas'); big.width = W; big.height = H;
+    const small = document.createElement('canvas'); small.width = w; small.height = h;
+    tpRef = {W, H, big, small, T: tpTexture(), g: big.getContext('2d'), sg: small.getContext('2d', {willReadFrequently: true})};
+  }
+  tpDraw(tpRef.g, W, H, idx, tpRef.T);
+  tpRef.sg.imageSmoothingQuality = 'high';
+  tpRef.sg.drawImage(tpRef.big, 0, 0, w, h);
+  return tpLuma(tpRef.sg.getImageData(0, 0, w, h).data);
+}
+const tpLuma = d => { const y = new Uint8Array(d.length / 4); for (let i = 0, j = 0; j < y.length; i += 4, j++) y[j] = (54 * d[i] + 183 * d[i + 1] + 19 * d[i + 2] + 128) >> 8; return y; };
+// SSIM em janelas de 8×8 (sem sobreposição), sem a faixa do código no topo.
+function tpSsim(a, b, w, h, skip){
+  const C1 = 6.5025, C2 = 58.5225; let sum = 0, n = 0;
+  for (let y0 = skip; y0 + 8 <= h; y0 += 8) for (let x0 = 0; x0 + 8 <= w; x0 += 8){
+    let ma = 0, mb = 0;
+    for (let y = y0; y < y0 + 8; y++) for (let x = x0; x < x0 + 8; x++){ ma += a[y * w + x]; mb += b[y * w + x]; }
+    ma /= 64; mb /= 64;
+    let va = 0, vb = 0, cv = 0;
+    for (let y = y0; y < y0 + 8; y++) for (let x = x0; x < x0 + 8; x++){ const da = a[y * w + x] - ma, db = b[y * w + x] - mb; va += da * da; vb += db * db; cv += da * db; }
+    va /= 63; vb /= 63; cv /= 63;
+    sum += ((2 * ma * mb + C1) * (2 * cv + C2)) / ((ma * ma + mb * mb + C1) * (va + vb + C2)); n++;
+  }
+  return n ? sum / n : 0;
+}
+const tpD = () => window.__tpMock || window.telaoDesktop;   // (testes: janelas de mentira)
+const tpMode = () => DESKTOP && (window.__tpMock ? window.__tpMock.mode : window.telaoDesktop.mode) === 'tp';
+const tpAvailable = () => DESKTOP && typeof window.telaoDesktop.openScene === 'function' && typeof window.telaoDesktop.openTest === 'function' && !window.telaoDesktop.profile;
+// Quem transmite: abre a cena e a janela de teste, transmite, junta os números e mostra o resultado.
+async function tpStart(){
+  if (tp.run) return;
+  if (!room || !me){ toast('O teste padrão precisa de uma sala: entre numa sala primeiro.', 'warn'); return; }
+  if (localStream){ toast('Pare a transmissão antes do teste padrão.', 'warn'); return; }
+  const q = QUALITY[currentQ()];
+  const secs = window.__tpSecs || TP_SECS;   // (testes: mais curto)
+  const R = tp.run = {t0: Date.now(), q: currentQ(), secs, samples: [], test: null, res: null, sc: null, step: 'abrindo a cena'};
+  const msg = t => { R.step = t; $('#tpMsg').textContent = t; };
+  $('#tpRun').disabled = true; $('#tpOut').hidden = true; $('#tpCopy').hidden = true;
+  try{
+    msg('abrindo a cena de teste…');
+    R.sc = await tpD().openScene(tpSceneHtml(), q.w, q.h);
+    if (!R.sc || !R.sc.id) throw new Error('não consegui abrir a cena de teste');
+    msg('abrindo a janela de teste…');
+    const before = new Set(members.map(m => m.id));
+    if (!await tpD().openTest(room, 'tp')) throw new Error('não consegui abrir a janela de teste');
+    const t1 = Date.now();
+    while (!R.test && Date.now() - t1 < 45000) await sleep(250);
+    if (!R.test) throw new Error('a janela de teste não entrou na sala');
+    msg('transmitindo a cena…');
+    await startShare({id: R.sc.id, type: 'window', name: 'Cena de teste', audio: AUDIO_NONE, tp: true});
+    if (!localStream) throw new Error('a transmissão da cena não começou');
+    hubSend({t: 'relay', to: R.test, data: {k: 'tp', go: true, w: R.sc.w, h: R.sc.h, secs}});
+    const t2 = Date.now();
+    while (!R.res && Date.now() - t2 < (secs + 60) * 1000){
+      await sleep(1000);
+      tpSample(R);
+      const left = Math.max(0, Math.round(secs + 20 - (Date.now() - t2) / 1000));
+      msg(R.started ? 'medindo… ' + left + ' s' : 'esperando a imagem chegar na janela de teste…');
+    }
+    if (!R.res) throw new Error('a janela de teste não mandou o resultado');
+    tp.last = tpResult(R);
+    tpShow(tp.last);
+    toast('Teste padrão pronto: nota ' + tp.last.ssimTxt + ', ' + tp.last.fpsTxt + '. O resultado está no Diagnóstico.', 'ok', 9000);
+  }catch(e){
+    msg('não deu: ' + e.message);
+    toast('Teste padrão: ' + e.message + '.', 'warn', 8000);
+  } finally {
+    if (localStream && R.sc && lastChosen && lastChosen.tp) stopShare();
+    try{ await tpD().closeScene(); }catch{}
+    if (R.test) hubSend({t: 'relay', to: R.test, data: {k: 'tp', close: true}});
+    tp.run = null; $('#tpRun').disabled = false;
+    if (tp.last && tp.last.at >= R.t0) msg('');
+  }
+}
+// Uma amostra por segundo do lado de quem transmite.
+function tpSample(R){
+  const E = engine.share, S = E && [...E.ses.values()].find(x => x.state === 'ok' && x.stat);
+  if (S) R.samples.push({motor: true, inFps: +S.stat.in || 0, outFps: +S.stat.out || 0, kbps: +S.stat.kbps || 0, target: S.kbps, lat: +S.stat.lat || 0,
+                         codec: S.codec.toUpperCase(), size: S.w + 'x' + S.h, enc: S.enc || ''});
+  else if (sendInfo && Date.now() - sendInfo.at < 3000 && sendInfo.worst){
+    const v = (sendInfo.viewers || []).find(x => !x.paused) || {};
+    R.samples.push({motor: false, inFps: sendInfo.capFps || 0, outFps: sendInfo.worst.fps || 0, kbps: (v.mbps || 0) * 1000, target: QUALITY[R.q].kbps, lat: 0,
+                    codec: sendInfo.worst.codec || '?', size: sendInfo.worst.h ? sendInfo.worst.h + 'p' : '', enc: sendInfo.worst.impl || ''});
+  }
+}
+function tpResult(R){
+  const r = R.res, live = R.samples.slice(-R.secs), avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0, q = QUALITY[R.q];
+  const last = live[live.length - 1] || {};
+  const kb = avg(live.map(x => x.kbps)), tg = avg(live.map(x => x.target));
+  const o = {at: Date.now(), ver: TELAO_VERSION, q: q.label, path: r.path, codec: last.codec || r.codec || '?', size: last.size || r.size || '', enc: last.enc || '',
+    ssim: +r.ssim || 0, ssimMin: +r.ssimMin || 0, n: r.n || 0, recvFps: +r.fps || 0, freezes: r.freezes || 0,
+    capFps: avg(live.map(x => x.inFps)), sendFps: avg(live.map(x => x.outFps)), kbps: kb, target: tg, lat: avg(live.map(x => x.lat))};
+  o.ssimTxt = o.ssim.toFixed(3).replace('.', ',');
+  o.fpsTxt = Math.round(o.recvFps) + ' fps chegando';
+  o.text = ['TESTE PADRÃO · Telão ' + o.ver + ' · ' + new Date(o.at).toLocaleString('pt-BR'),
+    'Qualidade: ' + o.q + ' · ' + (o.path === 'motor' ? 'motor' : 'caminho normal') + ' · ' + o.codec + (o.size ? ' ' + o.size : '') + (o.enc ? ' (' + o.enc + ')' : ''),
+    'Nota da imagem (SSIM): ' + o.ssimTxt + ' (pior ' + o.ssimMin.toFixed(3).replace('.', ',') + ', ' + o.n + ' amostras)',
+    'Quadros: captura ' + Math.round(o.capFps) + ' · enviados ' + Math.round(o.sendFps) + ' · chegando ' + Math.round(o.recvFps) + ' fps · travadas ' + o.freezes,
+    'Taxa: ' + (o.kbps / 1000).toFixed(1).replace('.', ',') + ' de ' + (o.target / 1000).toFixed(1).replace('.', ',') + ' Mbps (' + Math.round(100 * o.kbps / Math.max(1, o.target)) + '% do alvo) · codificação ' + o.lat.toFixed(1).replace('.', ',') + ' ms por quadro'].join('\n');
+  return o;
+}
+function tpShow(o){
+  $('#tpOut').textContent = o.text; $('#tpOut').hidden = false; $('#tpCopy').hidden = false;
+}
+function onTpMsg(from, d){
+  if (d.k === 'tphere'){ if (tp.run && !tp.run.test) tp.run.test = from; return; }
+  if (d.k === 'tpres'){ if (tp.run && from === tp.run.test){ if (d.started) tp.run.started = true; if (d.done) tp.run.res = d; } return; }
+  if (d.k === 'tp' && tpMode()){
+    if (d.close){ if (!window.__tpMock) setTimeout(() => window.close(), 300); return; }
+    if (d.go && !tp.view) tpView(from, +d.w || 1280, +d.h || 720, Math.max(3, Math.min(300, +d.secs || TP_SECS))).catch(() => { tp.view = null; });
+  }
+}
+// Janela de teste: espera a tela chegar, tira 1 miniatura por segundo e compara com a cena.
+async function tpView(from, W, H, secs){
+  const V = tp.view = {from, ssim: [], fps: [], freezes0: null, path: '', codec: ''};
+  const w = 640, h = Math.round(640 * H / W / 2) * 2, skip = Math.ceil(Math.round(H / 18) * w / W) + 2;
+  const t0 = Date.now();
+  let t = null;
+  while (Date.now() - t0 < 30000){ t = tiles.get(from); if (t && t.firstFrame) break; await sleep(300); }
+  if (!t){ tp.view = null; hubSend({t: 'relay', to: from, data: {k: 'tpres', done: true, n: 0, ssim: 0, ssimMin: 0, fps: 0, freezes: 0, path: '?'}}); return; }
+  await sleep(4000);   // deixa o motor (se for o caso) assumir e a taxa firmar
+  hubSend({t: 'relay', to: from, data: {k: 'tpres', started: true}});
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const cg = cv.getContext('2d', {willReadFrequently: true});
+  const fr0 = engineFrames(t), ts0 = Date.now();
+  for (let i = 0; i < secs && tiles.get(from) === t; i++){
+    const tick = Date.now();
+    let y = null;
+    if (t.nat && t.nat.state === 'on'){
+      V.path = 'motor'; V.codec = t.nat.codec.toUpperCase();
+      const r = await engineAsk({cmd: 'dsnap', id: String(t.nat.id), w: String(w), h: String(h)}, m => (m.type === 'dsnapok' || m.type === 'dsnaperr') && +m.id === t.nat.id, 3000);
+      if (r && r.type === 'dsnapok' && +r.w === w && +r.h === h){ const b = atob(r.y); y = new Uint8Array(b.length); for (let k = 0; k < b.length; k++) y[k] = b.charCodeAt(k); }
+      if (t.nat.stat) V.fps.push(+t.nat.stat.pres || 0);
+      if (V.freezes0 == null && t.nat.stat) V.freezes0 = +t.nat.stat.freezes || 0;
+    } else if (t.video.videoWidth){
+      V.path = 'normal'; V.codec = t.mime || '?';
+      cg.drawImage(t.video, 0, 0, w, h); y = tpLuma(cg.getImageData(0, 0, w, h).data);
+    }
+    if (y && y.length === w * h){
+      const idx = tpReadIdx(y, w, h, W, H);
+      if (idx >= 0) V.ssim.push(tpSsim(y, tpRefLuma(idx, W, H, w, h), w, h, skip));
+    }
+    await sleep(Math.max(50, 1000 - (Date.now() - tick)));
+  }
+  const secsDone = (Date.now() - ts0) / 1000, fps = V.path === 'motor' && V.fps.length ? V.fps.reduce((a, b) => a + b, 0) / V.fps.length : (engineFrames(t) - fr0) / Math.max(1, secsDone);
+  const fz = V.path === 'motor' && t.nat && t.nat.stat && V.freezes0 != null ? Math.max(0, (+t.nat.stat.freezes || 0) - V.freezes0) : 0;
+  const avg = V.ssim.length ? V.ssim.reduce((a, b) => a + b, 0) / V.ssim.length : 0;
+  hubSend({t: 'relay', to: from, data: {k: 'tpres', done: true, n: V.ssim.length, ssim: +avg.toFixed(4), ssimMin: +(V.ssim.length ? Math.min(...V.ssim) : 0).toFixed(4),
+    fps: +fps.toFixed(1), freezes: fz, path: V.path, codec: V.codec}});
+  tp.view = null;
+}
+function initTp(){
+  $('#tpSec').hidden = !tpAvailable();
+  $('#tpRun').onclick = () => tpStart();
+  $('#tpCopy').onclick = async () => { try{ await navigator.clipboard.writeText(tp.last ? tp.last.text : ''); toast('Resultado copiado.', 'ok'); }catch{ toast('Não consegui copiar automaticamente.', 'warn'); } };
+}
+// janela de teste aberta pelo teste padrão: entra sozinha na sala e avisa quem abriu
+function tpAutoJoin(){
+  if (DESKTOP && window.telaoDesktop.mode === 'tp' && window.telaoDesktop.profile){
+    const r = cleanCode(window.telaoDesktop.room || '');
+    if (r && !room){
+      if (!$('#name').value) $('#name').value = 'Teste';
+      setTimeout(() => { join().catch(() => {}); }, 300);
+      const t0 = Date.now(), iv = setInterval(() => {   // repete até quem abriu mandar começar
+        if (tp.view || Date.now() - t0 > 60000){ clearInterval(iv); return; }
+        if (me && room && members.length > 1) roomBroadcast({k: 'tphere'});
+      }, 1500);
+    }
+  }
 }
 
 /* ---------- Medir uso real (Diagnóstico) ----------
@@ -8483,7 +8749,9 @@ function perfSummary(run){
     for (const k of [...new Set(run.motor.map(x => x.key))]){
       const M = run.motor.filter(x => x.key === k), inn = nums(M, 'in'), out = nums(M, 'out');
       L.push('  codificação ' + k + ': captura ' + f0(avg(inn)) + ' fps (mín ' + f0(Math.min(...inn)) + ') · sai ' + f0(avg(out)) + ' fps (mín ' + f0(Math.min(...out)) + ') · ' +
-             f1(avg(nums(M, 'lat'))) + ' ms por quadro · ' + f1(avg(nums(M, 'kbps')) / 1000) + ' Mbps (alvo ' + f1(avg(nums(M, 'target')) / 1000) + ')');
+             f1(avg(nums(M, 'lat'))) + ' ms por quadro · ' + f1(avg(nums(M, 'kbps')) / 1000) + ' Mbps (alvo ' + f1(avg(nums(M, 'target')) / 1000) + ', ' + f0(100 * avg(nums(M, 'kbps')) / Math.max(1, avg(nums(M, 'target')))) + '% do alvo)');
+      const real = avg(nums(M, 'kbps')), alvo = avg(nums(M, 'target'));
+      if (alvo > 0 && real < alvo * 0.5 && avg(out) >= 10) W.push('O codificador do motor entregou só ' + f0(100 * real / alvo) + '% da taxa pedida (' + f1(real / 1000) + ' de ' + f1(alvo / 1000) + ' Mbps): a imagem sai com menos detalhe do que a internet permite. Em cena parada é normal; em jogo com movimento, é limite do codificador atual.');
       if (avg(out) < target * 0.8 && avg(inn) < target * 0.8) W.push('O motor recebeu só ' + f0(avg(inn)) + ' quadros/s do Windows (meta: ' + target + '): é o ritmo do próprio jogo na tela, ou a placa está toda com o jogo.');
     }
   }

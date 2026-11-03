@@ -122,7 +122,8 @@ function createWindow(){
       backgroundThrottling: false,
       spellcheck: !MEM_SAVE,
       additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION, '--telao-main-pid=' + process.pid,
-                            '--telao-wco=' + (wco ? WCO_H : 0), ...(PROFILE ? ['--telao-perfil=' + PROFILE, '--telao-sala=' + ((process.argv.find(a => a.startsWith('--telao-sala=')) || '').split('=')[1] || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40)] : [])],
+                            '--telao-wco=' + (wco ? WCO_H : 0), ...(PROFILE ? ['--telao-perfil=' + PROFILE, '--telao-sala=' + ((process.argv.find(a => a.startsWith('--telao-sala=')) || '').split('=')[1] || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40),
+                                           '--telao-modo=' + ((process.argv.find(a => a.startsWith('--telao-modo=')) || '').split('=')[1] || '').replace(/[^a-z]/gi, '').slice(0, 8)] : [])],
     },
   });
   Menu.setApplicationMenu(null);
@@ -174,7 +175,9 @@ app.whenReady().then(() => {
     pendingSource = null;
     try{
       if (!chosen) return callback(null);
-      const find = async () => (await desktopCapturer.getSources({types: ['window', 'screen']})).find(s => s.id === chosen.id);
+      // pelo id exato; senão, a mesma janela com outro sufixo (o id de getMediaSourceId, usado pela cena de teste, pode vir assim)
+      const same = id => id.startsWith('window:') && chosen.id.startsWith('window:') && id.split(':')[1] === chosen.id.split(':')[1];
+      const find = async () => { const l = await desktopCapturer.getSources({types: ['window', 'screen']}); return l.find(s => s.id === chosen.id) || l.find(s => same(s.id)); };
       let src = await find();
       for (let i = 0; !src && i < 3; i++){ await new Promise(r => setTimeout(r, 400)); src = await find(); }   // a lista às vezes vem vazia logo depois de outra consulta
       if (!src) return callback(null);
@@ -323,11 +326,29 @@ app.whenReady().then(() => {
     try{ const b = w.getNativeWindowHandle(); return b.length >= 8 ? b.readBigUInt64LE(0).toString() : b.readUInt32LE(0).toString(); }catch{ return ''; }
   });
   // Abre a janela de teste (outro processo do Telão com perfil próprio). Se já estiver aberta, ela só vem para a frente.
-  ipcMain.handle('telao:openTest', (_e, room) => {
+  ipcMain.handle('telao:openTest', (_e, room, mode) => {
     if (PROFILE) return false;
-    const r = String(room || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40);
-    try{ spawn(process.execPath, [...(app.isPackaged ? [] : [app.getAppPath()]), '--telao-perfil=teste', ...(r ? ['--telao-sala=' + r] : [])], {detached: true, stdio: 'ignore'}).unref(); return true; }catch{ return false; }
+    const r = String(room || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40), m = String(mode || '').replace(/[^a-z]/gi, '').slice(0, 8);
+    try{ spawn(process.execPath, [...(app.isPackaged ? [] : [app.getAppPath()]), '--telao-perfil=teste', ...(r ? ['--telao-sala=' + r] : []), ...(m ? ['--telao-modo=' + m] : [])], {detached: true, stdio: 'ignore'}).unref(); return true; }catch{ return false; }
   });
+  // Teste padrão: janela sem moldura com a cena de teste (o HTML vem da própria página), para transmitir sempre a mesma coisa.
+  let sceneWin = null;
+  const closeScene = () => { if (sceneWin && !sceneWin.isDestroyed()) sceneWin.destroy(); sceneWin = null; };
+  ipcMain.handle('telao:openScene', async (e, html, w, h) => {
+    if (!win || e.sender !== win.webContents || PROFILE || typeof html !== 'string' || html.length > 300000) return null;
+    closeScene();
+    const d = screen.getPrimaryDisplay(), sf = d.scaleFactor || 1, wa = d.workAreaSize;
+    let W = Math.max(320, Math.min(3840, Math.round(+w) || 1280)), H = Math.max(180, Math.min(2160, Math.round(+h) || 720));
+    while ((W / sf > wa.width || H / sf > wa.height) && W > 640){ W = Math.round(W * 2 / 3 / 2) * 2; H = Math.round(H * 2 / 3 / 2) * 2; }   // não cabe: um tamanho menor na mesma proporção
+    const file = path.join(app.getPath('userData'), 'cena-teste.html');
+    try{ fs.writeFileSync(file, html.replace('__W__', String(W)).replace('__H__', String(H))); }catch{ return null; }
+    sceneWin = new BrowserWindow({useContentSize: true, width: Math.round(W / sf), height: Math.round(H / sf), frame: false, resizable: false, show: true,
+      title: 'Telão — cena de teste', backgroundColor: '#000000', webPreferences: {backgroundThrottling: false, contextIsolation: true, nodeIntegration: false, spellcheck: false}});
+    sceneWin.on('closed', () => { sceneWin = null; });
+    await sceneWin.loadFile(file);
+    return {id: sceneWin.getMediaSourceId(), w: W, h: H};
+  });
+  ipcMain.handle('telao:closeScene', e => { if (win && e.sender === win.webContents) closeScene(); return true; });
   // Duplo clique na janela de vídeo do Telão Audio: tela cheia exige "gesto do usuário", que só o app consegue dar à página.
   ipcMain.handle('telao:natGesture', e => {
     if (!win || e.sender !== win.webContents) return false;
