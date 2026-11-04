@@ -1,26 +1,29 @@
 {
-  "version": "1.21.1",
+  "version": "1.21.2",
   "minShell": 2,
-  "page": "versoes/telao-1.21.1.html",
-  "sha256": "586e96a0dd6ce28a59cf23426591076e6c110118da2bdc3ab92d6ccbcf70ed26",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.21.1",
+  "page": "versoes/telao-1.21.2.html",
+  "sha256": "79a031c560cce113dafca9076bf9f5be8f423802d666e103180a692805657dae",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.21.2",
   "notes": [
-    "Teste padrão: o resultado diz se o motor entrou e, se não entrou, por quê; os quadros que chegam são contados pelo que foi decodificado (janela de teste coberta não conta menos); mostra quando o Chromium reduziu a imagem por falta de processador"
+    "Teste padrão: com duas pessoas testando na mesma sala, cada uma agora fala só com a própria janela de teste (antes uma podia medir a cena da outra). A janela de teste mede no tamanho cheio, entra no motor mesmo com clipes ligados e esconde as outras telas durante o teste",
+    "O resultado separa quem codificou (motor ou Chromium) de quem decodificou",
+    "Se o Telão Audio cair no meio da transmissão e voltar, o motor entra de novo sozinho (antes ficava no caminho normal até o fim)",
+    "Telão Audio: registro em arquivo e, se fechar com erro, o motivo aparece no relatório na próxima vez"
   ],
   "app": {
-    "version": "1.21.1",
+    "version": "1.21.2",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.21.1/app.asar",
-        "sha256": "51a4f6da1236818fcd9222c3e0d139b7da295c4ed7ccd7b66f530953a9ed72ab",
-        "size": 698371
+        "path": "versoes/app-1.21.2/app.asar",
+        "sha256": "fcf62b1d7d7b71a107f39999b39a741921e502af5ef03795ee1e637b81f43062",
+        "size": 700952
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.21.1/telao-audio.exe",
-        "sha256": "59cc333c3ae54dd7ebe6e1c07276f64c6af6e421b20cb59a1e3e70a7cba3d538",
-        "size": 807936
+        "path": "versoes/app-1.21.2/telao-audio.exe",
+        "sha256": "58ef57a98d8aa778f42ec3915c3030ff4f0e60efe9346ef688baa677ba23ca7e",
+        "size": 812544
       }
     }
   }

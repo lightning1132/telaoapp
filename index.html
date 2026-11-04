@@ -1079,7 +1079,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.21.1';
+const TELAO_VERSION = '1.21.2';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1089,7 +1089,11 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.21.1', 'hoje', ['Teste padrão: o resultado diz se o motor entrou e, se não entrou, por quê; os quadros que chegam são contados pelo que foi decodificado (janela de teste coberta não conta menos); mostra quando o Chromium reduziu a imagem por falta de processador']],
+  ['1.21.2', 'hoje', ['Teste padrão: com duas pessoas testando na mesma sala, cada uma agora fala só com a própria janela de teste (antes uma podia medir a cena da outra). A janela de teste mede no tamanho cheio, entra no motor mesmo com clipes ligados e esconde as outras telas durante o teste',
+                      'O resultado separa quem codificou (motor ou Chromium) de quem decodificou',
+                      'Se o Telão Audio cair no meio da transmissão e voltar, o motor entra de novo sozinho (antes ficava no caminho normal até o fim)',
+                      'Telão Audio: registro em arquivo e, se fechar com erro, o motivo aparece no relatório na próxima vez']],
+  ['1.21.1', '03/11', ['Teste padrão: o resultado diz se o motor entrou e, se não entrou, por quê; os quadros que chegam são contados pelo que foi decodificado (janela de teste coberta não conta menos); mostra quando o Chromium reduziu a imagem por falta de processador']],
   ['1.21.0', '03/11', ['Transmissões com mais qualidade: as taxas de cada qualidade quase dobraram (1080p60 foi de 8 para 14 Mbps; 720p60, de 4,5 para 8). Elas eram baixas para imagem de jogo',
                       'Quem assiste recebe sempre o tamanho da qualidade escolhida, mesmo com a tela pequena na grade (antes 1080p virava 540p). Só tela bem pequena, como celular, recebe a metade. Ampliar não espera mais uma codificação nova',
                       'A conexão já começa perto da taxa da qualidade, em vez de começar em 2,5 Mbps e subir devagar',
@@ -3742,6 +3746,7 @@ function scheduleRes(){ clearTimeout(resTimer); resTimer = setTimeout(() => send
 function wantedHeight(t){
   const doc = t.el.ownerDocument, view = doc.defaultView || window;
   if (doc.fullscreenElement === t.el) return 9999;   // tela cheia: qualidade total
+  if (tp.view && tiles.get(tp.view.from) === t) return 9999;   // teste padrão: mede sempre o tamanho cheio da qualidade
   if (t.pipH) return RES_STEPS.find(step => step >= t.pipH * (window.devicePixelRatio || 1) * 0.9) || 9999;   // PiP de vídeo
   const r = (t.nat ? t.video : t.el).getBoundingClientRect();   // no motor a tela tem a faixa embaixo
   if (!r.width || !r.height) return 0;
@@ -6209,7 +6214,7 @@ function engineMsg(d){
   if (d.t === 'close'){
     const was = engine.open; engine.open = false; engine.caps = null;
     if (was) engineNote('Telão Audio desconectou');
-    if (engine.share) engineShareEnd('o Telão Audio fechou', true);
+    if (engine.share){ engine.lostAt = Date.now(); engineShareEnd('o Telão Audio fechou', true); }
     for (const [pid, t] of tiles) if (t.nat) engineViewStop(pid, t, 'o Telão Audio fechou', false);
     return;
   }
@@ -6220,6 +6225,14 @@ function engineHelper(m){
   switch (m.type){
     case 'vcaps':
       engine.caps = {mf: !!m.mf, enc: m.enc || {}, dec: m.dec || {}, encNames: String(m.encNames || ''), decNames: String(m.decNames || '')};
+      if (m.crash) engineNote('o Telão Audio tinha fechado com erro: ' + String(m.crash).split('\n')[0].slice(0, 160));
+      if (m.crash) engine.crash = String(m.crash).slice(0, 1500);
+      // caiu no meio da transmissão e voltou: o motor entra de novo (antes ficava no caminho normal até o fim)
+      if (engine.lostAt && Date.now() - engine.lostAt < 10 * 60000 && localStream && !engine.share && !turboShare && !privateOn && lastChosen &&
+          (lastChosen.type === 'window' || lastChosen.type === 'screen')){
+        const st = localStream, ch = lastChosen; engine.lostAt = 0;
+        setTimeout(() => { if (localStream === st && !engine.share && engineSendOk()) engageEngine(ch, st).then(ok => { if (ok) engineNote('motor voltou depois do Telão Audio reconectar'); }).catch(() => {}); }, 2000);
+      }
       // quem nunca escolheu a qualidade e tem placa que codifica pelo motor começa em 1080p60
       if (store.get('quality', null) === null && !localStream && (engine.caps.enc.h264 || engine.caps.enc.h265) && $('#quality').value !== 'maximo'){ $('#quality').value = 'maximo'; if (typeof syncShareUi === 'function') syncShareUi(); }
       engineNote('Telão Audio: codifica ' + ['h264', 'h265'].filter(k => engine.caps.enc[k]).join('+') + ' · decodifica ' + ['h264', 'h265'].filter(k => engine.caps.dec[k]).join('+') +
@@ -6630,7 +6643,7 @@ function engineViewBlock(pid, t, codec){
   if ([...relayOut.values()].some(e => e.s === pid)) return 'eu retransmito esta tela';
   if (hiddenIds.has(pid) || t.el.hidden) return 'oculta';
   if (amAway) return 'ausente';
-  if (store.get('clips', false)) return 'clipes ligados';
+  if (store.get('clips', false) && !(tp.view && tp.view.from === pid)) return 'clipes ligados';
   if (floatState && floatState.pid === pid) return 'janela flutuante';
   if (!t.firstFrame) return 'conectando';
   if (t.el.classList.contains('needs-click')) return 'esperando clique';
@@ -6859,6 +6872,7 @@ function engineReport(){
     else L.push('  tela de ' + nameOf(pid) + ': caminho normal' + (t.natWhy ? ' (' + t.natWhy + ')' : ''));
   }
   for (const x of engine.log.slice(-14)) L.push('  ' + x);
+  if (engine.crash) L.push('  último erro do Telão Audio: ' + engine.crash.split('\n').slice(0, 6).join(' | '));
   L.push('Economia de memória (experimental): ' + (!memSaveState ? 'app sem a opção' : memSaveState.on ? 'LIGADA' : 'desligada') + (memSaveState && memSaveState.want !== memSaveState.on ? ' (muda para ' + (memSaveState.want ? 'ligada' : 'desligada') + ' ao reiniciar)' : ''));
   return L;
 }
@@ -8374,7 +8388,9 @@ function tpSsim(a, b, w, h, skip){
   return n ? sum / n : 0;
 }
 const tpD = () => window.__tpMock || window.telaoDesktop;   // (testes: janelas de mentira)
-const tpMode = () => DESKTOP && (window.__tpMock ? window.__tpMock.mode : window.telaoDesktop.mode) === 'tp';
+const tpModeStr = () => DESKTOP ? String((window.__tpMock ? window.__tpMock.mode : window.telaoDesktop.mode) || '') : '';
+const tpMode = () => /^tp[a-z]{0,6}$/.test(tpModeStr());
+const tpToken = () => tpModeStr().slice(2);
 const tpAvailable = () => DESKTOP && typeof window.telaoDesktop.openScene === 'function' && typeof window.telaoDesktop.openTest === 'function' && !window.telaoDesktop.profile;
 // Quem transmite: abre a cena e a janela de teste, transmite, junta os números e mostra o resultado.
 async function tpStart(){
@@ -8383,7 +8399,9 @@ async function tpStart(){
   if (localStream){ toast('Pare a transmissão antes do teste padrão.', 'warn'); return; }
   const q = QUALITY[currentQ()];
   const secs = window.__tpSecs || TP_SECS;   // (testes: mais curto)
-  const R = tp.run = {t0: Date.now(), q: currentQ(), secs, samples: [], test: null, res: null, sc: null, step: 'abrindo a cena'};
+  // código do par: com duas pessoas testando na mesma sala, cada uma fala só com a própria janela de teste
+  const tok = Array.from({length: 6}, () => 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]).join('');
+  const R = tp.run = {t0: Date.now(), q: currentQ(), secs, tok, samples: [], test: null, res: null, sc: null, step: 'abrindo a cena'};
   const msg = t => { R.step = t; $('#tpMsg').textContent = t; };
   $('#tpRun').disabled = true; $('#tpOut').hidden = true; $('#tpCopy').hidden = true;
   try{
@@ -8392,7 +8410,7 @@ async function tpStart(){
     if (!R.sc || !R.sc.id) throw new Error('não consegui abrir a cena de teste');
     msg('abrindo a janela de teste…');
     const before = new Set(members.map(m => m.id));
-    if (!await tpD().openTest(room, 'tp')) throw new Error('não consegui abrir a janela de teste');
+    if (!await tpD().openTest(room, 'tp' + tok)) throw new Error('não consegui abrir a janela de teste');
     const t1 = Date.now();
     while (!R.test && Date.now() - t1 < 45000) await sleep(250);
     if (!R.test) throw new Error('a janela de teste não entrou na sala');
@@ -8424,12 +8442,12 @@ async function tpStart(){
 }
 // Uma amostra por segundo do lado de quem transmite.
 function tpSample(R){
-  const E = engine.share, S = E && [...E.ses.values()].find(x => x.state === 'ok' && x.stat);
+  const E = engine.share, L = E && E.links.get(R.test), S = E && ((L && E.ses.get(L.sid)) || [...E.ses.values()].find(x => x.state === 'ok' && x.stat));
   // por que (não) está no motor, para o resultado
   R.eng = E ? 'ligado · ' + E.links.size + ' no motor · ' + E.ses.size + ' codificação(ões)' : 'não ligou' + (engine.last && engine.last.at >= R.t0 ? ' (' + engine.last.reason + ')' : '') +
           (!engineSendOk() ? ' · motor indisponível para transmitir' : '');
   R.engLog = engine.log.slice(-4);
-  if (S) R.samples.push({motor: true, inFps: +S.stat.in || 0, outFps: +S.stat.out || 0, kbps: +S.stat.kbps || 0, target: S.kbps, lat: +S.stat.lat || 0,
+  if (S && S.state === 'ok' && S.stat && (!E.links.size || L)) R.samples.push({motor: true, inFps: +S.stat.in || 0, outFps: +S.stat.out || 0, kbps: +S.stat.kbps || 0, target: S.kbps, lat: +S.stat.lat || 0,
                          codec: S.codec.toUpperCase(), size: S.w + 'x' + S.h, enc: S.enc || ''});
   else if (sendInfo && Date.now() - sendInfo.at < 3000 && sendInfo.worst){
     const v = (sendInfo.viewers || []).find(x => !x.paused) || {};
@@ -8440,14 +8458,14 @@ function tpSample(R){
 function tpResult(R){
   const r = R.res, live = R.samples.slice(-R.secs), avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0, q = QUALITY[R.q];
   const last = live[live.length - 1] || {};
-  const kb = avg(live.map(x => x.kbps)), tg = avg(live.map(x => x.target));
-  const o = {at: Date.now(), ver: TELAO_VERSION, q: q.label, path: r.path, codec: last.codec || r.codec || '?', size: last.size || r.size || '', enc: last.enc || '', lim: last.lim || '',
+  const kb = avg(live.map(x => x.kbps)), tg = avg(live.map(x => x.target)), encMotor = live.length > 0 && live.filter(x => x.motor).length >= live.length / 2;
+  const o = {at: Date.now(), ver: TELAO_VERSION, q: q.label, path: r.path, encMotor, codec: last.codec || r.codec || '?', size: last.size || r.size || '', enc: last.enc || '', lim: last.lim || '',
     ssim: +r.ssim || 0, ssimMin: +r.ssimMin || 0, n: r.n || 0, recvFps: +r.fps || 0, freezes: r.freezes || 0,
     capFps: avg(live.map(x => x.inFps)), sendFps: avg(live.map(x => x.outFps)), kbps: kb, target: tg, lat: avg(live.map(x => x.lat))};
   o.ssimTxt = o.ssim.toFixed(3).replace('.', ',');
   o.fpsTxt = Math.round(o.recvFps) + ' fps chegando';
   o.text = ['TESTE PADRÃO · Telão ' + o.ver + ' · ' + new Date(o.at).toLocaleString('pt-BR'),
-    'Qualidade: ' + o.q + ' · ' + (o.path === 'motor' ? 'motor' : 'caminho normal') + ' · ' + o.codec + (o.size ? ' ' + o.size : '') + (o.enc ? ' (' + o.enc + ')' : ''),
+    'Qualidade: ' + o.q + ' · codifica: ' + (o.encMotor ? 'motor' : 'Chromium') + ' · decodifica: ' + (o.path === 'motor' ? 'motor' : 'Chromium') + ' · ' + o.codec + (o.size ? ' ' + o.size : '') + (o.enc ? ' (' + o.enc + ')' : ''),
     'Nota da imagem (SSIM): ' + o.ssimTxt + ' (pior ' + o.ssimMin.toFixed(3).replace('.', ',') + ', ' + o.n + ' amostras)',
     'Quadros: captura ' + Math.round(o.capFps) + ' · enviados ' + Math.round(o.sendFps) + ' · chegando ' + Math.round(o.recvFps) + ' fps · travadas ' + o.freezes,
     'Taxa: ' + (o.kbps / 1000).toFixed(1).replace('.', ',') + ' de ' + (o.target / 1000).toFixed(1).replace('.', ',') + ' Mbps (' + Math.round(100 * o.kbps / Math.max(1, o.target)) + '% do alvo)' +
@@ -8460,7 +8478,7 @@ function tpShow(o){
   $('#tpOut').textContent = o.text; $('#tpOut').hidden = false; $('#tpCopy').hidden = false;
 }
 function onTpMsg(from, d){
-  if (d.k === 'tphere'){ if (tp.run && !tp.run.test) tp.run.test = from; return; }
+  if (d.k === 'tphere'){ if (tp.run && !tp.run.test && String(d.tok || '') === tp.run.tok) tp.run.test = from; return; }
   if (d.k === 'tpres'){ if (tp.run && from === tp.run.test){ if (d.started) tp.run.started = true; if (d.done) tp.run.res = d; } return; }
   if (d.k === 'tp' && tpMode()){
     if (d.close){ if (!window.__tpMock) setTimeout(() => window.close(), 300); return; }
@@ -8470,6 +8488,8 @@ function onTpMsg(from, d){
 // Janela de teste: espera a tela chegar, tira 1 miniatura por segundo e compara com a cena.
 async function tpView(from, W, H, secs){
   const V = tp.view = {from, ssim: [], fps: [], freezes0: null, path: '', codec: ''};
+  for (const pid of [...tiles.keys()]) if (pid !== from && !hiddenIds.has(pid)) setHidden(pid, true);
+  sendResAll(true);
   const w = 640, h = Math.round(640 * H / W / 2) * 2, skip = Math.ceil(Math.round(H / 18) * w / W) + 2;
   const t0 = Date.now();
   let t = null;
@@ -8514,14 +8534,14 @@ function initTp(){
 }
 // janela de teste aberta pelo teste padrão: entra sozinha na sala e avisa quem abriu
 function tpAutoJoin(){
-  if (DESKTOP && window.telaoDesktop.mode === 'tp' && window.telaoDesktop.profile){
+  if (DESKTOP && tpMode() && window.telaoDesktop.profile){
     const r = cleanCode(window.telaoDesktop.room || '');
     if (r && !room){
       if (!$('#name').value) $('#name').value = 'Teste';
       setTimeout(() => { join().catch(() => {}); }, 300);
       const t0 = Date.now(), iv = setInterval(() => {   // repete até quem abriu mandar começar
         if (tp.view || Date.now() - t0 > 60000){ clearInterval(iv); return; }
-        if (me && room && members.length > 1) roomBroadcast({k: 'tphere'});
+        if (me && room && members.length > 1) roomBroadcast({k: 'tphere', tok: tpToken()});
       }, 1500);
     }
   }

@@ -608,13 +608,51 @@ typedef HRESULT (WINAPI *PFN_ActivateAsync)(LPCWSTR, REFIID, PROPVARIANT*,
 
 /* ---------- utilidades ---------- */
 static CRITICAL_SECTION gLogLock;
+// Registro: console + arquivo em %TEMP% (o app abre o Telão Audio sem console) + as últimas linhas na memória para o
+// relatório de erro, se o programa cair.
+static FILE* gLogFile = nullptr;
+static char gLogRing[48][200]; static int gLogPos = 0;
 static void logf(const char* fmt, ...){
   EnterCriticalSection(&gLogLock);
   SYSTEMTIME t; GetLocalTime(&t);
-  printf("[%02d:%02d:%02d] ", t.wHour, t.wMinute, t.wSecond);
-  va_list ap; va_start(ap, fmt); vprintf(fmt, ap); va_end(ap);
-  printf("\n"); fflush(stdout);
+  char line[200]; int n = snprintf(line, sizeof line, "[%02d:%02d:%02d] ", t.wHour, t.wMinute, t.wSecond);
+  va_list ap; va_start(ap, fmt); vsnprintf(line + n, sizeof line - n, fmt, ap); va_end(ap);
+  printf("%s\n", line); fflush(stdout);
+  if (gLogFile){ fprintf(gLogFile, "%s\n", line); fflush(gLogFile); }
+  memcpy(gLogRing[gLogPos % 48], line, sizeof line); gLogPos++;
   LeaveCriticalSection(&gLogLock);
+}
+static std::wstring tempPath(const wchar_t* name){ wchar_t d[MAX_PATH]; DWORD n = GetTempPathW(MAX_PATH, d); if (!n || n >= MAX_PATH) return L""; return std::wstring(d) + name; }
+static LONG WINAPI crashFilter(EXCEPTION_POINTERS* ep){
+  std::wstring f = tempPath(L"telao-audio-erro.txt");
+  FILE* o = f.empty() ? nullptr : _wfopen(f.c_str(), L"w");
+  if (o){
+    SYSTEMTIME t; GetLocalTime(&t);
+    void* addr = ep && ep->ExceptionRecord ? ep->ExceptionRecord->ExceptionAddress : nullptr;
+    HMODULE m = nullptr; GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)addr, &m);
+    wchar_t mod[MAX_PATH] = L"?"; if (m) GetModuleFileNameW(m, mod, MAX_PATH);
+    const wchar_t* base = wcsrchr(mod, L'\\'); base = base ? base + 1 : mod;
+    fprintf(o, "%04d-%02d-%02d %02d:%02d:%02d erro 0x%08lX em %ls+0x%llX (linha %lu)\n", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond,
+            ep && ep->ExceptionRecord ? (unsigned long)ep->ExceptionRecord->ExceptionCode : 0ul, base, (unsigned long long)((char*)addr - (char*)m), (unsigned long)GetCurrentThreadId());
+    int from = gLogPos > 48 ? gLogPos - 48 : 0;
+    for (int i = from; i < gLogPos; i++) fprintf(o, "%s\n", gLogRing[i % 48]);
+    fclose(o);
+  }
+  return EXCEPTION_EXECUTE_HANDLER;
+}
+// Erro da última vez (até 1 dia): vai para a página no vcaps e o arquivo é renomeado.
+static std::string gLastCrash;
+static void loadLastCrash(){
+  std::wstring f = tempPath(L"telao-audio-erro.txt");
+  if (f.empty()) return;
+  WIN32_FILE_ATTRIBUTE_DATA fa; if (!GetFileAttributesExW(f.c_str(), GetFileExInfoStandard, &fa)) return;
+  FILETIME now; GetSystemTimeAsFileTime(&now);
+  ULONGLONG age = (((ULONGLONG)now.dwHighDateTime << 32) | now.dwLowDateTime) - (((ULONGLONG)fa.ftLastWriteTime.dwHighDateTime << 32) | fa.ftLastWriteTime.dwLowDateTime);
+  if (age < 864000000000ULL){
+    FILE* i = _wfopen(f.c_str(), L"r");
+    if (i){ char b[1600]; size_t n = fread(b, 1, sizeof b - 1, i); b[n] = 0; fclose(i); gLastCrash = b; }
+  }
+  MoveFileExW(f.c_str(), tempPath(L"telao-audio-erro-anterior.txt").c_str(), MOVEFILE_REPLACE_EXISTING);
 }
 static std::string utf8(const std::wstring& w){
   if (w.empty()) return "";
@@ -2379,6 +2417,7 @@ int main(int argc, char** argv){
   InitializeCriticalSection(&gMFLock);
   InitializeCriticalSection(&gEngLock);
   InitializeCriticalSection(&gPresLock);
+  SetUnhandledExceptionFilter(crashFilter);
   loadOrigins();
   if (gBoostRoot){ HANDLE bt = CreateThread(nullptr, 0, boostThread, nullptr, 0, nullptr); if (bt) CloseHandle(bt); }
 
@@ -2397,6 +2436,16 @@ int main(int argc, char** argv){
     printf("  Não consegui abrir a porta %u. Provavelmente o Telão Audio já está aberto.\n  Pressione Enter para sair.", PORT);
     getchar();
     return 1;
+  }
+  {   // registro em arquivo só para quem atende o Telão (o reserva do modo desempenho não escreve)
+    loadLastCrash();
+    std::wstring lf = tempPath(L"telao-audio.log");
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    if (!lf.empty()){
+      bool big = GetFileAttributesExW(lf.c_str(), GetFileExInfoStandard, &fa) && fa.nFileSizeLow > 2000000;
+      gLogFile = _wfopen(lf.c_str(), big ? L"w" : L"a");
+    }
+    if (!gLastCrash.empty()) logf("Da última vez o Telão Audio fechou com erro: %.120s", gLastCrash.c_str());
   }
   logf("Pronto. Esperando o Telão em 127.0.0.1:%u", PORT);
 
