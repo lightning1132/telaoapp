@@ -26,7 +26,8 @@ const SHELL_VERSION = 14;
 // Arquivos do app que podem ser trocados pela atualização leve (dentro de resources/). O resto é o Electron.
 const APP_FILES = ['app.asar', 'telao-audio.exe'];
 
-const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
+const CHECK_EVERY_MS = 60 * 60 * 1000;   // de hora em hora (a página aplica sozinha quando a pessoa não está numa sala)
+const STARTUP_MAX_MS = 25000;            // atualização antes de abrir: no máximo isso; sem internet ou GitHub fora, abre o que tem
 const APP_OK_TIMEOUT_S = 25;
 const READY_TIMEOUT_MS = 15000;
 
@@ -114,7 +115,7 @@ class Updater {
     clearTimeout(this.readyTimer);
     if (this.pending) this.send(this.pending);
   }
-  send(msg){ try{ if (this.webContents && !this.webContents.isDestroyed()) this.webContents.send('telao:update', msg); }catch{} }
+  send(msg){ try{ if (this.webContents && !this.webContents.isDestroyed()) this.webContents.send('telao:update', Object.assign({}, msg, this.minVersion ? {min: this.minVersion} : {})); }catch{} }
 
   async check(){
     if (!this.url) return {status: 'sem-endereco'};
@@ -123,13 +124,18 @@ class Updater {
     catch(e){ return {status: 'erro', error: e.message}; }
     if (!man || !isVersion(man.version)) return {status: 'erro', error: 'manifesto inválido'};
     const notes = Array.isArray(man.notes) ? man.notes.filter(x => typeof x === 'string').slice(0, 10) : [];
+    this.minVersion = isVersion(man.minVersion) ? man.minVersion : null;   // versão mínima para usar (a página bloqueia abaixo dela)
     const download = typeof man.download === 'string' && /^https:\/\//.test(man.download) ? man.download : null;
     // 1) app novo? (pacote leve: só o código do app e o Telão Audio)
     const appRes = await this.checkApp(man, notes, download);
     if (appRes && appRes.status !== 'erro') return appRes;
     // 2) interface nova?
     const current = this.loaded ? this.loaded.version : this.bundledVersion;
-    if (cmpVer(man.version, current) <= 0) return appRes || {status: 'atualizado', version: current};
+    if (cmpVer(man.version, current) <= 0){
+      // já na última: ainda assim avisa a versão mínima (quem está abaixo dela é bloqueado pela página)
+      if (this.minVersion && cmpVer(current, this.minVersion) < 0) this.send({kind: 'min', version: man.version, notes});
+      return appRes || {status: 'atualizado', version: current};
+    }
     if ((man.minShell || 0) > SHELL_VERSION){
       this.pending = {kind: 'app', version: man.version, notes, download};
       this.send(this.pending);
@@ -228,9 +234,18 @@ class Updater {
     }catch{}
   }
 
+  // Antes de abrir a página: procura atualização (com tempo-limite). App novo baixado → troca e reabre já atualizado;
+  // página nova → abre direto nela. Qualquer falha ou demora → segue com o que tem (nunca impede de abrir).
+  async startup(){
+    this.startupDone = true;
+    let r = null;
+    try{ r = await Promise.race([this.check(), new Promise(res => setTimeout(() => res({status: 'demorou'}), STARTUP_MAX_MS))]); }catch{}
+    if (this.appStaged && r && r.status === 'app-baixado'){ this.pending = null; return this.applyApp() ? 'reiniciando' : 'abrir'; }
+    return 'abrir';
+  }
   start(){
     const run = () => this.check().catch(() => {});
-    setTimeout(run, 5000);
+    if (!this.startupDone) setTimeout(run, 5000);
     setInterval(run, CHECK_EVERY_MS);
   }
 }

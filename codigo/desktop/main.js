@@ -114,6 +114,10 @@ const WCO_H = 52;
 // Ícone do Telão nas janelas (barra de tarefas e Alt+Tab). O do Telao.exe (atalho, Explorer) vem do pacote completo.
 const APP_ICON = path.join(__dirname, process.platform === 'win32' ? 'icon.ico' : 'icon.png');
 const useWco = () => process.env.TELAO_WCO === '1' || (process.platform === 'win32' && process.env.TELAO_WCO !== '0');
+const SPLASH_HTML = '<!doctype html><meta charset="utf-8"><title>Telão</title><style>html,body{height:100%;margin:0;background:#0d0f12;color:#e9ebee;font:15px "Segoe UI",system-ui,sans-serif;display:grid;place-items:center}' +
+  'b{font-size:28px;letter-spacing:-.01em}p{color:#8a93a2;margin:10px 0 0}i{display:block;width:180px;height:3px;margin:22px auto 0;background:#2a303a;border-radius:2px;overflow:hidden;position:relative}' +
+  'i:after{content:"";position:absolute;left:-40%;width:40%;height:100%;background:#7cf29a;animation:a 1.1s linear infinite}@keyframes a{to{left:100%}}</style>' +
+  '<div style="text-align:center"><b>telão</b><p>Procurando atualização…</p><i></i></div>';
 function createWindow(){
   const wco = useWco();
   win = new BrowserWindow({
@@ -136,9 +140,13 @@ function createWindow(){
   });
   Menu.setApplicationMenu(null);
   // Página: a baixada pela atualização automática (se mais nova e saudável) ou a instalada.
-  const page = updater.choosePage();
-  win.loadFile(page.file);
-  if (!PROFILE) updater.watch(win);
+  // Antes, procura atualização (até 25 s, com uma tela de espera): todo mundo entra na versão mais nova.
+  const openPage = () => { if (!win || win.isDestroyed()) return; const page = updater.choosePage(); win.loadFile(page.file); if (!PROFILE) updater.watch(win); };
+  if (PROFILE || (!app.isPackaged && !process.env.TELAO_TESTE_INICIO) || process.argv.includes('--sem-atualizar')) openPage();
+  else {
+    win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(SPLASH_HTML)).catch(() => {});   // (a página real substitui no meio: ERR_ABORTED é esperado)
+    updater.startup().then(r => { if (r !== 'reiniciando') openPage(); }, openPage);
+  }
 
   // Links externos abrem no navegador; nada de janelas novas dentro do app.
   win.webContents.setWindowOpenHandler(({url, frameName}) => {

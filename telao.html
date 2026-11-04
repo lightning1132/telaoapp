@@ -729,6 +729,11 @@ html:not(.cinema) #cineChat{display:none}
 </head>
 <body>
 
+<div id="updForce" class="modal" hidden><div class="pk-card" role="alertdialog" aria-label="Atualização obrigatória" style="max-width:440px;padding:22px">
+  <b style="font-size:17px">Atualize o Telão para continuar</b>
+  <p class="muted" id="updForceText" style="margin:10px 0 16px;line-height:1.45"></p>
+  <div class="dg-row"><span class="grow"></span><button type="button" class="primary" id="updForceGo">Atualizar</button></div>
+</div></div>
 <div id="upd" hidden>
   <span id="updText"></span>
   <button type="button" class="primary" id="updGo"></button>
@@ -1083,7 +1088,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.22.2';
+const TELAO_VERSION = '1.23.0';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1093,7 +1098,11 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.22.2', 'hoje', ['NVENC direto: quando alguém pedia quadro completo antes de passar 1 s do anterior, o Telão Audio codificava sem parar (quase 200 quadros/s) até poder mandar o quadro completo. Gastava a placa à toa, baixava a qualidade de cada quadro e fazia quem assistia cair do motor. Corrigido']],
+  ['1.23.0', 'hoje', ['Atualização antes de abrir: ao iniciar, o app procura a versão nova (tela "Procurando atualização…", no máximo 25 s) e já abre nela; se for app novo, troca e reabre sozinho. Sem internet, abre o que tem',
+                      'Fora de sala, a atualização é aplicada sozinha, sem precisar clicar. Numa sala continua a faixa com "Atualizar agora" (para não derrubar ninguém no meio)',
+                      'O app procura atualização de hora em hora (antes, a cada 6 h)',
+                      'Versão mínima: quando uma versão antiga deixar de funcionar com as novas, ela mostra "Atualize o Telão para continuar" e não entra em sala até atualizar']],
+  ['1.22.2', '04/11', ['NVENC direto: quando alguém pedia quadro completo antes de passar 1 s do anterior, o Telão Audio codificava sem parar (quase 200 quadros/s) até poder mandar o quadro completo. Gastava a placa à toa, baixava a qualidade de cada quadro e fazia quem assistia cair do motor. Corrigido']],
   ['1.22.1', '03/11', ['Motor: transmite só a área interna da janela do jogo. Antes iam junto a barra de título e, no Windows 10, as bordas invisíveis da janela (faixas nas laterais e a imagem fora de escala)',
                       'Teste padrão: nota exata, comparando a luminância do quadro decodificado com a cena no tamanho de verdade (antes as duas eram reduzidas de jeitos diferentes, e isso escondia diferença de qualidade). As notas novas não se comparam com as antigas']],
   ['1.22.0', '03/11', ['Motor de vídeo em placas NVIDIA: o Telão Audio passa a falar direto com o codificador da placa (NVENC), em modo qualidade para quem assiste: 2 passadas, ajuste de detalhe por região da imagem e cota de bits por ~0,4 s em vez de por quadro. Mais detalhe pela mesma taxa',
@@ -1225,9 +1234,31 @@ function cmpVer(a, b){
   return 0;
 }
 /* ---------- Faixa de atualização ---------- */
-let updInfo = null, updWarned = false;
+let updInfo = null, updWarned = false, updForced = false, updAuto = null;
+// Abaixo da versão mínima (manifesto "minVersion"): não entra em sala até atualizar. Só é usada quando uma versão
+// antiga deixa de funcionar com as novas (protocolo mudou); no dia a dia, a atualização antes de abrir já resolve.
+function forceUpdate(info){
+  updForced = true;
+  const can = info.kind === 'app-ready' || info.kind === 'page';
+  $('#updForceText').textContent = 'Esta versão (' + TELAO_VERSION + ') não funciona mais com a dos seus amigos. ' +
+    (can ? 'A versão ' + info.version + ' já foi baixada: leva uns segundos.' : info.kind === 'app' && info.download ? 'Precisa baixar o app novo uma vez.' : 'Feche e abra o Telão para atualizar.');
+  $('#updForceGo').textContent = can ? 'Atualizar agora' : info.download ? 'Baixar' : 'OK';
+  $('#updForceGo').onclick = () => {
+    if (can){ $('#updForceGo').disabled = true; $('#updForceGo').textContent = 'Atualizando…'; teardown(); if (info.kind === 'app-ready') window.telaoDesktop.applyApp(); else window.telaoDesktop.applyUpdate(); }
+    else if (info.download) window.open(info.download, '_blank');
+  };
+  $('#updForce').hidden = false;
+}
 function showUpdate(info){
+  if (info && info.min && cmpVer(TELAO_VERSION, info.min) < 0){ forceUpdate(info); if (info.kind === 'min') return; }
   if (!info || !info.version || cmpVer(info.version, TELAO_VERSION) <= 0) return;
+  // fora de sala e sem transmitir: atualiza sozinho (é o momento que não atrapalha ninguém)
+  if ((info.kind === 'app-ready' || info.kind === 'page') && !me && !localStream && !joining && !updForced){
+    clearTimeout(updAuto);
+    toast('Atualizando o Telão para a versão ' + info.version + '…', '', 4000);
+    updAuto = setTimeout(() => { if (me || localStream || joining) return showUpdate(info); teardown(); if (info.kind === 'app-ready') window.telaoDesktop.applyApp(); else window.telaoDesktop.applyUpdate(); }, 2500);
+    return;
+  }
   if (store.get('updLater', '') === info.version + '|' + new Date().toDateString()) return;   // "Depois" vale até amanhã
   updInfo = info;
   const notes = (info.notes || []).slice(0, 3).join(' · ');
@@ -1926,6 +1957,7 @@ function maybeAutoJoin(fromHash){
 
 async function join(){
   if (joining || me) return;
+  if (updForced){ $('#updForce').hidden = false; return; }
   if (typeof Peer === 'undefined'){ toast('Biblioteca de conexão não carregou. Verifique a internet e recarregue.', 'danger'); return; }
   myName = $('#name').value.trim().slice(0, 24) || 'Anônimo';
   room = cleanCode($('#code').value);
