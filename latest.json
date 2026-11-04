@@ -1,26 +1,30 @@
 {
-  "version": "1.21.5",
+  "version": "1.22.0",
   "minShell": 2,
-  "page": "versoes/telao-1.21.5.html",
-  "sha256": "119ff53be6ff7df4d30ee7381c54392c8ee731602f49fcb00ea69aeac040971f",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.21.5",
+  "page": "versoes/telao-1.22.0.html",
+  "sha256": "eb62db0361701f6b92beda3c10cd9b4debf4551749a804bafcf7b2c44d9bbb24",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.22.0",
   "notes": [
-    "Motor: quando a janela do jogo é menor que a qualidade escolhida (ou tem tamanho quebrado), o motor abria uma codificação nova a cada 2–5 segundos sem parar. Cada troca é um quadro completo (engasgo) e, em algumas placas, derrubava o Telão Audio. Agora abre uma vez e fica"
+    "Motor de vídeo em placas NVIDIA: o Telão Audio passa a falar direto com o codificador da placa (NVENC), em modo qualidade para quem assiste: 2 passadas, ajuste de detalhe por região da imagem e cota de bits por ~0,4 s em vez de por quadro. Mais detalhe pela mesma taxa",
+    "Sem quadro completo a cada 4 s: a imagem se renova aos poucos a cada 3 s (corrige perdas sem o pico de um quadro inteiro). Quadro completo só quando alguém pede, no máximo 1 por segundo",
+    "Jogo em tela cheia na frente: o motor captura o monitor em vez da janela (no Windows 10 a captura da janela congelava). Ao trocar de janela, volta na hora para só a janela do jogo",
+    "Opções → Desempenho: dá para desligar o NVENC direto e a captura do monitor. Se o NVENC não abrir, ou se o Telão Audio cair dentro dele, o motor volta sozinho para o caminho anterior",
+    "Relatório e teste padrão mostram o QP médio (quanto o codificador comprimiu: menor é mais detalhe)"
   ],
   "app": {
-    "version": "1.21.5",
+    "version": "1.22.0",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.21.5/app.asar",
-        "sha256": "bb64eafe349535c3128e703f065a155694bfbc5e7c4d13e12d0d7d5d5b1683be",
-        "size": 702878
+        "path": "versoes/app-1.22.0/app.asar",
+        "sha256": "2eafa90f46f58835a486d4c3075b121382c9a75625f9aa7a1ea70e7005ec59ec",
+        "size": 707466
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.21.5/telao-audio.exe",
-        "sha256": "4c148a06f119b24fe113dd88b2cf63fdafee8622a4826a006a95be411f11af1b",
-        "size": 812544
+        "path": "versoes/app-1.22.0/telao-audio.exe",
+        "sha256": "56ff84fb48344ae0e5b7e2ef524d3019752005d0119e7b1439d07cbba5010fb3",
+        "size": 831488
       }
     }
   }

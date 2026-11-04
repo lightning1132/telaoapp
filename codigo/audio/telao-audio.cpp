@@ -623,6 +623,8 @@ static void logf(const char* fmt, ...){
   LeaveCriticalSection(&gLogLock);
 }
 static std::wstring tempPath(const wchar_t* name){ wchar_t d[MAX_PATH]; DWORD n = GetTempPathW(MAX_PATH, d); if (!n || n >= MAX_PATH) return L""; return std::wstring(d) + name; }
+static volatile LONG gInNvenc = 0;   // dentro de uma chamada ao NVENC (marca o relatório de erro)
+static std::string gNvOff;           // NVENC desligado nesta execução (e por quê)
 static LONG WINAPI crashFilter(EXCEPTION_POINTERS* ep){
   std::wstring f = tempPath(L"telao-audio-erro.txt");
   FILE* o = f.empty() ? nullptr : _wfopen(f.c_str(), L"w");
@@ -632,8 +634,8 @@ static LONG WINAPI crashFilter(EXCEPTION_POINTERS* ep){
     HMODULE m = nullptr; GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)addr, &m);
     wchar_t mod[MAX_PATH] = L"?"; if (m) GetModuleFileNameW(m, mod, MAX_PATH);
     const wchar_t* base = wcsrchr(mod, L'\\'); base = base ? base + 1 : mod;
-    fprintf(o, "%04d-%02d-%02d %02d:%02d:%02d erro 0x%08lX em %ls+0x%llX (linha %lu)\n", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond,
-            ep && ep->ExceptionRecord ? (unsigned long)ep->ExceptionRecord->ExceptionCode : 0ul, base, (unsigned long long)((char*)addr - (char*)m), (unsigned long)GetCurrentThreadId());
+    fprintf(o, "%04d-%02d-%02d %02d:%02d:%02d erro 0x%08lX em %ls+0x%llX (linha %lu)%s\n", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond,
+            ep && ep->ExceptionRecord ? (unsigned long)ep->ExceptionRecord->ExceptionCode : 0ul, base, (unsigned long long)((char*)addr - (char*)m), (unsigned long)GetCurrentThreadId(), gInNvenc ? " [nvenc]" : "");
     int from = gLogPos > 48 ? gLogPos - 48 : 0;
     for (int i = from; i < gLogPos; i++) fprintf(o, "%s\n", gLogRing[i % 48]);
     fclose(o);
@@ -651,6 +653,8 @@ static void loadLastCrash(){
   if (age < 864000000000ULL){
     FILE* i = _wfopen(f.c_str(), L"r");
     if (i){ char b[1600]; size_t n = fread(b, 1, sizeof b - 1, i); b[n] = 0; fclose(i); gLastCrash = b; }
+    // caiu dentro do NVENC: nesta execução o motor usa a Media Foundation
+    if (gLastCrash.find("[nvenc]") != std::string::npos && gLastCrash.find("[nvenc]") < gLastCrash.find('\n')) gNvOff = "o Telão Audio caiu dentro do NVENC da última vez; usando a Media Foundation";
   }
   MoveFileExW(f.c_str(), tempPath(L"telao-audio-erro-anterior.txt").c_str(), MOVEFILE_REPLACE_EXISTING);
 }
@@ -1132,7 +1136,7 @@ struct VRes {
   ID3D11Texture2D* staging = nullptr; ID3D11Query* query = nullptr;
   HANDLE timer = nullptr, target = nullptr;
   int ow = 0, oh = 0; bool nv12 = true;
-  std::string adapter;
+  std::string adapter; UINT vendorId = 0;
 };
 static void freeVP(VRes& r){
   for (auto*& v : r.outView) rel(v);
@@ -1231,7 +1235,7 @@ static HRESULT makeDevice(VRes& r, UINT vendor, UINT device){
   IDXGIDevice* dx = nullptr; r.dev->QueryInterface(__uuidof(IDXGIDevice), (void**)&dx);
   if (!dx) return E_NOINTERFACE;
   IDXGIAdapter* ad = nullptr;
-  if (SUCCEEDED(dx->GetAdapter(&ad))){ DXGI_ADAPTER_DESC d; ad->GetDesc(&d); r.adapter = utf8(d.Description); ad->Release(); }
+  if (SUCCEEDED(dx->GetAdapter(&ad))){ DXGI_ADAPTER_DESC d; ad->GetDesc(&d); r.adapter = utf8(d.Description); r.vendorId = d.VendorId; ad->Release(); }
   hr = pCreateD3DDeviceFromDXGI(dx, &r.rtDev);
   dx->Release();
   if (FAILED(hr)) return hr;
@@ -2099,6 +2103,7 @@ static void overlayCommand(Conn* c, const std::string& cmd, const std::string& m
 }
 
 #include <deque>
+#include "nvenc.inc"
 #include "motor.inc"
 
 static void handleCommand(Conn* c, const std::string& msg){
@@ -2417,6 +2422,7 @@ int main(int argc, char** argv){
   InitializeCriticalSection(&gMFLock);
   InitializeCriticalSection(&gEngLock);
   InitializeCriticalSection(&gPresLock);
+  InitializeCriticalSection(&gNvLock);
   SetUnhandledExceptionFilter(crashFilter);
   loadOrigins();
   if (gBoostRoot){ HANDLE bt = CreateThread(nullptr, 0, boostThread, nullptr, 0, nullptr); if (bt) CloseHandle(bt); }

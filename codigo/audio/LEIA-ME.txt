@@ -26,9 +26,13 @@ janela transparente que não recebe clique nem foco e não aparece em captura de
 processador (Direct2D + DirectWrite) e só enquanto há algo animando; não usa a placa de vídeo do Telão.
 
 MOTOR DE VÍDEO (só no Telão Desktop 1.18+)
-Transmitindo: captura o jogo (Windows Graphics Capture), reduz e converte na placa (D3D11 Video Processor) e
-codifica no codificador da placa pelo Media Foundation (H.264 ou H.265, taxa constante, baixa latência, sem
-quadros B). Cada tamanho/ritmo pedido pelos espectadores é uma "sessão" (no máximo 4); quem pede o mesmo
+Transmitindo: captura o jogo (Windows Graphics Capture; com o jogo em tela cheia na frente, o monitor inteiro
+por Desktop Duplication, voltando para só a janela ao trocar de janela), reduz e converte na placa (D3D11 Video
+Processor) e codifica: em placas NVIDIA, direto pelo NVENC (Video Codec SDK 11.1, cabeçalho nvEncodeAPI.h da
+NVIDIA, licença MIT): preset P4 de qualidade, 2 passadas, AQ, taxa constante com buffer de ~0,4 s, renovação
+gradual em vez de quadro completo periódico; nas outras, pelo Media Foundation (H.264 ou H.265, taxa constante,
+baixa latência, sem quadros B). Registro em %TEMP%\telao-audio.log; se fechar com erro, o motivo fica em
+%TEMP%\telao-audio-erro.txt e vai para o relatório do Telão na próxima vez. Cada tamanho/ritmo pedido pelos espectadores é uma "sessão" (no máximo 4); quem pede o mesmo
 compartilha a mesma codificação. Os quadros prontos vão para o Telão, que só os empacota no WebRTC.
 Assistindo: recebe do Telão os quadros comprimidos de cada tela, decodifica na placa (decodificador H.264 do
 Windows; H.265 precisa da "Extensão de Vídeo HEVC") e desenha numa janela própria, presa à janela do Telão,
