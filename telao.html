@@ -1083,7 +1083,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.22.0';
+const TELAO_VERSION = '1.22.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1093,7 +1093,9 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.22.0', 'hoje', ['Motor de vídeo em placas NVIDIA: o Telão Audio passa a falar direto com o codificador da placa (NVENC), em modo qualidade para quem assiste: 2 passadas, ajuste de detalhe por região da imagem e cota de bits por ~0,4 s em vez de por quadro. Mais detalhe pela mesma taxa',
+  ['1.22.1', 'hoje', ['Motor: transmite só a área interna da janela do jogo. Antes iam junto a barra de título e, no Windows 10, as bordas invisíveis da janela (faixas nas laterais e a imagem fora de escala)',
+                      'Teste padrão: nota exata, comparando a luminância do quadro decodificado com a cena no tamanho de verdade (antes as duas eram reduzidas de jeitos diferentes, e isso escondia diferença de qualidade). As notas novas não se comparam com as antigas']],
+  ['1.22.0', '03/11', ['Motor de vídeo em placas NVIDIA: o Telão Audio passa a falar direto com o codificador da placa (NVENC), em modo qualidade para quem assiste: 2 passadas, ajuste de detalhe por região da imagem e cota de bits por ~0,4 s em vez de por quadro. Mais detalhe pela mesma taxa',
                       'Sem quadro completo a cada 4 s: a imagem se renova aos poucos a cada 3 s (corrige perdas sem o pico de um quadro inteiro). Quadro completo só quando alguém pede, no máximo 1 por segundo',
                       'Jogo em tela cheia na frente: o motor captura o monitor em vez da janela (no Windows 10 a captura da janela congelava). Ao trocar de janela, volta na hora para só a janela do jogo',
                       'Opções → Desempenho: dá para desligar o NVENC direto e a captura do monitor. Se o NVENC não abrir, ou se o Telão Audio cair dentro dele, o motor volta sozinho para o caminho anterior',
@@ -8404,6 +8406,20 @@ function tpRefLuma(idx, W, H, w, h){
   tpRef.sg.drawImage(tpRef.big, 0, 0, w, h);
   return tpLuma(tpRef.sg.getImageData(0, 0, w, h).data);
 }
+// Referência exata: o quadro no tamanho de verdade, luminância em faixa limitada (16–235, como no vídeo) e média 2×2 —
+// a mesma redução que o Telão Audio faz no quadro decodificado. Sem diferença de escala nem de cor: a nota mede só a compressão.
+let tpRefX = null;
+function tpRefLumaExact(idx, W, H){
+  if (!tpRefX || tpRefX.W !== W || tpRefX.H !== H){ const c = document.createElement('canvas'); c.width = W; c.height = H; tpRefX = {W, H, c, g: c.getContext('2d', {willReadFrequently: true}), T: tpTexture()}; }
+  tpDraw(tpRefX.g, W, H, idx, tpRefX.T);
+  return tpHalf(tpLumaLim(tpRefX.g.getImageData(0, 0, W, H).data), W, H);
+}
+const tpLumaLim = d => { const y = new Uint8Array(d.length / 4); for (let i = 0, j = 0; j < y.length; i += 4, j++) y[j] = 16 + (((54 * d[i] + 183 * d[i + 1] + 19 * d[i + 2]) * 219 + 32768) >> 16); return y; };
+function tpHalf(y, W, H){
+  const w = W >> 1, h = H >> 1, o = new Uint8Array(w * h);
+  for (let r = 0; r < h; r++) for (let x = 0; x < w; x++){ const a = 2 * r * W + 2 * x; o[r * w + x] = (y[a] + y[a + 1] + y[a + W] + y[a + W + 1] + 2) >> 2; }
+  return o;
+}
 const tpLuma = d => { const y = new Uint8Array(d.length / 4); for (let i = 0, j = 0; j < y.length; i += 4, j++) y[j] = (54 * d[i] + 183 * d[i + 1] + 19 * d[i + 2] + 128) >> 8; return y; };
 // SSIM em janelas de 8×8 (sem sobreposição), sem a faixa do código no topo.
 function tpSsim(a, b, w, h, skip){
@@ -8492,13 +8508,13 @@ function tpResult(R){
   const last = live[live.length - 1] || {};
   const kb = avg(live.map(x => x.kbps)), tg = avg(live.map(x => x.target)), encMotor = live.length > 0 && live.filter(x => x.motor).length >= live.length / 2;
   const o = {at: Date.now(), ver: TELAO_VERSION, q: q.label, path: r.path, encMotor, codec: last.codec || r.codec || '?', size: last.size || r.size || '', enc: last.enc || '', lim: last.lim || '',
-    ssim: +r.ssim || 0, ssimMin: +r.ssimMin || 0, n: r.n || 0, recvFps: +r.fps || 0, freezes: r.freezes || 0,
+    ssim: +r.ssim || 0, ssimMin: +r.ssimMin || 0, n: r.n || 0, exact: r.exact || 0, recvFps: +r.fps || 0, freezes: r.freezes || 0,
     qp: avg(live.map(x => x.qp || 0).filter(x => x > 0)), capFps: avg(live.map(x => x.inFps)), sendFps: avg(live.map(x => x.outFps)), kbps: kb, target: tg, lat: avg(live.map(x => x.lat))};
   o.ssimTxt = o.ssim.toFixed(3).replace('.', ',');
   o.fpsTxt = Math.round(o.recvFps) + ' fps chegando';
   o.text = ['TESTE PADRÃO · Telão ' + o.ver + ' · ' + new Date(o.at).toLocaleString('pt-BR'),
     'Qualidade: ' + o.q + ' · codifica: ' + (o.encMotor ? 'motor' : 'Chromium') + ' · decodifica: ' + (o.path === 'motor' ? 'motor' : 'Chromium') + ' · ' + o.codec + (o.size ? ' ' + o.size : '') + (o.enc ? ' (' + o.enc + ')' : ''),
-    'Nota da imagem (SSIM): ' + o.ssimTxt + ' (pior ' + o.ssimMin.toFixed(3).replace('.', ',') + ', ' + o.n + ' amostras)',
+    'Nota da imagem (SSIM' + (o.exact >= o.n * 0.8 && o.n ? ', exata' : ', aproximada') + '): ' + o.ssimTxt + ' (pior ' + o.ssimMin.toFixed(3).replace('.', ',') + ', ' + o.n + ' amostras)',
     'Quadros: captura ' + Math.round(o.capFps) + ' · enviados ' + Math.round(o.sendFps) + ' · chegando ' + Math.round(o.recvFps) + ' fps · travadas ' + o.freezes,
     'Taxa: ' + (o.kbps / 1000).toFixed(1).replace('.', ',') + ' de ' + (o.target / 1000).toFixed(1).replace('.', ',') + ' Mbps (' + Math.round(100 * o.kbps / Math.max(1, o.target)) + '% do alvo)' +
       (o.lat > 0 ? ' · codificação ' + o.lat.toFixed(1).replace('.', ',') + ' ms por quadro' : '') + (o.qp > 0 ? ' · QP médio ' + o.qp.toFixed(1).replace('.', ',') : '') + (o.lim && o.lim !== 'none' ? ' · Chromium limitado por ' + ({cpu: 'processador', bandwidth: 'rede', other: 'outro motivo'}[o.lim] || o.lim) : ''),
@@ -8519,7 +8535,7 @@ function onTpMsg(from, d){
 }
 // Janela de teste: espera a tela chegar, tira 1 miniatura por segundo e compara com a cena.
 async function tpView(from, W, H, secs){
-  const V = tp.view = {from, ssim: [], fps: [], freezes0: null, path: '', codec: ''};
+  const V = tp.view = {from, ssim: [], fps: [], freezes0: null, path: '', codec: '', exact: 0};
   for (const pid of [...tiles.keys()]) if (pid !== from && !hiddenIds.has(pid)) setHidden(pid, true);
   sendResAll(true);
   const w = 640, h = Math.round(640 * H / W / 2) * 2, skip = Math.ceil(Math.round(H / 18) * w / W) + 2;
@@ -8535,18 +8551,28 @@ async function tpView(from, W, H, secs){
   const fr0 = await decoded(), ts0 = Date.now();
   for (let i = 0; i < secs && tiles.get(from) === t; i++){
     const tick = Date.now();
-    let y = null;
+    let y = null, ex = null;   // ex: luminância exata (metade do tamanho de verdade) quando a tela chega no tamanho da cena
+    const W2 = W >> 1, H2 = H >> 1;
     if (t.nat && t.nat.state === 'on'){
       V.path = 'motor'; V.codec = t.nat.codec.toUpperCase();
-      const r = await engineAsk({cmd: 'dsnap', id: String(t.nat.id), w: String(w), h: String(h)}, m => (m.type === 'dsnapok' || m.type === 'dsnaperr') && +m.id === t.nat.id, 3000);
-      if (r && r.type === 'dsnapok' && +r.w === w && +r.h === h){ const b = atob(r.y); y = new Uint8Array(b.length); for (let k = 0; k < b.length; k++) y[k] = b.charCodeAt(k); }
+      const nid = t.nat.id, ask = (ww, hh) => engineAsk({cmd: 'dsnap', id: String(nid), w: String(ww), h: String(hh)}, m => (m.type === 'dsnapok' || m.type === 'dsnaperr') && +m.id === nid, 4000);
+      const dec = r => { const b = atob(r.y), u = new Uint8Array(b.length); for (let k = 0; k < b.length; k++) u[k] = b.charCodeAt(k); return u; };
+      let r = V.noExact ? null : await ask(0, 0);
+      if (r && r.type === 'dsnapok' && r.raw && +r.w === W2 && +r.h === H2) ex = dec(r);
+      else { if (r && r.type === 'dsnapok' && r.raw) V.noExact = true; r = await ask(w, h); if (r && r.type === 'dsnapok' && +r.w === w && +r.h === h) y = dec(r); }
       if (t.nat.stat) V.fps.push(+t.nat.stat.pres || 0);
       if (V.freezes0 == null && t.nat.stat) V.freezes0 = +t.nat.stat.freezes || 0;
     } else if (t.video.videoWidth){
       V.path = 'normal'; V.codec = t.mime || '?';
-      cg.drawImage(t.video, 0, 0, w, h); y = tpLuma(cg.getImageData(0, 0, w, h).data);
+      if (t.video.videoWidth === W && t.video.videoHeight === H){
+        if (!V.full){ V.full = document.createElement('canvas'); V.full.width = W; V.full.height = H; V.fg = V.full.getContext('2d', {willReadFrequently: true}); }
+        V.fg.drawImage(t.video, 0, 0, W, H); ex = tpHalf(tpLumaLim(V.fg.getImageData(0, 0, W, H).data), W, H);
+      } else { cg.drawImage(t.video, 0, 0, w, h); y = tpLuma(cg.getImageData(0, 0, w, h).data); }
     }
-    if (y && y.length === w * h){
+    if (ex && ex.length === W2 * H2){
+      const idx = tpReadIdx(ex, W2, H2, W, H);
+      if (idx >= 0){ V.ssim.push(tpSsim(ex, tpRefLumaExact(idx, W, H), W2, H2, Math.ceil(Math.round(H / 18) / 2) + 2)); V.exact++; }
+    } else if (y && y.length === w * h){
       const idx = tpReadIdx(y, w, h, W, H);
       if (idx >= 0) V.ssim.push(tpSsim(y, tpRefLuma(idx, W, H, w, h), w, h, skip));
     }
@@ -8556,7 +8582,7 @@ async function tpView(from, W, H, secs){
   const fz = V.path === 'motor' && t.nat && t.nat.stat && V.freezes0 != null ? Math.max(0, (+t.nat.stat.freezes || 0) - V.freezes0) : 0;
   const avg = V.ssim.length ? V.ssim.reduce((a, b) => a + b, 0) / V.ssim.length : 0;
   hubSend({t: 'relay', to: from, data: {k: 'tpres', done: true, n: V.ssim.length, ssim: +avg.toFixed(4), ssimMin: +(V.ssim.length ? Math.min(...V.ssim) : 0).toFixed(4),
-    fps: +fps.toFixed(1), freezes: fz, path: V.path, codec: V.codec, why: V.path === 'motor' ? 'no motor' : 'caminho normal (' + (t.natWhy || (engineOn() ? 'motor ligado, sem motivo registrado' : 'motor desligado')) + ')'}});
+    fps: +fps.toFixed(1), freezes: fz, path: V.path, codec: V.codec, exact: V.exact, why: V.path === 'motor' ? 'no motor' : 'caminho normal (' + (t.natWhy || (engineOn() ? 'motor ligado, sem motivo registrado' : 'motor desligado')) + ')'}});
   tp.view = null;
 }
 function initTp(){

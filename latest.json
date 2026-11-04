@@ -1,30 +1,27 @@
 {
-  "version": "1.22.0",
+  "version": "1.22.1",
   "minShell": 2,
-  "page": "versoes/telao-1.22.0.html",
-  "sha256": "eb62db0361701f6b92beda3c10cd9b4debf4551749a804bafcf7b2c44d9bbb24",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.22.0",
+  "page": "versoes/telao-1.22.1.html",
+  "sha256": "a3f72f17dd8178b0067ac95e3c7089a1436aa6bef3d8756794f172a14193eaa8",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.22.1",
   "notes": [
-    "Motor de vídeo em placas NVIDIA: o Telão Audio passa a falar direto com o codificador da placa (NVENC), em modo qualidade para quem assiste: 2 passadas, ajuste de detalhe por região da imagem e cota de bits por ~0,4 s em vez de por quadro. Mais detalhe pela mesma taxa",
-    "Sem quadro completo a cada 4 s: a imagem se renova aos poucos a cada 3 s (corrige perdas sem o pico de um quadro inteiro). Quadro completo só quando alguém pede, no máximo 1 por segundo",
-    "Jogo em tela cheia na frente: o motor captura o monitor em vez da janela (no Windows 10 a captura da janela congelava). Ao trocar de janela, volta na hora para só a janela do jogo",
-    "Opções → Desempenho: dá para desligar o NVENC direto e a captura do monitor. Se o NVENC não abrir, ou se o Telão Audio cair dentro dele, o motor volta sozinho para o caminho anterior",
-    "Relatório e teste padrão mostram o QP médio (quanto o codificador comprimiu: menor é mais detalhe)"
+    "Motor: transmite só a área interna da janela do jogo. Antes iam junto a barra de título e, no Windows 10, as bordas invisíveis da janela (faixas nas laterais e a imagem fora de escala)",
+    "Teste padrão: nota exata, comparando a luminância do quadro decodificado com a cena no tamanho de verdade (antes as duas eram reduzidas de jeitos diferentes, e isso escondia diferença de qualidade). As notas novas não se comparam com as antigas"
   ],
   "app": {
-    "version": "1.22.0",
+    "version": "1.22.1",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.22.0/app.asar",
-        "sha256": "2eafa90f46f58835a486d4c3075b121382c9a75625f9aa7a1ea70e7005ec59ec",
-        "size": 707466
+        "path": "versoes/app-1.22.1/app.asar",
+        "sha256": "f1c1f36057f87c578792452d19af09d65036283a3b49b9ce6ced885c3430d6e5",
+        "size": 710198
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.22.0/telao-audio.exe",
-        "sha256": "56ff84fb48344ae0e5b7e2ef524d3019752005d0119e7b1439d07cbba5010fb3",
-        "size": 831488
+        "path": "versoes/app-1.22.1/telao-audio.exe",
+        "sha256": "ea01b5a7122235b308515d0ee0fa7d84b439bfc9ea8b35cee9aa7221be3e1a8d",
+        "size": 836096
       }
     }
   }

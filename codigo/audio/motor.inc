@@ -224,9 +224,9 @@ static HRESULT sesVP(EncSes& s, VRes& r, int inW, int inH, int fps){
   return S_OK;
 }
 // Abre o codificador da placa para uma sessão (um tamanho/ritmo/formato). Devolve "" se deu certo, ou o motivo.
-static std::string sesOpen(EncSes& s, VRes& r, IMFDXGIDeviceManager* mgr, const LUID* luid, int inW, int inH){
+static std::string sesOpen(EncSes& s, VRes& r, IMFDXGIDeviceManager* mgr, const LUID* luid, int inW, int inH, int contW, int contH){
   if (!s.flags) s.flags = new SlotFlags();
-  fitSize(inW, inH, s.boxW, s.boxH, &s.ow, &s.oh);
+  fitSize(contW, contH, s.boxW, s.boxH, &s.ow, &s.oh);
   // largura múltipla de 16 (e altura de 8 no H.265): janela com tamanho quebrado (ex.: 1282x720, a cena de teste no PC do
   // escapriem) derrubava o Telão Audio ao abrir o codificador H.265 de uma GTX 1050 Ti. A diferença some na redução.
   s.ow = std::max(64, s.ow & ~15); s.oh = std::max(64, s.hevc ? s.oh & ~7 : s.oh & ~1);
@@ -457,6 +457,26 @@ static bool ddWanted(HWND target){
   const RECT& m = mi.rcMonitor;
   return wr.left <= m.left + 2 && wr.top <= m.top + 2 && wr.right >= m.right - 2 && wr.bottom >= m.bottom - 2;
 }
+/* Só a área interna da janela: a captura de janela do Windows inclui barra de título e, no Windows 10, as bordas
+   invisíveis de redimensionar (a cena de teste do escapriem chegava 1296x728 em vez de 1280x720, com faixas pretas e a
+   imagem fora de escala). Devolve o retângulo da área interna dentro do quadro capturado (fw×fh), ou false. */
+typedef HRESULT (WINAPI *PFN_DwmAttr)(HWND, DWORD, void*, DWORD);
+static PFN_DwmAttr pDwmAttr = nullptr; static bool dwmTried = false;
+static bool clientCrop(HWND h, int fw, int fh, RECT* out){
+  if (!dwmTried){ dwmTried = true; HMODULE m = LoadLibraryW(L"dwmapi.dll"); if (m) pDwmAttr = (PFN_DwmAttr)GetProcAddress(m, "DwmGetWindowAttribute"); }
+  RECT wr, cr; if (!h || IsIconic(h) || !GetWindowRect(h, &wr) || !GetClientRect(h, &cr)) return false;
+  POINT p0 = {0, 0}; if (!ClientToScreen(h, &p0)) return false;
+  RECT efb = wr; if (pDwmAttr) pDwmAttr(h, 9 /*DWMWA_EXTENDED_FRAME_BOUNDS*/, &efb, sizeof efb);
+  auto fits = [&](const RECT& b){ return std::abs((int)(b.right - b.left) - fw) <= 2 && std::abs((int)(b.bottom - b.top) - fh) <= 2; };
+  const RECT* base = fits(efb) ? &efb : fits(wr) ? &wr : nullptr;
+  if (!base) return false;   // não sei onde a área interna cai no quadro: captura inteira, como antes
+  int x = std::max(0, (int)(p0.x - base->left)), y = std::max(0, (int)(p0.y - base->top));
+  int w = std::min((int)cr.right, fw - x), hh = std::min((int)cr.bottom, fh - y);
+  if (w < 64 || hh < 64) return false;
+  if (x == 0 && y == 0 && w >= fw - 1 && hh >= fh - 1) return false;   // já é só a área interna
+  *out = {x, y, x + w, y + hh};
+  return true;
+}
 static IDXGIOutputDuplication* ddOpen(VRes& r, HMONITOR mon, std::string* err){
   IDXGIDevice* dx = nullptr; IDXGIAdapter* ad = nullptr; IDXGIOutputDuplication* dup = nullptr;
   if (FAILED(r.dev->QueryInterface(__uuidof(IDXGIDevice), (void**)&dx)) || FAILED(dx->GetAdapter(&ad))){ rel(dx); *err = "placa"; return nullptr; }
@@ -531,7 +551,16 @@ static void engRun(Eng* e){
     int cw = sz.Width, ch = sz.Height;   // área útil da imagem capturada
     bool haveImg = false;
     IDXGIOutputDuplication* dup = nullptr; double ddRetry = 0, ddCheck = 0; bool ddWant = false, ddSaidErr = false; std::string ddMode = "wgc";
+    RECT crop{}; bool haveCrop = false; double cropCheck = 0; int cropFw = 0, cropFh = 0;
     while (!e->stop && e->conn->alive){
+      { // área interna da janela (sem barra de título e bordas): vale para o tamanho das codificações e para o recorte
+        double tnow = nowMs();
+        if (!dup && !e->monitor && (tnow - cropCheck > 500 || cropFw != cw || cropFh != ch)){
+          cropCheck = tnow; cropFw = cw; cropFh = ch;
+          RECT c2; bool hc = clientCrop(e->hwnd, cw, ch, &c2);
+          if (hc != haveCrop || (hc && memcmp(&c2, &crop, sizeof crop))){ haveCrop = hc; crop = c2; if (hc) logf("Motor: só a área interna da janela (%ld,%ld %ldx%ld de %dx%d)", crop.left, crop.top, crop.right - crop.left, crop.bottom - crop.top, cw, ch); }
+        }
+      }
       // comandos da página (abrir/fechar sessão, quadro completo, taxa)
       std::vector<EngCmd> cmds;
       EnterCriticalSection(&e->lock); cmds.swap(e->cmds); LeaveCriticalSection(&e->lock);
@@ -539,7 +568,9 @@ static void engRun(Eng* e){
         if (c.kind == 1 && c.ses){
           for (size_t i = 0; i < ses.size(); i++) if (ses[i]->id == c.ses->id){ sesFree(*ses[i]); delete ses[i]; ses.erase(ses.begin() + i); break; }
           if (ses.size() >= 4){ engSend(e, "{\"type\":\"esesserr\",\"id\":" + std::to_string(c.ses->id) + ",\"message\":\"sessões demais\"}"); delete c.ses; continue; }
-          std::string err = sesOpen(*c.ses, r, mgr, haveLuid ? &luid : nullptr, r.inW, r.inH);
+          // tamanho de partida: a área interna da janela (sem bordas), quando já se sabe; o processador de vídeo continua lendo a imagem inteira
+          int effW = haveCrop && !dup ? crop.right - crop.left : r.inW, effH = haveCrop && !dup ? crop.bottom - crop.top : r.inH;
+          std::string err = sesOpen(*c.ses, r, mgr, haveLuid ? &luid : nullptr, r.inW, r.inH, effW, effH);
           if (!err.empty()){
             engSend(e, "{\"type\":\"esesserr\",\"id\":" + std::to_string(c.ses->id) + ",\"message\":\"" + jsonEsc(err) + "\"}");
             logf("Motor: sessão %u não abriu: %s", c.ses->id, err.c_str());
@@ -654,7 +685,8 @@ static void engRun(Eng* e){
         int slot = sesFreeSlot(s);
         if (slot < 0){ s.nBusy++; continue; }
         RECT src = {0, 0, cw, ch};
-        IRect d = aspectRect(cw, ch, s.ow, s.oh);
+        if (haveCrop && !dup) src = crop;
+        IRect d = aspectRect(src.right - src.left, src.bottom - src.top, s.ow, s.oh);
         RECT dst = {d.l, d.t, d.r, d.b};
         r.vctx->VideoProcessorSetStreamSourceRect(s.vp, 0, TRUE, &src);
         r.vctx->VideoProcessorSetStreamDestRect(s.vp, 0, TRUE, &dst);
@@ -1173,8 +1205,11 @@ static void presApply(PresCmd* c){
     while (p < all.size() && s->fsReacts.size() < 8){ size_t q = all.find('\n', p); if (q == std::string::npos) q = all.size(); std::string one = all.substr(p, q - p); if (!one.empty()) s->fsReacts.push_back(wide(one)); p = q + 1; }
     streamPresent(s);
   } else if (c->kind == 6){   // teste padrão: miniatura em tons de cinza do último quadro decodificado
-    std::string err, y; int w = std::max(64, std::min(1280, c->w)), h = std::max(36, std::min(720, c->h));
-    if (streamSnap(s, w, h, &y, &err)) presSend(s, "{\"type\":\"dsnapok\",\"id\":" + std::to_string(s->id) + ",\"w\":" + std::to_string(w) + ",\"h\":" + std::to_string(h) + ",\"y\":\"" + y + "\"}");
+    std::string err, y; bool raw = c->w <= 0; int w = raw ? 0 : std::max(64, std::min(1280, c->w)), h = raw ? 0 : std::max(36, std::min(720, c->h));
+    if (streamSnap(s, w, h, &y, &err)){
+      if (raw){ size_t a = y.find(','), b = y.find(',', a + 1); w = atoi(y.substr(0, a).c_str()); h = atoi(y.substr(a + 1, b - a - 1).c_str()); y = y.substr(b + 1); }
+      presSend(s, "{\"type\":\"dsnapok\",\"id\":" + std::to_string(s->id) + ",\"w\":" + std::to_string(w) + ",\"h\":" + std::to_string(h) + ",\"raw\":" + (raw ? "true" : "false") + ",\"y\":\"" + y + "\"}");
+    }
     else presSend(s, "{\"type\":\"dsnaperr\",\"id\":" + std::to_string(s->id) + ",\"message\":\"" + jsonEsc(err) + "\"}");
   } else if (c->kind == 7){   // pedir de novo um quadro completo (o Telão vai pedir para quem transmite)
     s->waitKey = true;
@@ -1190,6 +1225,31 @@ static bool streamSnap(DecStream* s, int w, int h, std::string* out, std::string
     rel(db); rel(mb); }
   if (!tex){ *err = "quadro fora da placa"; return false; }
   D3D11_TEXTURE2D_DESC td; tex->GetDesc(&td);
+  if (w <= 0){
+    // modo exato: a luminância do quadro decodificado (plano Y do NV12, sem conversão de cor nem redução da placa), em
+    // média 2×2. A página reduz a referência do mesmo jeito: a nota mede só o que a compressão perdeu.
+    if (td.Format != DXGI_FORMAT_NV12){ tex->Release(); *err = "quadro não está em NV12"; return false; }
+    D3D11_TEXTURE2D_DESC sd = td; sd.ArraySize = 1; sd.MipLevels = 1; sd.Usage = D3D11_USAGE_STAGING; sd.BindFlags = 0; sd.CPUAccessFlags = D3D11_CPU_ACCESS_READ; sd.MiscFlags = 0;
+    ID3D11Texture2D* st = nullptr; bool ok = false;
+    if (SUCCEEDED(gPr.dev->CreateTexture2D(&sd, nullptr, &st))){
+      gPr.ctx->CopySubresourceRegion(st, 0, 0, 0, 0, tex, sub, nullptr);
+      D3D11_MAPPED_SUBRESOURCE m;
+      if (SUCCEEDED(gPr.ctx->Map(st, 0, D3D11_MAP_READ, 0, &m))){
+        int vw = std::min(s->vw, (int)td.Width - s->cropX), vh = std::min(s->vh, (int)td.Height - s->cropY), ow = vw / 2, oh = vh / 2;
+        std::vector<uint8_t> yv((size_t)ow * oh);
+        for (int r = 0; r < oh; r++){
+          const uint8_t* a = (const uint8_t*)m.pData + (size_t)(s->cropY + 2 * r) * m.RowPitch + s->cropX, *b = a + m.RowPitch;
+          for (int x = 0; x < ow; x++) yv[(size_t)r * ow + x] = (uint8_t)((a[2 * x] + a[2 * x + 1] + b[2 * x] + b[2 * x + 1] + 2) >> 2);
+        }
+        gPr.ctx->Unmap(st, 0);
+        *out = std::to_string(ow) + "," + std::to_string(oh) + "," + base64(yv.data(), yv.size());
+        ok = ow > 0 && oh > 0;
+      } else *err = "leitura";
+      st->Release();
+    } else *err = "textura de leitura";
+    tex->Release();
+    return ok;
+  }
   ID3D11VideoProcessorEnumerator* vpe = nullptr; ID3D11VideoProcessor* vp = nullptr; ID3D11VideoProcessorInputView* iv = nullptr; ID3D11VideoProcessorOutputView* ov = nullptr;
   ID3D11Texture2D* rt = nullptr; ID3D11Texture2D* st = nullptr; bool ok = false;
   do {
