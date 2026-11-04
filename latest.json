@@ -1,25 +1,24 @@
 {
-  "version": "1.21.4",
+  "version": "1.21.5",
   "minShell": 2,
-  "page": "versoes/telao-1.21.4.html",
-  "sha256": "46b955f3ca4742837784cd45f134d7de08ceafcd7fa796d722979a71d12752db",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.21.4",
+  "page": "versoes/telao-1.21.5.html",
+  "sha256": "119ff53be6ff7df4d30ee7381c54392c8ee731602f49fcb00ea69aeac040971f",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.21.5",
   "notes": [
-    "Telão Audio: corrigida a queda ao trocar de codificação no motor (aparecia em placas como a GTX 1050 Ti). O codificador soltava a última imagem depois que a codificação já tinha fechado, e o Telão Audio escrevia em memória liberada",
-    "Se o Telão Audio cair no meio da transmissão, a transmissão espera ele voltar e retoma pelo motor, em vez de ir para a captura turbo"
+    "Motor: quando a janela do jogo é menor que a qualidade escolhida (ou tem tamanho quebrado), o motor abria uma codificação nova a cada 2–5 segundos sem parar. Cada troca é um quadro completo (engasgo) e, em algumas placas, derrubava o Telão Audio. Agora abre uma vez e fica"
   ],
   "app": {
-    "version": "1.21.4",
+    "version": "1.21.5",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.21.4/app.asar",
-        "sha256": "80e592e7d6b1335a43d199ae51195b08aeddf422003fade3846459b803e62895",
-        "size": 702279
+        "path": "versoes/app-1.21.5/app.asar",
+        "sha256": "bb64eafe349535c3128e703f065a155694bfbc5e7c4d13e12d0d7d5d5b1683be",
+        "size": 702878
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.21.4/telao-audio.exe",
+        "path": "versoes/app-1.21.5/telao-audio.exe",
         "sha256": "4c148a06f119b24fe113dd88b2cf63fdafee8622a4826a006a95be411f11af1b",
         "size": 812544
       }

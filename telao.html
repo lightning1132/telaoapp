@@ -1079,7 +1079,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.21.4';
+const TELAO_VERSION = '1.21.5';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1089,7 +1089,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.21.4', 'hoje', ['Telão Audio: corrigida a queda ao trocar de codificação no motor (aparecia em placas como a GTX 1050 Ti). O codificador soltava a última imagem depois que a codificação já tinha fechado, e o Telão Audio escrevia em memória liberada',
+  ['1.21.5', 'hoje', ['Motor: quando a janela do jogo é menor que a qualidade escolhida (ou tem tamanho quebrado), o motor abria uma codificação nova a cada 2–5 segundos sem parar. Cada troca é um quadro completo (engasgo) e, em algumas placas, derrubava o Telão Audio. Agora abre uma vez e fica']],
+  ['1.21.4', '03/11', ['Telão Audio: corrigida a queda ao trocar de codificação no motor (aparecia em placas como a GTX 1050 Ti). O codificador soltava a última imagem depois que a codificação já tinha fechado, e o Telão Audio escrevia em memória liberada',
                       'Se o Telão Audio cair no meio da transmissão, a transmissão espera ele voltar e retoma pelo motor, em vez de ir para a captura turbo']],
   ['1.21.3', '03/11', ['Telão Audio: corrigida uma queda ao abrir o motor em H.265 com janela de tamanho quebrado (ex.: 1282x720) em placas mais antigas. Se ele cair por qualquer motivo, o app agora abre de novo sozinho e o motor volta']],
   ['1.21.2', '03/11', ['Teste padrão: com duas pessoas testando na mesma sala, cada uma agora fala só com a própria janela de teste (antes uma podia medir a cena da outra). A janela de teste mede no tamanho cheio, entra no motor mesmo com clipes ligados e esconde as outras telas durante o teste',
@@ -6384,12 +6385,14 @@ function engineShareSync(){
   for (const g of groups.values()){
     const cur = [...E.ses.values()].filter(s => s.group === g.group && s.state !== 'closing');
     const live = cur.find(s => s.state === 'ok') || cur[0] || null;
-    const same = s => s.w === g.w && s.h === g.h && s.fps === g.fps;
+    // compara com o tamanho PEDIDO: o Telão Audio pode devolver outro (janela menor que a qualidade, largura alinhada).
+    // Comparando com o devolvido, nunca batia e o motor abria codificação nova sem parar (escapriem: 18 em 1 min).
+    const same = s => (s.bw || s.w) === g.w && (s.bh || s.h) === g.h && s.fps === g.fps;
     if (!live){ engineOpenSes(g); continue; }
     if (!same(live) && !cur.some(s => s !== live && same(s))){
       // tamanho/ritmo mudou: espera firmar (subir 1,5 s, descer 5 s) e abre a codificação nova antes de largar a velha
       const key = g.w + 'x' + g.h + '@' + g.fps, p = E.pend.get(g.group);
-      const up = g.h > live.h || g.fps > live.fps, wait = (window.__engineAdaptMs || 1) * (up ? 1500 : 5000);
+      const up = g.h > (live.bh || live.h) || g.fps > live.fps, wait = (window.__engineAdaptMs || 1) * (up ? 1500 : 5000);
       if (!p || p.key !== key) E.pend.set(g.group, {key, since: now});
       else if (now - p.since >= wait){ E.pend.delete(g.group); engineOpenSes(g); }
     } else E.pend.delete(g.group);
@@ -6415,7 +6418,7 @@ function engineShareSync(){
 function engineOpenSes(g){
   const E = engine.share;
   if (E.ses.size >= 4){ engineNote('motor: codificações demais; ' + g.group + ' fica no caminho normal'); return; }
-  const s = {id: ++engine.sid, group: g.group, codec: g.codec, profile: g.profile, w: g.w, h: g.h, fps: g.fps, kbps: Math.round(g.kbps), state: 'opening', at: Date.now(), stat: null, low: 0, enc: ''};
+  const s = {id: ++engine.sid, group: g.group, codec: g.codec, profile: g.profile, w: g.w, h: g.h, bw: g.w, bh: g.h, fps: g.fps, kbps: Math.round(g.kbps), state: 'opening', at: Date.now(), stat: null, low: 0, enc: ''};
   E.ses.set(s.id, s);
   engineCmd({cmd: 'esess', id: String(s.id), w: String(s.w), h: String(s.h), fps: String(s.fps), kbps: String(s.kbps), codec: s.codec, profile: s.profile});
   setTimeout(() => { if (s.state === 'opening' && engine.share === E){ engineNote('motor: codificação ' + s.id + ' não respondeu'); E.badKeys.set(s.group, Date.now() + 5 * 60000); E.ses.delete(s.id); } }, 6000);
