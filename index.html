@@ -1088,7 +1088,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.23.0';
+const TELAO_VERSION = '1.23.1';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1098,7 +1098,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.23.0', 'hoje', ['Atualização antes de abrir: ao iniciar, o app procura a versão nova (tela "Procurando atualização…", no máximo 25 s) e já abre nela; se for app novo, troca e reabre sozinho. Sem internet, abre o que tem',
+  ['1.23.1', 'hoje', ['Todo mundo sempre na mesma versão: cada versão nova passa a ser a mínima. Quem estiver fora de sala atualiza sozinho; quem estiver numa sala termina a sessão normalmente e atualiza ao sair; com versão antiga, não entra em sala']],
+  ['1.23.0', '04/11', ['Atualização antes de abrir: ao iniciar, o app procura a versão nova (tela "Procurando atualização…", no máximo 25 s) e já abre nela; se for app novo, troca e reabre sozinho. Sem internet, abre o que tem',
                       'Fora de sala, a atualização é aplicada sozinha, sem precisar clicar. Numa sala continua a faixa com "Atualizar agora" (para não derrubar ninguém no meio)',
                       'O app procura atualização de hora em hora (antes, a cada 6 h)',
                       'Versão mínima: quando uma versão antiga deixar de funcionar com as novas, ela mostra "Atualize o Telão para continuar" e não entra em sala até atualizar']],
@@ -1239,6 +1240,14 @@ let updInfo = null, updWarned = false, updForced = false, updAuto = null;
 // antiga deixa de funcionar com as novas (protocolo mudou); no dia a dia, a atualização antes de abrir já resolve.
 function forceUpdate(info){
   updForced = true;
+  // numa sala (ou transmitindo): não derruba ninguém no meio; a faixa avisa e, ao sair da sala, atualiza sozinho
+  if (me || localStream){
+    $('#updText').textContent = 'Versão nova do Telão (' + info.version + '). Quando sair da sala ele atualiza sozinho; para entrar de novo, precisa estar nela.';
+    $('#updGo').textContent = info.kind === 'app-ready' ? 'Reiniciar e atualizar' : 'Atualizar agora';
+    $('#updGo').hidden = !(info.kind === 'app-ready' || info.kind === 'page');
+    updInfo = info; $('#upd').hidden = false;
+    return;
+  }
   const can = info.kind === 'app-ready' || info.kind === 'page';
   $('#updForceText').textContent = 'Esta versão (' + TELAO_VERSION + ') não funciona mais com a dos seus amigos. ' +
     (can ? 'A versão ' + info.version + ' já foi baixada: leva uns segundos.' : info.kind === 'app' && info.download ? 'Precisa baixar o app novo uma vez.' : 'Feche e abra o Telão para atualizar.');
@@ -1253,7 +1262,7 @@ function showUpdate(info){
   if (info && info.min && cmpVer(TELAO_VERSION, info.min) < 0){ forceUpdate(info); if (info.kind === 'min') return; }
   if (!info || !info.version || cmpVer(info.version, TELAO_VERSION) <= 0) return;
   // fora de sala e sem transmitir: atualiza sozinho (é o momento que não atrapalha ninguém)
-  if ((info.kind === 'app-ready' || info.kind === 'page') && !me && !localStream && !joining && !updForced){
+  if ((info.kind === 'app-ready' || info.kind === 'page') && !me && !localStream && !joining){
     clearTimeout(updAuto);
     toast('Atualizando o Telão para a versão ' + info.version + '…', '', 4000);
     updAuto = setTimeout(() => { if (me || localStream || joining) return showUpdate(info); teardown(); if (info.kind === 'app-ready') window.telaoDesktop.applyApp(); else window.telaoDesktop.applyUpdate(); }, 2500);
@@ -1957,7 +1966,7 @@ function maybeAutoJoin(fromHash){
 
 async function join(){
   if (joining || me) return;
-  if (updForced){ $('#updForce').hidden = false; return; }
+  if (updForced){ if (updInfo) forceUpdate(updInfo); $('#updForce').hidden = false; return; }
   if (typeof Peer === 'undefined'){ toast('Biblioteca de conexão não carregou. Verifique a internet e recarregue.', 'danger'); return; }
   myName = $('#name').value.trim().slice(0, 24) || 'Anônimo';
   room = cleanCode($('#code').value);

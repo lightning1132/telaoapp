@@ -1,30 +1,28 @@
 {
-  "version": "1.23.0",
+  "version": "1.23.1",
   "minShell": 2,
-  "page": "versoes/telao-1.23.0.html",
-  "sha256": "2c5cdabe1ac761874325fbc8c62a78deb6f659dad638a843adaf22d64494215b",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.23.0",
+  "page": "versoes/telao-1.23.1.html",
+  "sha256": "d14661eb23d0ccafd7c82b0d5c3e8942e5227266ba4a87f554b3e7d08808df54",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.23.1",
   "notes": [
-    "Atualização antes de abrir: ao iniciar, o app procura a versão nova (tela \"Procurando atualização…\", no máximo 25 s) e já abre nela; se for app novo, troca e reabre sozinho. Sem internet, abre o que tem",
-    "Fora de sala, a atualização é aplicada sozinha, sem precisar clicar. Numa sala continua a faixa com \"Atualizar agora\" (para não derrubar ninguém no meio)",
-    "O app procura atualização de hora em hora (antes, a cada 6 h)",
-    "Versão mínima: quando uma versão antiga deixar de funcionar com as novas, ela mostra \"Atualize o Telão para continuar\" e não entra em sala até atualizar"
+    "Todo mundo sempre na mesma versão: cada versão nova passa a ser a mínima. Quem estiver fora de sala atualiza sozinho; quem estiver numa sala termina a sessão normalmente e atualiza ao sair; com versão antiga, não entra em sala"
   ],
   "app": {
-    "version": "1.23.0",
+    "version": "1.23.1",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.23.0/app.asar",
-        "sha256": "a9ce1d5062e42c51cb9b45edac47d72ecc89af154aa83327f14ba1d97b5899c6",
-        "size": 716089
+        "path": "versoes/app-1.23.1/app.asar",
+        "sha256": "a29ce5fd198fac0a8c7704b6a28732adcdd483fa61777aa61572ba1ef3b51ed4",
+        "size": 716922
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.23.0/telao-audio.exe",
+        "path": "versoes/app-1.23.1/telao-audio.exe",
         "sha256": "2509abf6eaeb2c589ac4a740fc05b463072ccaf0827f73791df45e53c8eda2fd",
         "size": 836096
       }
     }
-  }
+  },
+  "minVersion": "1.23.1"
 }
