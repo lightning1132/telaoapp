@@ -1,28 +1,25 @@
 {
-  "version": "1.21.2",
+  "version": "1.21.3",
   "minShell": 2,
-  "page": "versoes/telao-1.21.2.html",
-  "sha256": "79a031c560cce113dafca9076bf9f5be8f423802d666e103180a692805657dae",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.21.2",
+  "page": "versoes/telao-1.21.3.html",
+  "sha256": "9987b73bc30e82bf8e0056680d295ad03385a342257fe252da9c318c88901fef",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.21.3",
   "notes": [
-    "Teste padrão: com duas pessoas testando na mesma sala, cada uma agora fala só com a própria janela de teste (antes uma podia medir a cena da outra). A janela de teste mede no tamanho cheio, entra no motor mesmo com clipes ligados e esconde as outras telas durante o teste",
-    "O resultado separa quem codificou (motor ou Chromium) de quem decodificou",
-    "Se o Telão Audio cair no meio da transmissão e voltar, o motor entra de novo sozinho (antes ficava no caminho normal até o fim)",
-    "Telão Audio: registro em arquivo e, se fechar com erro, o motivo aparece no relatório na próxima vez"
+    "Telão Audio: corrigida uma queda ao abrir o motor em H.265 com janela de tamanho quebrado (ex.: 1282x720) em placas mais antigas. Se ele cair por qualquer motivo, o app agora abre de novo sozinho e o motor volta"
   ],
   "app": {
-    "version": "1.21.2",
+    "version": "1.21.3",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.21.2/app.asar",
-        "sha256": "fcf62b1d7d7b71a107f39999b39a741921e502af5ef03795ee1e637b81f43062",
-        "size": 700952
+        "path": "versoes/app-1.21.3/app.asar",
+        "sha256": "1aefd6af85b07ae01f879282ee05d80afbc7bec8a82792227f4edb1705998268",
+        "size": 701697
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.21.2/telao-audio.exe",
-        "sha256": "58ef57a98d8aa778f42ec3915c3030ff4f0e60efe9346ef688baa677ba23ca7e",
+        "path": "versoes/app-1.21.3/telao-audio.exe",
+        "sha256": "61a2783e50e10b317bfc2699257131f31ddd8849bfad68118a88f16d2fa40171",
         "size": 812544
       }
     }

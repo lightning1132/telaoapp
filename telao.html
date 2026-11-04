@@ -1079,7 +1079,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.21.2';
+const TELAO_VERSION = '1.21.3';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1089,7 +1089,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.21.2', 'hoje', ['Teste padrão: com duas pessoas testando na mesma sala, cada uma agora fala só com a própria janela de teste (antes uma podia medir a cena da outra). A janela de teste mede no tamanho cheio, entra no motor mesmo com clipes ligados e esconde as outras telas durante o teste',
+  ['1.21.3', 'hoje', ['Telão Audio: corrigida uma queda ao abrir o motor em H.265 com janela de tamanho quebrado (ex.: 1282x720) em placas mais antigas. Se ele cair por qualquer motivo, o app agora abre de novo sozinho e o motor volta']],
+  ['1.21.2', '03/11', ['Teste padrão: com duas pessoas testando na mesma sala, cada uma agora fala só com a própria janela de teste (antes uma podia medir a cena da outra). A janela de teste mede no tamanho cheio, entra no motor mesmo com clipes ligados e esconde as outras telas durante o teste',
                       'O resultado separa quem codificou (motor ou Chromium) de quem decodificou',
                       'Se o Telão Audio cair no meio da transmissão e voltar, o motor entra de novo sozinho (antes ficava no caminho normal até o fim)',
                       'Telão Audio: registro em arquivo e, se fechar com erro, o motivo aparece no relatório na próxima vez']],

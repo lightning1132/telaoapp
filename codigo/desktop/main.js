@@ -65,12 +65,20 @@ function startHelper(){
     // Se já houver um Telão Audio aberto (porta ocupada), este sai sozinho e a página usa o que já existe.
     // --boost-tree: o helper tira os processos do Telão da economia de energia do Windows 11
     // (com o app minimizado, o Windows cortava o FPS pela metade).
-    helper = spawn(exe, ['--boost-tree', String(process.pid)], {windowsHide: true, stdio: 'ignore'});
-    helper.on('exit', () => { helper = null; });
-    helper.on('error', () => { helper = null; });
+    const me = spawn(exe, ['--boost-tree', String(process.pid)], {windowsHide: true, stdio: 'ignore'});
+    helper = me;
+    // caiu com erro: abre de novo (até 5 vezes em 10 min); a página reconecta e o motor volta sozinho
+    me.on('exit', code => {
+      if (helper === me) helper = null;
+      if (helperQuitting || code === 0) return;
+      const now = Date.now(); helperFalls = helperFalls.filter(t => now - t < 600000); helperFalls.push(now);
+      if (helperFalls.length <= 5) setTimeout(() => { if (!helper && !helperQuitting) startHelper(); }, 1500);
+    });
+    me.on('error', () => { if (helper === me) helper = null; });
   }catch{ helper = null; }
 }
-function stopHelper(){ if (helper){ try{ helper.kill(); }catch{} helper = null; } }
+let helperQuitting = false, helperFalls = [];
+function stopHelper(){ helperQuitting = true; if (helper){ try{ helper.kill(); }catch{} helper = null; } }
 
 // Ícone do Telão no Telao.exe instalado (uma vez, sem baixar o app inteiro): ao fechar, o Telão Audio espera o app sair,
 // grava o ícone numa cópia do exe, confere e troca (o original fica como Telao.exe.old). Se falhar, tenta no máximo 3 vezes.
