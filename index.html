@@ -1079,7 +1079,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.21.3';
+const TELAO_VERSION = '1.21.4';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1089,7 +1089,9 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.21.3', 'hoje', ['Telão Audio: corrigida uma queda ao abrir o motor em H.265 com janela de tamanho quebrado (ex.: 1282x720) em placas mais antigas. Se ele cair por qualquer motivo, o app agora abre de novo sozinho e o motor volta']],
+  ['1.21.4', 'hoje', ['Telão Audio: corrigida a queda ao trocar de codificação no motor (aparecia em placas como a GTX 1050 Ti). O codificador soltava a última imagem depois que a codificação já tinha fechado, e o Telão Audio escrevia em memória liberada',
+                      'Se o Telão Audio cair no meio da transmissão, a transmissão espera ele voltar e retoma pelo motor, em vez de ir para a captura turbo']],
+  ['1.21.3', '03/11', ['Telão Audio: corrigida uma queda ao abrir o motor em H.265 com janela de tamanho quebrado (ex.: 1282x720) em placas mais antigas. Se ele cair por qualquer motivo, o app agora abre de novo sozinho e o motor volta']],
   ['1.21.2', '03/11', ['Teste padrão: com duas pessoas testando na mesma sala, cada uma agora fala só com a própria janela de teste (antes uma podia medir a cena da outra). A janela de teste mede no tamanho cheio, entra no motor mesmo com clipes ligados e esconde as outras telas durante o teste',
                       'O resultado separa quem codificou (motor ou Chromium) de quem decodificou',
                       'Se o Telão Audio cair no meio da transmissão e voltar, o motor entra de novo sozinho (antes ficava no caminho normal até o fim)',
@@ -6622,7 +6624,8 @@ function engineShareEnd(why, fallback){
   }
   if (fallback && localStream === E.stream){
     toast('O motor de vídeo parou (' + why + '). A transmissão continua pelo caminho normal.', 'warn', 8000);
-    reopen.then(() => { if (localStream === E.stream && DESKTOP && turboAvailable() && turboOn() && !turboShare) return engageTurbo(E.chosen, E.stream); }).catch(() => {});
+    // Telão Audio caiu: a turbo também depende dele; o app abre ele de novo e o motor volta sozinho (ver vcaps)
+    if (why !== 'o Telão Audio fechou') reopen.then(() => { if (localStream === E.stream && DESKTOP && turboAvailable() && turboOn() && !turboShare) return engageTurbo(E.chosen, E.stream); }).catch(() => {});
   }
 }
 // Parâmetros do envio para quem está no motor: sem reduzir o vídeo de mentira e com folga de taxa para o vídeo de verdade.
