@@ -1083,7 +1083,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.22.1';
+const TELAO_VERSION = '1.22.2';
 // Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
 // (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
 const REQUIRES_SHELL = 2;
@@ -1093,7 +1093,8 @@ const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest'
 const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
 const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.22.1', 'hoje', ['Motor: transmite só a área interna da janela do jogo. Antes iam junto a barra de título e, no Windows 10, as bordas invisíveis da janela (faixas nas laterais e a imagem fora de escala)',
+  ['1.22.2', 'hoje', ['NVENC direto: quando alguém pedia quadro completo antes de passar 1 s do anterior, o Telão Audio codificava sem parar (quase 200 quadros/s) até poder mandar o quadro completo. Gastava a placa à toa, baixava a qualidade de cada quadro e fazia quem assistia cair do motor. Corrigido']],
+  ['1.22.1', '03/11', ['Motor: transmite só a área interna da janela do jogo. Antes iam junto a barra de título e, no Windows 10, as bordas invisíveis da janela (faixas nas laterais e a imagem fora de escala)',
                       'Teste padrão: nota exata, comparando a luminância do quadro decodificado com a cena no tamanho de verdade (antes as duas eram reduzidas de jeitos diferentes, e isso escondia diferença de qualidade). As notas novas não se comparam com as antigas']],
   ['1.22.0', '03/11', ['Motor de vídeo em placas NVIDIA: o Telão Audio passa a falar direto com o codificador da placa (NVENC), em modo qualidade para quem assiste: 2 passadas, ajuste de detalhe por região da imagem e cota de bits por ~0,4 s em vez de por quadro. Mais detalhe pela mesma taxa',
                       'Sem quadro completo a cada 4 s: a imagem se renova aos poucos a cada 3 s (corrige perdas sem o pico de um quadro inteiro). Quadro completo só quando alguém pede, no máximo 1 por segundo',

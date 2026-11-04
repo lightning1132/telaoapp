@@ -680,7 +680,10 @@ static void engRun(Eng* e){
         EncSes& s = *sp;
         sesPump(s, e->conn);
         bool due = fresh ? s.pacer.accept(now) : false;
-        bool repeat = !fresh && haveImg && (s.key || now - s.lastIn > 250);   // tela parada: repete para o vídeo não parar (e o quadro completo sair)
+        // NVENC: o quadro completo pedido pode estar esperando o intervalo de 1 s; enquanto espera, o pedido não pode virar
+        // "repete agora" (codificava a cada volta do laço: 198 quadros/s, o vídeo de mentira entupia e quem assistia saía do motor)
+        bool keyNow = s.key && (!s.nv || now - s.lastIdr >= 1000);
+        bool repeat = !fresh && haveImg && (keyNow || now - s.lastIn > 250);   // tela parada: repete para o vídeo não parar (e o quadro completo sair)
         if (!(due || repeat) || !s.vp) continue;
         int slot = sesFreeSlot(s);
         if (slot < 0){ s.nBusy++; continue; }

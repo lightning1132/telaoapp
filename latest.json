@@ -1,26 +1,25 @@
 {
-  "version": "1.22.1",
+  "version": "1.22.2",
   "minShell": 2,
-  "page": "versoes/telao-1.22.1.html",
-  "sha256": "a3f72f17dd8178b0067ac95e3c7089a1436aa6bef3d8756794f172a14193eaa8",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.22.1",
+  "page": "versoes/telao-1.22.2.html",
+  "sha256": "ed33d2342f9ffba9f9b2fa393b2059c742aaac433db5103ee699dbfb4e3ec7f3",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.22.2",
   "notes": [
-    "Motor: transmite só a área interna da janela do jogo. Antes iam junto a barra de título e, no Windows 10, as bordas invisíveis da janela (faixas nas laterais e a imagem fora de escala)",
-    "Teste padrão: nota exata, comparando a luminância do quadro decodificado com a cena no tamanho de verdade (antes as duas eram reduzidas de jeitos diferentes, e isso escondia diferença de qualidade). As notas novas não se comparam com as antigas"
+    "NVENC direto: quando alguém pedia quadro completo antes de passar 1 s do anterior, o Telão Audio codificava sem parar (quase 200 quadros/s) até poder mandar o quadro completo. Gastava a placa à toa, baixava a qualidade de cada quadro e fazia quem assistia cair do motor. Corrigido"
   ],
   "app": {
-    "version": "1.22.1",
+    "version": "1.22.2",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.22.1/app.asar",
-        "sha256": "f1c1f36057f87c578792452d19af09d65036283a3b49b9ce6ced885c3430d6e5",
-        "size": 710198
+        "path": "versoes/app-1.22.2/app.asar",
+        "sha256": "569dcf6256c335297b5dd7235f52a11ec56e7c4e038f3f1c515b6bd2844a119b",
+        "size": 710511
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.22.1/telao-audio.exe",
-        "sha256": "ea01b5a7122235b308515d0ee0fa7d84b439bfc9ea8b35cee9aa7221be3e1a8d",
+        "path": "versoes/app-1.22.2/telao-audio.exe",
+        "sha256": "2509abf6eaeb2c589ac4a740fc05b463072ccaf0827f73791df45e53c8eda2fd",
         "size": 836096
       }
     }
