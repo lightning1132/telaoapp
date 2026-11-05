@@ -15,6 +15,11 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.24
+- App mais enxuto: saíram a captura turbo (o motor de vídeo faz o trabalho dela), a configuração manual de
+  servidor TURN e a camada antiga de reações. As reações e o chat por cima do jogo são sempre desenhados pelo
+  Telão Audio.
+
 NOVIDADES DO APP 1.18
 - Motor de vídeo (ligado por padrão): quem transmite, o Telão Audio captura o jogo e codifica direto na placa
   de vídeo (H.264, ou H.265 quando os dois lados aceitam); o Telão só empacota e manda. Quem assiste, o Telão
@@ -29,18 +34,9 @@ NOVIDADES DO APP 1.18
 - Não usam o motor (ficam no caminho normal): clipes ligados, janela flutuante, tela que você retransmite
   para alguém, e celular.
 
-NOVIDADES DO APP 1.16.3
-- Captura turbo: a miniatura "Transmitindo" mostra uma prévia pequena (12 quadros/s) em vez da imagem da turbo.
-  Exibir a imagem da turbo ali derrubava a transmissão ou travava a tela de quem você estava assistindo.
-
-NOVIDADES DO APP 1.16.2
-- Captura turbo pela placa perdendo quadros (por exemplo, assistindo alguém enquanto transmite): o Telão troca
-  sozinho para a turbo pela memória, sem cortar a transmissão.
-
 NOVIDADES DO APP 1.16.1
 - As reações e o chat por cima do jogo passam a ser desenhados pelo Telão Audio, numa janela própria e leve.
-  A camada antiga (do app) disputava a placa de vídeo com a captura turbo: reação ou chat em spam travava a
-  transmissão. Se algo não aparecer direito, dá para voltar à antiga em Opções → Desempenho.
+  A camada antiga (do app) disputava a placa de vídeo com a transmissão: reação ou chat em spam travava tudo.
 - Quem transmitia em VP8 pelo processador sem motivo volta para H.264/H.265 pela placa.
 
 NOVIDADES DO APP 1.16
@@ -76,13 +72,6 @@ NOVIDADES DO APP 1.14
 NOVIDADES DO APP 1.13
 - H.265 automático: quando quem transmite e quem assiste têm placa de vídeo que faz H.265, o vídeo vai em
   H.265 (mesma imagem com menos internet). iPhone/iPad também recebem em H.265. Desliga em Opções.
-
-NOVIDADES DO APP 1.12
-- Captura turbo (experimental, vem desligada): o Telão Audio embutido pega a imagem do jogo direto do Windows
-  e já reduz e converte na placa de vídeo, sem passar pelo motor de captura do Chromium (que em alguns PCs
-  trava abaixo de 60 fps). Liga no seletor de tela, em "Captura turbo". Se der qualquer problema, o Telão
-  volta sozinho para a captura normal. Para comparar antes: Diagnóstico → "Testar captura turbo".
-  No Windows 10 aparece uma borda amarela em volta do jogo enquanto ela estiver ligada (só na sua tela).
 
 NOVIDADES DO APP 1.9
 - Chat da sala (botão "💬 Chat"). Quem está transmitindo vê as mensagens por cima do jogo, na mesma faixa

@@ -769,24 +769,6 @@ html:not(.cinema) #cineChat{display:none}
       <div id="autoMsg" class="rc-auto-msg" hidden><span></span> <button type="button" class="linkish" id="autoCancel">Cancelar</button></div>
     </div>
     <button id="joinBtn" class="primary big">Entrar</button>
-    <details id="turnBox">
-      <summary>Avançado: servidor TURN (se você não vê os outros na sala)</summary>
-      <div class="fields">
-        <p class="hint" style="margin:0 0 12px!important">Só quem tem problema de conexão precisa preencher. Use o link da Metered <b>ou</b> um servidor próprio.</p>
-        <label>Link de credenciais da Metered
-          <input id="turnLink" placeholder="https://seuapp.metered.live/api/v1/turn/credentials?apiKey=…" spellcheck="false">
-        </label>
-        <label>Ou: URL(s) do TURN, separadas por vírgula
-          <input id="turnUrl" placeholder="turn:exemplo.com:3478" spellcheck="false">
-        </label>
-        <label>Usuário <input id="turnUser" spellcheck="false"></label>
-        <label>Senha <input id="turnPass" spellcheck="false"></label>
-        <div class="row" style="align-items:center">
-          <button id="turnTest" class="ghost" type="button">Testar TURN</button>
-          <span id="turnTestOut" class="muted" style="font-size:13px"></span>
-        </div>
-      </div>
-    </details>
     <p id="envWarn" class="warn" hidden></p>
   </div>
 </section>
@@ -813,7 +795,6 @@ html:not(.cinema) #cineChat{display:none}
   </header>
   <div id="netBanner" hidden>
     <span id="netText"></span>
-    <button id="netFix" class="primary">Configurar TURN</button>
     <button id="netClose" class="ghost" title="Fechar aviso">×</button>
   </div>
   <div id="relayBar" hidden></div>
@@ -848,7 +829,6 @@ html:not(.cinema) #cineChat{display:none}
   <div class="pgrp"><h4>Qualidade</h4><select id="quality" aria-label="Qualidade da sua transmissão"></select></div>
   <div class="pgrp" id="smAudio"><h4>Som</h4><select id="audioSrc" aria-label="Qual áudio vai junto com a sua tela"></select></div>
   <div class="pgrp" id="smAudioApp" hidden><h4>Som</h4><span class="muted">Você escolhe o som junto com a janela, na hora de compartilhar.</span></div>
-  <label class="tgl" id="smTurboWrap" hidden><span><b>Captura turbo</b><small>mais fps, pela placa de vídeo (experimental)</small></span><input type="checkbox" id="smTurbo"></label>
   <div class="pgrp"><h4>Formato preferido</h4><select id="codec" aria-label="Codec de vídeo. H.264 usa a placa de vídeo na maioria dos PCs, o que libera o processador."></select></div>
   <div class="pnote">O formato que cada amigo recebe (H.264, H.265, AV1) é ajustado sozinho conforme o que o aparelho dele aguenta.</div>
 </div>
@@ -916,7 +896,6 @@ html:not(.cinema) #cineChat{display:none}
       <label class="pk-audio">Som: <select id="pkAudioSel"></select></label>
       <span id="pkAudioHint" class="muted"></span>
       <label id="pkFastWrap" class="pk-fast" hidden title="Para quem usa Windows 10: lá a captura de janela costuma travar em ~20 fps. Com o jogo em tela cheia ou janela sem bordas, o Telão captura o monitor inteiro em vez da janela, que é bem mais rápido. O som continua sendo só o da janela. No Windows 11 a captura de janela já é rápida e isso não faz diferença. Atenção: se você der Alt+Tab, quem assiste vê o que estiver na tela."><input type="checkbox" id="pkFast"> Modo rápido <span id="pkFastNote" class="muted">(só ajuda no Windows 10)</span></label>
-      <label id="pkTurboWrap" class="pk-fast" hidden title="O Telão Audio pega a imagem direto do Windows e já reduz e converte na placa de vídeo, sem passar pelo motor de captura do Chromium (que em alguns PCs trava abaixo de 60 fps). Se der qualquer problema, o Telão volta sozinho para a captura normal. Dá pra comparar as duas em Diagnóstico → Testar captura turbo."><input type="checkbox" id="pkTurbo"> Captura turbo <span class="muted">(experimental)</span></label>
       <span class="grow"></span>
       <button type="button" class="ghost" id="pkCancel">Cancelar</button>
       <button type="button" class="primary" id="pkGo" disabled>Compartilhar</button>
@@ -960,16 +939,6 @@ html:not(.cinema) #cineChat{display:none}
           <tbody></tbody>
         </table>
         <div id="dgAdvice" class="dg-advice" hidden></div>
-      </section>
-      <section id="dgTurboSec" hidden>
-        <h3>Captura turbo <span class="muted">(experimental)</span></h3>
-        <p class="muted dg-p">Compara a captura normal com a captura turbo na janela do seu jogo: quantos quadros chegam e quantos saem codificados, na qualidade escolhida. Deixe o jogo rodando, clique em testar e escolha a janela dele. Leva uns 40 segundos e não transmite nada pra ninguém.</p>
-        <div class="dg-row"><button type="button" class="primary" id="tbRun">Testar captura turbo</button><span id="tbMsg" class="muted"></span></div>
-        <table class="dg-table" id="tbTable" hidden>
-          <thead><tr><th>Captura</th><th>Chegam</th><th>Saem</th><th>Detalhes</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div id="tbAdvice" class="dg-advice" hidden></div>
       </section>
       <section id="dgLiveSec" hidden>
         <h3>Sua transmissão agora</h3>
@@ -1027,8 +996,6 @@ html:not(.cinema) #cineChat{display:none}
         <p class="muted dg-p" style="margin-top:6px;margin-bottom:10px">No Windows 10, a captura da janela para de receber imagem quando o jogo em tela cheia está na frente (a transmissão congela). Ligado, enquanto o jogo é a janela da frente e cobre o monitor inteiro, o motor pega a imagem do monitor; ao trocar de janela (alt+tab), volta na hora para só a janela do jogo.</p></div>
         <div id="optTestBox" hidden style="margin-bottom:12px"><button type="button" class="ghost" id="optTestWin">Abrir janela de teste</button>
         <p class="muted dg-p" style="margin-top:6px">Abre um segundo Telão neste PC, com outro nome, para você entrar na mesma sala e assistir a si mesmo (bom para testar o motor sem precisar de outra pessoa). Abaixe o volume da sua tela nela, senão o som do jogo sai duas vezes.</p></div></div>
-        <div id="optNativeOvBox"><label class="chk"><input type="checkbox" id="optNativeOv"> Reações e chat por cima do jogo desenhados pelo Telão Audio</label>
-        <p class="muted dg-p" style="margin-top:6px">Mais leve: não disputa a placa de vídeo com a captura turbo (com a camada antiga, spam de reações travava a transmissão). Desligue só se as reações não aparecerem direito por cima do jogo.</p></div>
         <div id="optMemBox" hidden><label class="chk" style="margin-top:10px"><input type="checkbox" id="optMem"> Economia de memória <span class="muted">(experimental)</span></label>
         <p class="muted dg-p" style="margin-top:6px">Junta partes do app que hoje rodam em processos separados (rede e som) e desliga coisas que o Telão não usa (corretor ortográfico, aba de reserva). Num teste, o app caiu de 485 para 361 MB. Em troca, se uma dessas partes travar, o app inteiro fecha em vez de só ela reiniciar. Vale depois de reiniciar o app; compare com a medição de uso real ligada e desligada.</p>
         <button type="button" class="ghost" id="optMemRestart" hidden style="margin-top:4px">Reiniciar o app agora</button></div>
@@ -1088,17 +1055,17 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.23.1';
-// Atualização automática. REQUIRES_SHELL: nível mínimo do app desktop para esta página funcionar
-// (sobe quando a página passa a usar algo novo do main.js/preload/Telão Audio).
-const REQUIRES_SHELL = 2;
+const TELAO_VERSION = '1.24.0';
+// Atualização automática. REQUIRES_SHELL: nível do app desktop que esta página usa (main.js/preload/Telão Audio).
+// Todo mundo fica sempre na versão mais nova, então é sempre o nível do app atual (release.sh confere).
+const REQUIRES_SHELL = 14;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
-const RELEASES_URL = 'https://github.com/lightning1132/telaoapp/releases/latest';      // preenchido no empacotamento (página de download do app)
-const LATEST_SHELL = 14;      // nível do app desktop mais novo (14: motor de vídeo no Telão Audio)
-const SELF_UPDATE_SHELL = 4;  // a partir deste nível o app se atualiza sozinho
 const CHANGELOG = [
-  ['1.23.1', 'hoje', ['Todo mundo sempre na mesma versão: cada versão nova passa a ser a mínima. Quem estiver fora de sala atualiza sozinho; quem estiver numa sala termina a sessão normalmente e atualiza ao sair; com versão antiga, não entra em sala']],
+  ['1.24.0', 'hoje', ['App mais enxuto: saem a captura turbo (o motor de vídeo faz o trabalho dela; se ele não entrar, a transmissão segue pela captura normal), a configuração manual de servidor TURN, a camada antiga de reações por cima do jogo (fica a desenhada pelo Telão Audio) e o código que existia só para conversar com versões antigas',
+                      'Se sair uma versão nova enquanto você está numa sala, o aviso agora explica que o Telão atualiza sozinho quando você sair (antes pedia para baixar o arquivo novo)',
+                      'Novidades: a lista mostra só as últimas 10 versões']],
+  ['1.23.1', '04/11', ['Todo mundo sempre na mesma versão: cada versão nova passa a ser a mínima. Quem estiver fora de sala atualiza sozinho; quem estiver numa sala termina a sessão normalmente e atualiza ao sair; com versão antiga, não entra em sala']],
   ['1.23.0', '04/11', ['Atualização antes de abrir: ao iniciar, o app procura a versão nova (tela "Procurando atualização…", no máximo 25 s) e já abre nela; se for app novo, troca e reabre sozinho. Sem internet, abre o que tem',
                       'Fora de sala, a atualização é aplicada sozinha, sem precisar clicar. Numa sala continua a faixa com "Atualizar agora" (para não derrubar ninguém no meio)',
                       'O app procura atualização de hora em hora (antes, a cada 6 h)',
@@ -1118,116 +1085,7 @@ const CHANGELOG = [
   ['1.21.2', '03/11', ['Teste padrão: com duas pessoas testando na mesma sala, cada uma agora fala só com a própria janela de teste (antes uma podia medir a cena da outra). A janela de teste mede no tamanho cheio, entra no motor mesmo com clipes ligados e esconde as outras telas durante o teste',
                       'O resultado separa quem codificou (motor ou Chromium) de quem decodificou',
                       'Se o Telão Audio cair no meio da transmissão e voltar, o motor entra de novo sozinho (antes ficava no caminho normal até o fim)',
-                      'Telão Audio: registro em arquivo e, se fechar com erro, o motivo aparece no relatório na próxima vez']],
-  ['1.21.1', '03/11', ['Teste padrão: o resultado diz se o motor entrou e, se não entrou, por quê; os quadros que chegam são contados pelo que foi decodificado (janela de teste coberta não conta menos); mostra quando o Chromium reduziu a imagem por falta de processador']],
-  ['1.21.0', '03/11', ['Transmissões com mais qualidade: as taxas de cada qualidade quase dobraram (1080p60 foi de 8 para 14 Mbps; 720p60, de 4,5 para 8). Elas eram baixas para imagem de jogo',
-                      'Quem assiste recebe sempre o tamanho da qualidade escolhida, mesmo com a tela pequena na grade (antes 1080p virava 540p). Só tela bem pequena, como celular, recebe a metade. Ampliar não espera mais uma codificação nova',
-                      'A conexão já começa perto da taxa da qualidade, em vez de começar em 2,5 Mbps e subir devagar',
-                      'Quem nunca escolheu a qualidade e tem placa que codifica pelo motor começa em Máximo (1080p60)',
-                      'Diagnóstico → "Teste padrão": transmite uma cena de teste para uma janela de teste neste PC e dá uma nota para a imagem que chega, com FPS e taxa. É como vamos comparar as próximas melhorias',
-                      'Medição de uso real: mostra quanto da taxa pedida o codificador do motor entrega e avisa quando fica muito abaixo']],
-  ['1.20.1', '30/10', ['Transmitindo pelo motor: quem recebia pelo caminho invertido (quando a conexão direta não fecha) ficava fora do motor, em VP8 pelo processador, vendo a captura do Chromium, que com o jogo em tela cheia no primeiro plano congela. Agora vai no formato certo e entra no motor como os outros',
-                      'Assistindo pelo motor: quando uma tela fechava (quem transmitia parou, ou a conexão foi refeita), a janela de vídeo do Telão Audio dela ficava aberta por trás. Agora fecha junto',
-                      'Medição de uso real: mostra quem está no caminho invertido e avisa quando a captura do Chromium para para quem está fora do motor']],
-  ['1.20.0', '24/10', ['Transmitindo pelo motor de vídeo: quando todo mundo está assistindo pelo motor, o Telão fecha a captura do Chromium (que ficava aberta só para a miniatura) e economiza memória e placa de vídeo. A miniatura avisa "prévia pausada"; se alguém sair do motor, a captura reabre sozinha em meio segundo',
-                      'Nova opção experimental em Opções → Desempenho: "Economia de memória". Junta a rede e o som no processo principal do app e desliga o que o Telão não usa (corretor ortográfico, aba de reserva). Vale ao reiniciar o app; no teste caiu de 485 para 361 MB. Ligue, use uma noite e compare na medição de uso real']],
-  ['1.19.0', '24/10', ['Estatísticas e conquistas: horas transmitidas e assistidas pelos amigos, maior plateia, maior transmissão, top 10 de jogos, quem você mais assiste, noites no Telão, semanas seguidas e mais. Em "quem está na sala" → "Minhas estatísticas e conquistas"',
-                      '16 conquistas com 4 níveis (Bronze, Prata, Ouro e Estrela). Ao desbloquear aparece um aviso e os amigos veem no chat. "Copiar cartão" gera uma imagem da conquista para mandar no grupo',
-                      'Clicando em alguém na lista da sala, você vê as estatísticas e as melhores conquistas da pessoa',
-                      'Tudo começa do zero nesta versão. Fica guardado no seu aparelho e uma cópia fica com os amigos da sala: se formatar o PC, use o código de recuperação (no seu painel) para recebê-las de volta']],
-  ['1.18.6', '23/10', ['Atualização do app: quem já tinha baixado uma versão e verificava de novo antes de reiniciar via "Não consegui verificar agora (ENOENT…)" e ficava sem atualizar. Corrigido']],
-  ['1.18.5', '23/10', ['Transmitindo pelo motor: quem assiste no navegador (ou sem o motor) via engasgos e atraso. Cada quadro agora leva o horário em que o jogo foi capturado (antes, o de quando a página o repassava, e qualquer demora virava rajada)',
-                      'Motor: a taxa do vídeo acompanha o que a internet de quem assiste aguenta naquele momento, como o caminho normal faz (antes podia mandar mais do que cabia e o atraso ia crescendo)']],
-  ['1.18.4', '23/10', ['Motor de vídeo, quem assiste: imagem com borrões e blocos coloridos ao abrir menus/mapa. Quadros grandes chegavam ao Telão Audio em pedaços e só o primeiro era usado; agora são juntados',
-                      'Motor: quadro completo a cada 4 s (antes 10 s) e, se algum quadro se perder no caminho, a tela espera o próximo completo em vez de mostrar sujeira',
-                      'Saindo do motor (por exemplo, ligando os clipes), se a imagem não voltar em 4 s, a tela é reconectada sozinha (antes podia ficar preta)']],
-  ['1.18.3', '23/10', ['Motor de vídeo, quem assiste: o decodificador do Windows não abria ("não entrega NV12") porque precisava saber um tamanho de vídeo antes do primeiro quadro. Agora parte de 1080p e se ajusta no primeiro quadro completo; se ainda não sair imagem, o relatório diz por quê']],
-  ['1.18.2', '23/10', ['Janela de teste (Opções → Desempenho): abre um segundo Telão neste PC, com outro nome e já na sua sala, para assistir a si mesmo e testar o motor de vídeo sem precisar de outra pessoa']],
-  ['1.18.1', '23/10', ['Motor de vídeo: conexão nova não abre mais uma codificação à parte enquanto a internet ainda está sendo medida (cada troca fazia a tela engasgar no começo)',
-                      'Motor de vídeo em H.265: o vídeo de mentira passa a ser 640x360 (codificadores H.265 da placa recusam imagem muito pequena)',
-                      'Medição de uso real e "Ao vivo" mostram os números de verdade do motor (resolução, ritmo, codificador do Telão Audio) em vez dos do vídeo de mentira']],
-  ['1.18.0', '23/10', ['Motor de vídeo (app 1.18): transmitindo, o Telão Audio captura e codifica o jogo direto na placa de vídeo; assistindo, ele decodifica na placa e desenha a tela numa janela própria. Bem menos memória e processador do que pelo Chromium. Ligado por padrão',
-                      'Assistindo pelo motor: nome, qualidade e botões ficam numa faixa embaixo do vídeo; "Reagir" abre as reações. Na tela cheia, as reações e o "sair" aparecem ao mexer o mouse',
-                      'Se o motor falhar, a transmissão ou a tela volta sozinha para o caminho normal, sem cortar. Dá para desligar em Opções → Desempenho',
-                      'Precisa do app 1.18 (atualiza sozinho). Quem assiste no navegador ou em versão antiga continua vendo normalmente']],
-  ['1.17.2', '23/10', ['Passar a sala: em "quem está na sala" há "Segurar a sala". Quem segura é o PC a que todo mundo se conecta para entrar; se ele estiver longe ou numa rede difícil (e alguém não consegue entrar), dá para trazer a sala para o seu PC sem ninguém sair',
-                      'Quem segura a sala e fica ausente (ou está no celular) passa a sala sozinho para alguém ativo no PC',
-                      'Funciona quando quem segura a sala está na 1.17.2 ou mais nova']],
-  ['1.17.1', '22/10', ['Relatório: na conexão com a sala, diz se cada caminho é IPv4, IPv6 ou endereço local escondido (o iPhone esconde o dele) e, quando conecta, por qual par conectou. Ajuda a entender por que um celular não entra']],
-  ['1.17.0', '22/10', ['Celular: interface própria para assistir. A tela fica em cima, na largura toda e sem nada por cima; nome, qualidade, som, tela cheia e reações ficam embaixo; as outras telas viram uma lista (toque para trocar). Um toque no vídeo mostra os botões',
-                      'Celular: deitar o celular põe em tela cheia (no Android vira tela cheia de verdade no primeiro toque; no iPhone o vídeo ocupa a tela, e dá para abrir o player do iPhone). Reações e mensagens do chat aparecem por cima',
-                      'Celular: chat em gaveta embaixo, sem o botão de compartilhar (o navegador do celular não compartilha a tela) e o celular nunca é escolhido para repassar vídeo',
-                      'Dá para adicionar o Telão à tela inicial do celular: abre como app, sem a barra do navegador']],
-  ['1.16.4', '22/10', ['Tirar da sala funciona com quem está numa versão antiga: a sala fecha a conexão dele, ele some da lista de todo mundo e não consegue voltar por 20 min (quem está na 1.16+ continua saindo sozinho e pode voltar quando quiser)',
-                      'Ausente e tirado da sala não recebem mais repasse: antes, quando você parava de enviar, outro amigo podia passar a repassar a sua tela para ele',
-                      'Ausente continua ausente mesmo se o Telão antigo dele pedir o vídeo de novo']],
-  ['1.16.3', '22/10', ['App, captura turbo: a miniatura "Transmitindo" era o que derrubava tudo. Mostrar a imagem da turbo nela fazia a transmissão cair para ~5 fps (pela placa) ou travava a tela do amigo que você assiste (pela memória). Agora a miniatura mostra uma prévia pequena (12 quadros/s) e a turbo segue a 60 com as telas dos amigos lisas']],
-  ['1.16.2', '22/10', ['App, captura turbo pela placa: se ela começar a perder quadros (o Telão Audio entrega 60 e a transmissão sai com bem menos, como quando você assiste alguém ao mesmo tempo), o Telão troca sozinho para a turbo pela memória, sem cortar',
-                      'Relatório: a turbo segundo a segundo (quanto chega, quanto sai, por que descarta), para achar onde os quadros se perdem']],
-  ['1.16.1', '22/10', ['App: reações e chat por cima do jogo agora são desenhados pelo Telão Audio. Com a captura turbo, reação ou chat (principalmente em spam) travava a transmissão; não trava mais',
-                      'Corrige quem transmitia em VP8 pelo processador sem precisar: quando a 1ª imagem de alguém demorava (PC sobrecarregado), o Telão de quem assistia marcava o formato como "não consigo exibir" para sempre. Agora só marca se a imagem chega e não aparece, a marca vale 12 h, e as marcas antigas foram esquecidas',
-                      'Relatório mostra os formatos marcados, e o Diagnóstico tem "Esquecer formatos marcados"']],
-  ['1.16.0', '22/10', ['Ausente: quem não responde ao "Ainda está aí?" (45 min sem mexer no PC), bloqueia a tela ou é marcado por alguém para de receber vídeo, e ninguém gasta internet ou placa com ele. Volta ao mexer',
-                      'Tirar da sala: em "quem está na sala", qualquer um pode marcar alguém como ausente ou tirar da sala (a pessoa pode entrar de novo)',
-                      'Custo da transmissão e medição de uso real mostram a memória (do PC e do Telão) e a memória da placa de vídeo, com aviso quando estão quase cheias',
-                      'App: prioridade do Telão na placa de vídeo enquanto transmite (experimental, em Opções), para a transmissão não engasgar com jogo pesado',
-                      'Aviso da captura turbo aponta a causa certa (placa de vídeo, processador ou preparo lento)']],
-  ['1.15.2', '22/10', ['App: o ícone do Telão passa a ir também para o Telao.exe (atalho, Explorer, barra de tarefas), sem baixar o app inteiro. Acontece sozinho na primeira vez que você fechar o Telão depois desta atualização']],
-  ['1.15.1', '22/10', ['App: ícone do Telão na barra de tarefas e nas janelas (no lugar do ícone do Electron)']],
-  ['1.15.0', '22/10', ['App: o painel do "Ao vivo" mostra o uso da placa de vídeo pelo Telão (com quanto é codificação) e o da placa inteira, com o jogo',
-                      'Medição de uso real (Diagnóstico) inclui a placa de vídeo: Telão, encoder da placa e PC inteiro, com aviso quando a placa ou o encoder estão no limite']],
-  ['1.14.0', '22/10', ['Visual novo: logo, barra da sala mais limpa (qualidade e som no ▾ do Compartilhar; opções, diagnóstico e sair no ⋯) e rostos de quem está na sala',
-                      'No app, a barra do Telão é a própria barra da janela (os botões de minimizar, maximizar e fechar continuam os do Windows)',
-                      'Temas: Grafite, Azul-noite, Preto OLED, Café, Claro ou igual ao sistema, e cor de destaque à sua escolha (Opções)',
-                      '"Ao vivo" de quem transmite: quantos assistem, upload e, clicando, o custo no PC (processador no app) e o que cada amigo recebe. Fica amarelo ou vermelho sozinho quando algo aperta',
-                      'Telas se ajustam para caber sem rolagem e sem buraco; cada uma mostra se está lisa ou engasgando, e os detalhes técnicos ao passar o mouse',
-                      'Sala vazia mostra quem está aqui e um botão grande para transmitir; a miniatura de quem transmite não cobre mais o chat']],
-  ['1.13.0', '22/10', ['H.265 automático entre PCs: quando os dois lados têm placa compatível, o vídeo vai em H.265 (menos internet para a mesma imagem). Desliga em Opções',
-                      'iPhone/iPad continuam recebendo em H.265 pela placa de quem transmite']],
-  ['1.12.7', '22/10', ['Teste de encoder testa também o H.265 (HEVC)',
-                      'iPhone/iPad recebem em H.265 pela placa de vídeo de quem transmite, quando ela codifica H.265 (o Safari não oferece AV1 em chamadas)']],
-  ['1.12.6', '22/10', ['iPhone 15 Pro, 16 e mais novos: recebem em AV1, codificado pela placa de vídeo de quem transmite (antes iam em H.264 Baseline, pelo processador)',
-                      'Se o AV1 não aparecer na tela de quem assiste, volta sozinho para o H.264']],
-  ['1.12.5', '22/10', ['iPhone/iPad: o vídeo vai em H.264 "Constrained High" (o High que o iPhone aceita), pela placa de vídeo, quando o teste confirma que funciona neste PC']],
-  ['1.12.4', '22/10', ['iPhone/iPad: agora o H.264 High chega de verdade (a conexão de quem transmite passa a ser "só envio", e assim o High entra na negociação)']],
-  ['1.12.3', '22/10', ['iPhone/iPad assistindo: o H.264 vai no perfil High pela placa de vídeo (antes ia em Baseline pelo processador), quando a placa de quem transmite aceita',
-                      'Teste de encoder testa cada perfil do H.264 (Main, High, Baseline); relatórios mostram o perfil combinado com cada pessoa']],
-  ['1.12.2', '22/10', ['Captura turbo no tamanho certo: se todo mundo assiste em 720p, ela já captura em 720p (codificação mais leve e mais fps)',
-                      'Se a captura turbo cair, a normal volta na hora (ela fica de reserva, quase parada)',
-                      'Medição de uso real mostra a captura turbo: quantos quadros o jogo mostrou e quantos a captura passou adiante']],
-  ['1.12.1', '22/10', ['Captura turbo pela placa: corrige o engasgo fixo (a cada ~meio segundo) pra quem assiste',
-                      'Teste da captura turbo agora mede também o ritmo do lado de quem recebe (acusa engasgo)']],
-  ['1.12.0', '22/10', ['Captura turbo (experimental): o Telão Audio pega a imagem do jogo direto do Windows e prepara na placa de vídeo, sem passar pelo motor de captura do Chromium. Liga no seletor de tela',
-                      'Diagnóstico → "Testar captura turbo": compara a captura normal com a turbo na janela do seu jogo (sem transmitir nada)']],
-  ['1.11.0', '22/10', ['Diagnóstico → "Medir uso real (60 s)": quanto o Telão gasta do PC e como estão imagem e rede de cada transmissão, com avisos',
-                      'Fundo da entrada: o sorteio não fica mais sem imagem quando uma das listas de jogos acaba',
-                      'Chat: mensagem mandada logo em seguida da outra não se perde mais']],
-  ['1.10.1', '21/10', ['Tela de entrada bem mais leve: o fundo só se mexe com o Telão em foco, por até 1 minuto',
-                      'Chat mais leve: só desenha as mensagens novas, e nada com o painel fechado']],
-  ['1.10.0', '21/10', ['Tela de entrada com arte de jogos ao fundo, diferente a cada vez que o Telão abre',
-                      'Os jogos que vocês transmitem entram no sorteio do fundo (o app procura o jogo na Steam e conta pra sala)']],
-  ['1.9.2', '21/10', ['GIF grande na foto de perfil ou nas figurinhas é reduzido automaticamente (e cortado nos primeiros 6 s se for longo)']],
-  ['1.9.1', '21/10', ['Corrige a atualização do app para a 1.9 (a 1.9.0 voltava sozinha para a versão anterior)']],
-  ['1.9.0', '21/10', ['Chat da sala, que aparece por cima do jogo de quem transmite (botão 💬 na miniatura liga/desliga)',
-                     'Reações personalizáveis: barra de 8 com emojis, textos e figurinhas do grupo',
-                     'Figurinhas do grupo: qualquer um adiciona ou remove, e todo mundo da sala recebe',
-                     'Foto de perfil (imagem ou GIF)',
-                     'Tela privada: troca a sua transmissão por uma mensagem, sem cortar o som',
-                     'Qualidades 360p e 540p, e Ultimate 120 fps (experimental)',
-                     'Retransmissão: um amigo repassa o vídeo quando a internet de quem transmite está no limite',
-                     'Modo rápido vem desligado (só ajuda no Windows 10)']],
-  ['1.8.0', '21/10', ['Modo rápido para Windows 10: jogo em tela cheia ou sem bordas é capturado pelo caminho da tela inteira, bem mais rápido (o som continua só do jogo)',
-                     'Diagnóstico mostra o passo a passo da conexão com a sala']],
-  ['1.7.1', '21/10', ['Entrar na sala funciona mesmo em redes que bloqueiam as conexões que você abre (quem segura a sala liga de volta)']],
-  ['1.7.0', '21/10', ['O app também se atualiza sozinho: baixa só o necessário (~1 MB) e reinicia', 'Se a versão nova do app não abrir, volta sozinho para a anterior', 'Som escolhido junto com a tela: janela manda o som dela sozinha; tela inteira mostra os apps com som ali mesmo']],
-  ['1.6.1', '21/10', ['Mostra a versão do app junto da versão do Telão', 'Botão 🎮 avisa quando o app precisa ser atualizado para as reações por cima do jogo']],
-  ['1.6.0', '21/10', ['Reações aparecem por cima do jogo de quem transmite (app desktop)', 'Janela flutuante: assista um amigo numa janela sempre por cima']],
-  ['1.5.0', '21/10', ['Atualização automática', 'Sala de sempre: salas recentes e entrada automática', 'Reações (emojis) sobre a tela de quem transmite', 'Clipe dos últimos 30 segundos de qualquer tela']],
-  ['1.4.0', '21/10', ['Versão de cada pessoa na sala (passe o mouse no nome)', 'Aviso quando alguém da sala está numa versão mais nova ou mais antiga', 'Esta lista de novidades']],
-  ['1.3.0', '21/10', ['FPS não cai mais pela metade com o app minimizado (Windows 11)', 'Telão Audio fecha junto com o app']],
-  ['1.2.0', '21/10', ['H.264 pela placa de vídeo (perfil Main)', 'AV1 pela placa de vídeo no app']],
-  ['1.1.0', '21/10', ['Painel de Diagnóstico com teste de encoder']],
-  ['1.0.0', '20/10', ['Versão desktop: seletor de janelas e áudio só da janela', 'Resolução sob demanda e começo nítido', 'Caminho invertido quando a conexão direta falha', 'Troca automática de formato de vídeo']],
+                      'Telão Audio: registro em arquivo e, se fechar com erro, o motivo aparece no relatório na próxima vez']]
 ];
 function cmpVer(a, b){
   const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0), pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -1312,14 +1170,6 @@ function initUpdates(){
       window.open(updInfo.download || updInfo.url, '_blank');
     } else $('#upd').hidden = true;
   };
-  // Só apps que ainda não se atualizam sozinhos (nível < 4) precisam baixar o zip; do 4 em diante o próprio app se atualiza.
-  if (DESKTOP && (window.telaoDesktop.shell || 0) < SELF_UPDATE_SHELL && RELEASES_URL
-      && store.get('updLater', '') !== 'app' + SELF_UPDATE_SHELL + '|' + new Date().toDateString()){
-    updInfo = {kind: 'app', version: 'app' + SELF_UPDATE_SHELL, download: RELEASES_URL};
-    $('#updText').textContent = 'Tem app novo do Telão: reações por cima do jogo, janela flutuante completa e o app passa a se atualizar sozinho. Precisa baixar o arquivo uma última vez.';
-    $('#updGo').textContent = 'Baixar'; $('#updGo').hidden = false;
-    $('#upd').hidden = false;
-  }
   if (DESKTOP){
     if (window.telaoDesktop.onUpdate) window.telaoDesktop.onUpdate(showUpdate);
     if (window.telaoDesktop.ready) window.telaoDesktop.ready(TELAO_VERSION);
@@ -1608,11 +1458,6 @@ function syncShareUi(){
   updateLive();
   renderEmptyPeople();
 }
-function syncShareMenu(){
-  const ok = typeof turboAvailable === 'function' && turboAvailable();
-  $('#smTurboWrap').hidden = !ok;
-  if (ok) $('#smTurbo').checked = turboOn();
-}
 function genCode(){
   const a = 'abcdefghjkmnpqrstuvwxyz23456789';
   let s = '';
@@ -1622,75 +1467,13 @@ function genCode(){
 const cleanCode = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 24);
 const currentQ = () => $('#quality').value || 'fluido';
 
-/* ---------- TURN ----------
-   Quando a rede de duas pessoas bloqueia conexão direta, o TURN serve de ponte.
-   Basta um dos dois lados ter TURN configurado. */
-let linkIce = [];   // servidores vindos do link da Metered
-
-function manualTurn(t){
-  if (!t || !t.url) return [];
-  return [{
-    urls: t.url.split(',').map(s => s.trim()).filter(Boolean),
-    username: t.user || undefined,
-    credential: t.pass || undefined,
-  }];
-}
-function iceConfig(){
-  const servers = [
-    {urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']},
-    {urls:'stun:stun.cloudflare.com:3478'},
-    ...manualTurn(store.get('turn', null)),
-    ...linkIce,
-  ];
-  return {iceServers: servers};
-}
-const hasTurn = () => iceConfig().iceServers.some(s => [].concat(s.urls).some(u => /^turns?:/i.test(u)));
-
-async function fetchTurnLink(link){
-  if (!link) return [];
-  if (!/^https:\/\//i.test(link)) throw new Error('o link precisa começar com https://');
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 7000);
-  try{
-    const r = await fetch(link, {signal: ctl.signal, cache: 'no-store'});
-    if (!r.ok) throw new Error('resposta ' + r.status + (r.status === 401 || r.status === 403 ? ' (chave inválida?)' : ''));
-    const j = await r.json();
-    const arr = Array.isArray(j) ? j : (j && j.iceServers) || [];
-    if (!arr.length) throw new Error('o link não devolveu nenhum servidor');
-    store.set('turnCache', {link, servers: arr});
-    return arr;
-  }catch(e){
-    const c = store.get('turnCache', null);
-    if (c && c.link === link && Array.isArray(c.servers)) return c.servers;   // última credencial boa
-    throw new Error(e.name === 'AbortError' ? 'tempo esgotado' : e.message);
-  }finally{ clearTimeout(timer); }
-}
-
-// Testa se o TURN configurado nos campos realmente entrega um endereço de ponte (candidato "relay").
-async function testTurn(){
-  const out = $('#turnTestOut');
-  out.textContent = 'Testando…'; out.style.color = '';
-  let servers;
-  try{
-    servers = [
-      ...manualTurn({url: $('#turnUrl').value.trim(), user: $('#turnUser').value.trim(), pass: $('#turnPass').value}),
-      ...(await fetchTurnLink($('#turnLink').value.trim())),
-    ].filter(s => [].concat(s.urls).some(u => /^turns?:/i.test(u)));
-  }catch(e){ out.textContent = 'Falhou: ' + e.message; out.style.color = 'var(--danger)'; return; }
-  if (!servers.length){ out.textContent = 'Nenhum TURN preenchido.'; out.style.color = 'var(--warn)'; return; }
-  const pc = new RTCPeerConnection({iceServers: servers, iceTransportPolicy: 'relay'});
-  const ok = await new Promise(resolve => {
-    const timer = setTimeout(() => resolve(false), 9000);
-    pc.onicecandidate = e => {
-      if (e.candidate && (e.candidate.type === 'relay' || / typ relay /.test(e.candidate.candidate))){ clearTimeout(timer); resolve(true); }
-    };
-    pc.createDataChannel('teste');
-    pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => resolve(false));
-  });
-  pc.close();
-  out.textContent = ok ? 'Funcionando ✓' : 'Não respondeu. Confira o link ou usuário/senha.';
-  out.style.color = ok ? 'var(--accent)' : 'var(--danger)';
-}
+/* ---------- Rede ----------
+   Só STUN (descobrir o endereço público de cada um); sem TURN, por decisão do projeto. Quando a rede de alguém
+   bloqueia conexão direta, o Telão tenta o caminho invertido e a retransmissão por outro amigo da sala. */
+const iceConfig = () => ({iceServers: [
+  {urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']},
+  {urls: 'stun:stun.cloudflare.com:3478'},
+]});
 
 /* Aviso de rede: aparece quando não conseguimos entrar na sala ou falar com alguém. */
 let netDismissed = false;
@@ -1722,23 +1505,15 @@ function initLobby(){
   }
   $('#name').value = store.get('name', '');
   const fromHash = cleanCode((location.hash.match(/sala=([^&]+)/) || [])[1]);
-  const openTurn = store.get('openTurn', false);
-  $('#code').value = fromHash || (openTurn && store.get('lastRoom', '')) || genCode();
+  $('#code').value = fromHash || genCode();
   if (DESKTOP && window.telaoDesktop.profile){   // janela de teste: já vem com a sala de quem abriu e um nome próprio
     const r = cleanCode(window.telaoDesktop.room || '');
     if (r) $('#code').value = r;
     if (!$('#name').value) $('#name').value = 'Teste';
     tpAutoJoin();
   }
-  const t = store.get('turn', {});
-  $('#turnUrl').value = t.url || ''; $('#turnUser').value = t.user || ''; $('#turnPass').value = t.pass || '';
-  $('#turnLink').value = t.link || '';
-  $('#turnTest').onclick = testTurn;
-  if (openTurn){
-    store.set('openTurn', false);
-    $('#turnBox').open = true;
-    setTimeout(() => { $('#turnBox').scrollIntoView({block: 'center'}); $('#turnLink').focus(); }, 50);
-  }
+  // configuração de TURN que ficou de versões antigas (1.23 e antes): não é mais usada
+  try{ for (const k of ['turn', 'turnCache', 'openTurn']) localStorage.removeItem('telao:' + k); }catch{}
 
   applyTheme();
   syncWcoInset();
@@ -1774,7 +1549,7 @@ function initLobby(){
   for (const el of [$('#name'), $('#code')]) el.addEventListener('input', cancelAutoJoin);
   const kicked = kickedNote();
   if (kicked){ store.set('kickedNote', null); if (kicked.room) $('#code').value = cleanCode(kicked.room); toast(kicked.by + ' tirou você da sala ' + kicked.room + '. Dá pra entrar de novo quando quiser.', 'warn', 9000); }
-  else if (!openTurn) maybeAutoJoin(!!fromHash);
+  else maybeAutoJoin(!!fromHash);
   $('#joinBtn').onclick = join;
   for (const el of [$('#name'), $('#code')]) el.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
 }
@@ -1975,19 +1750,12 @@ async function join(){
   store.set('lastRoom', room);
   pushRecent(room);
   cancelAutoJoin();
-  const link = $('#turnLink').value.trim();
-  store.set('turn', {url: $('#turnUrl').value.trim(), user: $('#turnUser').value.trim(), pass: $('#turnPass').value, link});
   if (location.protocol !== 'file:') try{ history.replaceState(null, '', '#sala=' + room); }catch{}
 
   joining = true;
   netT0 = Date.now(); netEvents.length = 0;
-  netLog('entrando na sala ' + room + ' · Telão ' + TELAO_VERSION + (DESKTOP ? ' app ' + window.telaoDesktop.version : ' navegador') + (hasTurn() ? ' · com TURN' : ' · sem TURN'));
+  netLog('entrando na sala ' + room + ' · Telão ' + TELAO_VERSION + (DESKTOP ? ' app ' + window.telaoDesktop.version : ' navegador'));
   $('#joinBtn').disabled = true; $('#joinBtn').textContent = 'Conectando…';
-  linkIce = [];
-  if (link){
-    try{ linkIce = await fetchTurnLink(link); }
-    catch(e){ toast('Não consegui buscar as credenciais do TURN (' + e.message + '). Entrando sem TURN.', 'warn', 8000); }
-  }
   joining = false;
   me = newPeer(PREFIX + room + '-' + genCode());
 
@@ -2037,12 +1805,11 @@ function showRoom(){
   $('#awayBack').onclick = comeBack;
   $('#liveStop').onclick = stopShare;
   $('#liveBtn').onclick = () => togglePop($('#costPop'), $('#liveBtn'), () => { renderCost(); startCostTimer(); });
-  $('#shareMore').onclick = () => togglePop($('#shareMenu'), $('#shareMore'), syncShareMenu);
+  $('#shareMore').onclick = () => togglePop($('#shareMenu'), $('#shareMore'));
   $('#moreBtn').onclick = () => togglePop($('#moreMenu'), $('#moreBtn'));
   $('#membersBtn').dataset.popAlign = 'left';
   $('#membersBtn').onclick = () => togglePop($('#memPop'), $('#membersBtn'), renderMemPop);
   for (const id of ['#optsBtn', '#diagBtn', '#leaveBtn']) $(id).addEventListener('click', closePop);
-  $('#smTurbo').onchange = () => { store.set('turbo', $('#smTurbo').checked); toast($('#smTurbo').checked ? 'Captura turbo ligada. Vale a partir da próxima transmissão.' : 'Captura turbo desligada. Vale a partir da próxima transmissão.'); };
   syncShareUi();
   syncWcoInset();
   if (navigator.windowControlsOverlay) try{ navigator.windowControlsOverlay.addEventListener('geometrychange', syncWcoInset); }catch{}
@@ -2071,7 +1838,6 @@ function showRoom(){
   $('#smAudio').hidden = DESKTOP;      // no app, o som é escolhido no seletor de janelas
   $('#smAudioApp').hidden = !DESKTOP;
   $('#netClose').onclick = () => { netDismissed = true; hideNetBanner(); };
-  $('#netFix').onclick = () => { store.set('openTurn', true); leave(); };
   setStatus('Entrando na sala…', 'warn');
   renderMembers();
   setTimeout(measureHz, 1500);   // mede de novo já na sala (na entrada, o fundo animado pode atrapalhar em PC modesto)
@@ -2103,7 +1869,7 @@ let lastAutoHand = 0;
 function autoHandover(){
   if (!me || !hubPeer || hubPeer.destroyed || !(amAway || PHONE) || Date.now() - lastAutoHand < 60000) return;
   const cands = members.filter(m => m.id !== me.id && !peerAway.has(m.id) && !kickedIds.has(m.id)).map(m => ({m, v: peerVer.get(m.id) || {}}))
-    .filter(x => x.v.v && cmpVer(x.v.v, '1.17.2') >= 0 && !x.v.ph);
+    .filter(x => x.v.v && !x.v.ph);
   const best = cands.find(x => x.v.d) || cands[0];
   if (!best) return;
   lastAutoHand = Date.now();
@@ -2125,27 +1891,25 @@ function tryClaimHub(){
   });
 }
 
-/* Quem segura a sala também faz valer o "tirar da sala": um Telão antigo (antes da 1.16) não sabe sair sozinho, então
-   o hub fecha a conexão dele e não deixa voltar por um tempo (pelo id; e pelo nome, se ele estava numa versão antiga,
-   porque recarregar a página gera outro id). Quem está na 1.16+ recebe o aviso, sai sozinho e pode voltar quando quiser. */
+/* Quem segura a sala também faz valer o "tirar da sala": quem foi tirado recebe o aviso e sai sozinho; por garantia,
+   o hub fecha a conexão dele logo depois e não aceita aquele mesmo id de volta por um tempo (recarregar gera outro id,
+   então dá para entrar de novo quando quiser). */
 const KICK_BAN_MS = 20 * 60000;
 function runHub(hp){
   const mem = new Map();
-  const banIds = new Map(), banNames = new Map();   // id/nome → até quando
-  const banned = (id, name) => { const now = Date.now(); return (banIds.get(id) || 0) > now || (name != null && (banNames.get(name) || 0) > now); };
+  const banIds = new Map();   // id → até quando
+  const banned = id => (banIds.get(id) || 0) > Date.now();
   const ban = id => {
-    const m = mem.get(id), until = Date.now() + (window.__kickBanMs || KICK_BAN_MS);
-    banIds.set(id, until);
-    const v = peerVer.get(id);
-    if (m && (!v || !v.v || cmpVer(v.v, '1.16.0') < 0)) banNames.set(m.name, until);
+    const m = mem.get(id);
+    banIds.set(id, Date.now() + (window.__kickBanMs || KICK_BAN_MS));
     netLog('hub: ' + (m ? m.name : id.slice(-6)) + ' foi tirado da sala');
-    // um instante para o aviso chegar (quem está na 1.16+ sai sozinho e vai para a tela de entrada)
+    // um instante para o aviso chegar (a pessoa sai sozinha e vai para a tela de entrada)
     setTimeout(() => { const x = mem.get(id); if (x){ mem.delete(id); try{ x.conn.close(); }catch{} send(); } }, 1500);
   };
   const chatLog = chatMsgs.slice(-CHAT_KEEP).map(m => ({id: m.id, from: m.from, n: m.n, x: m.x, st: m.st, at: m.at}));   // quem assume a sala continua o histórico
   const send = () => {
     const list = [...mem].map(([id, m]) => ({id, name: m.name, sharing: m.sharing}));
-    for (const m of mem.values()) if (m.conn.open) try{ m.conn.send({t:'list', list, owner: me ? me.id : ''}); }catch{}   // owner: quem segura a sala (1.17.2+)
+    for (const m of mem.values()) if (m.conn.open) try{ m.conn.send({t:'list', list, owner: me ? me.id : ''}); }catch{}   // owner: quem segura a sala
   };
   let handing = false;
   // Conexão de um participante (aberta por ele, ou pelo hub no caminho invertido).
@@ -2153,7 +1917,7 @@ function runHub(hp){
     conn.on('data', msg => {
       if (!msg || typeof msg !== 'object') return;
       if (msg.t === 'hello'){
-        if (banned(conn.peer, String(msg.name || '?').slice(0, 24))){ setTimeout(() => { try{ conn.close(); }catch{} }, 200); return; }
+        if (banned(conn.peer)){ setTimeout(() => { try{ conn.close(); }catch{} }, 200); return; }
         if (!mem.has(conn.peer) || mem.get(conn.peer).conn !== conn) netLog('hub: ' + conn.peer.slice(-6) + ' se apresentou' + (conn.metadata && conn.metadata.telaoReverse ? ' (caminho invertido)' : ''));
         mem.set(conn.peer, {name: String(msg.name || '?').slice(0, 24), sharing: !!msg.sharing, conn, seen: Date.now()});
         send();
@@ -2284,9 +2048,7 @@ function scheduleHubRecovery(){
     hubFailStreak++;
     if (hubFailStreak >= 2){
       setStatus('Sem conexão com a sala', 'danger');
-      showNetBanner(hasTurn()
-        ? 'Mesmo com TURN não consegui entrar na sala. Use "Testar TURN" na tela de configuração para conferir as credenciais.'
-        : 'Não consigo me conectar com quem está na sala: a sua rede (ou a de quem criou a sala) bloqueia conexão direta. Configure um servidor TURN para resolver.');
+      showNetBanner('Não consigo me conectar com quem está na sala: a sua rede (ou a de quem criou a sala) bloqueia conexão direta. O Telão continua tentando; reiniciar o roteador ou usar outra rede (ex.: a do celular) costuma resolver.');
     }
   }
   hubMissing = false;
@@ -2334,8 +2096,9 @@ function onList(list){
   }
 }
 
-/* Cada participante anuncia a própria versão aos outros (pela sala, como a pausa).
-   Quem não anuncia em alguns segundos está numa versão anterior à 1.4. */
+/* Cada participante anuncia a própria versão aos outros (pela sala, como a pausa). A versão mínima faz todo mundo
+   entrar na mais nova; diferença só aparece logo depois de uma versão sair, enquanto quem estava numa sala termina
+   a sessão (ao sair, o Telão dele atualiza sozinho). */
 const peerVer = new Map();     // id → {v, d}
 const announced = new Set();   // ids pra quem já mandei a minha versão
 const firstSeen = new Map();   // id → quando apareceu na sala
@@ -2370,7 +2133,7 @@ function checkOutdated(){
   if (cmpVer(newest, TELAO_VERSION) <= 0 || warnedVer.has(newest)) return;
   warnedVer.add(newest);
   const who = members.filter(m => peerVer.get(m.id) && peerVer.get(m.id).v === newest).map(m => m.name).join(', ');
-  toast('Sua versão do Telão (' + TELAO_VERSION + ') é mais antiga que a de ' + (who || 'alguém da sala') + ' (' + newest + '). Peça o arquivo novo pra atualizar.', 'warn', 12000);
+  toast('Saiu uma versão nova do Telão (' + newest + ', já com ' + (who || 'alguém da sala') + '). Quando você sair da sala, o seu atualiza sozinho.', '', 9000);
 }
 function versionInfo(m){
   if (me && m.id === me.id) return {v: TELAO_VERSION, d: DESKTOP};
@@ -2383,12 +2146,12 @@ function memberVer(m){
   const vi = versionInfo(m), newest = newestVersion();
   let txt = 'versão: verificando…';
   if (vi && vi.v) txt = 'Telão ' + vi.v + (vi.d ? ' Desktop' : ' no navegador');
-  else if (vi) txt = 'versão anterior à 1.4';
+  else if (vi) txt = 'versão desconhecida';
   const old = !!(vi && (!vi.v || cmpVer(vi.v, newest) < 0));
-  return {vi, txt: txt + (old ? ' · desatualizado' : ''), old, short: vi && vi.v ? (vi.d ? 'app ' : 'navegador ') + vi.v : (vi ? 'versão antiga' : '')};
+  return {vi, txt: txt + (old ? ' · desatualizado' : ''), old, short: vi && vi.v ? (vi.d ? 'app ' : 'navegador ') + vi.v : (vi ? 'versão desconhecida' : '')};
 }
 const roomList = () => members.length ? members : [{id: me && me.id, name: myName, sharing: !!localStream}];
-// Barra: rostos de quem está na sala (aro colorido = transmitindo; bolinha amarela = versão antiga).
+// Barra: rostos de quem está na sala (aro colorido = transmitindo; bolinha amarela = versão anterior à de alguém da sala).
 function renderMembers(){
   const box = $('#members'); box.textContent = '';
   const list = roomList();
@@ -2476,18 +2239,12 @@ function renderMemPop(){
   box.append(sep, mine, call);
   // Quem segura a sala: é o PC a que todo mundo se conecta para entrar. Se ele estiver longe ou numa rede difícil,
   // quem não consegue chegar nele não entra; dá para passar a sala para outro PC.
-  if (me && hubOwner !== me.id){
+  if (me && hubOwner && hubOwner !== me.id){
     const hold = document.createElement('button'); hold.type = 'button'; hold.className = 'mi'; hold.id = 'memHold';
     hold.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>';
-    if (hubOwner){
-      hold.append('Segurar a sala (hoje com ' + nameOf(hubOwner) + ')');
-      hold.title = 'Todo mundo passa a se conectar ao seu ' + (DESKTOP ? 'PC' : 'aparelho') + ' para entrar na sala. Ajuda quando alguém não consegue entrar.';
-      hold.onclick = () => { closePop(); if (askHandover(me.id)) toast('Pedindo a sala para você…'); };
-    } else {
-      hold.append('Quem segura a sala está numa versão antiga');
-      hold.title = 'Para passar a sala de um PC para outro, quem segura precisa estar na 1.17.2 ou mais nova.';
-      hold.disabled = true;
-    }
+    hold.append('Segurar a sala (hoje com ' + nameOf(hubOwner) + ')');
+    hold.title = 'Todo mundo passa a se conectar ao seu ' + (DESKTOP ? 'PC' : 'aparelho') + ' para entrar na sala. Ajuda quando alguém não consegue entrar.';
+    hold.onclick = () => { closePop(); if (askHandover(me.id)) toast('Pedindo a sala para você…'); };
     box.appendChild(hold);
   }
 }
@@ -2623,7 +2380,7 @@ function helperConnect(){
   try{ ws = new WebSocket(HELPER_URL); }catch{ return helperRetry(); }
   ws.binaryType = 'arraybuffer';
   helper.ws = ws;
-  ws.onopen = () => { helper.ready = true; helperSend({cmd: 'list'}); if (localStream){ syncGpuPrio(); if (nativeOv){ nativeOv = false; showOverlay(); } } };
+  ws.onopen = () => { helper.ready = true; helperSend({cmd: 'list'}); if (localStream){ syncGpuPrio(); nativeOv = false; showOverlay(); } };
   ws.onmessage = ev => {
     if (typeof ev.data !== 'string'){ if (helper.onAudio) helper.onAudio(ev.data); return; }
     let m; try{ m = JSON.parse(ev.data); }catch{ return; }
@@ -2954,16 +2711,11 @@ function openPicker(){
 
     for (const b of box.querySelectorAll('.pk-tabs button')) b.onclick = () => { pickerTab = b.dataset.t; render(); };
     const fast = $('#pkFast');
-    const turboCb = $('#pkTurbo');
     const syncFast = () => {
-      const turboing = turboAvailable() && turboOn();
-      $('#pkFastWrap').hidden = !fastCaptureAvailable() || !selected || selected.type !== 'window' || turboing;   // a turbo já resolve o que o modo rápido resolvia
+      $('#pkFastWrap').hidden = !fastCaptureAvailable() || !selected || selected.type !== 'window';
       fast.checked = fastCaptureOn(); $('#pkFastNote').textContent = fastNote();
-      $('#pkTurboWrap').hidden = !turboAvailable() || !selected;
-      turboCb.checked = turboOn();
     };
     fast.onchange = () => store.set('fastWindow', fast.checked);
-    turboCb.onchange = () => { store.set('turbo', turboCb.checked); syncFast(); };
     syncFast();
     renderAudio();
     $('#pkRefresh').onclick = load;
@@ -2994,9 +2746,8 @@ async function startShare(pre){
   const devId = src.startsWith('dev:') ? src.slice(4) : null;
   let capId = DESKTOP ? chosen.id : null, fastHwnd = '';
   fastCapture = false;
-  const useTurbo = DESKTOP && turboAvailable() && turboOn();
   const useEngine = DESKTOP && engineSendOk() && (chosen.type === 'window' || chosen.type === 'screen');
-  if (DESKTOP && chosen.type === 'window' && fastCaptureAvailable() && fastCaptureOn() && !useTurbo && !useEngine){
+  if (DESKTOP && chosen.type === 'window' && fastCaptureAvailable() && fastCaptureOn() && !useEngine){
     const hwnd = chosen.id.split(':')[1] || '';
     const sid = await fastScreenFor(hwnd);
     if (sid){ capId = sid; fastCapture = true; fastHwnd = hwnd; }
@@ -3069,8 +2820,7 @@ async function startShare(pre){
   hubSend({t:'state', sharing:true});
   for (const m of members) if (m.id !== me.id) callPeer(m.id);
   updatePip();
-  if (useEngine) engageEngine(chosen, s).then(ok => { if (!ok && useTurbo && localStream === s) engageTurbo(chosen, s).catch(e => toast('Captura turbo: ' + e.message, 'warn')); }, () => {});
-  else if (useTurbo) engageTurbo(chosen, s).catch(e => toast('Captura turbo: ' + e.message, 'warn'));
+  if (useEngine) engageEngine(chosen, s).catch(() => {});
   setTimeout(() => autoProbeH264().catch(() => {}), 8000);
 }
 
@@ -3078,7 +2828,6 @@ function stopShare(){
   if (!localStream) return;
   statsSave(); statsGame = null;
   engineShareEnd('transmissão parou', false);
-  stopTurboShare();
   localStream.getTracks().forEach(t => t.stop());
   localStream = null;
   privateOn = false; clearInterval(privateTimer);
@@ -3161,19 +2910,12 @@ function swapOutgoingVideo(){
   }
   syncPipVideo();
 }
-/* O que a miniatura "Transmitindo" mostra. Nunca a imagem da captura turbo: exibir aquela trilha numa <video> faz o
-   processo de vídeo do Telão subir/desenhar 60 imagens por segundo e disputa com o resto (pela placa, a transmissão
-   caía para ~5 fps; pela memória, a tela do amigo que você assiste travava). Com a turbo, a miniatura mostra a captura
-   normal de reserva (pequena e a poucos quadros por segundo), que não disputa nada. */
-const PIP_TURBO_PREVIEW = {w: 480, h: 270, fps: 12};
+// Captura normal de reserva enquanto todo mundo está no motor: pequena e a poucos quadros por segundo (é o que a miniatura mostra).
+const PIP_STANDBY = {w: 480, h: 270, fps: 12};
 function pipTrack(){
   if (privateOn && privateTrack) return privateTrack;
   if (!localStream) return null;
   if (engine.share && engine.share.off) return null;
-  if (turboShare && turboActive()){
-    const sb = turboShare.standby;
-    return sb && sb.readyState === 'live' ? sb : null;
-  }
   return localStream.getVideoTracks()[0] || null;
 }
 function syncPipVideo(){
@@ -3235,7 +2977,7 @@ function callPeer(pid){
         const n = (failCount.get(pid) || 0) + 1; failCount.set(pid, n);
         if (n === MAX_FAILS){
           const who = (members.find(m => m.id === pid) || {}).name || 'um participante';
-          showNetBanner('Não consegui enviar sua tela para ' + who + ': a rede de vocês bloqueia conexão direta. Um de vocês dois precisa configurar um servidor TURN.');
+          showNetBanner('Não consegui enviar sua tela para ' + who + ': a rede de vocês bloqueia conexão direta. O Telão tenta passar por outro amigo da sala que já esteja assistindo.');
         }
       }
     }
@@ -3251,7 +2993,7 @@ const wantHz = new Map();  // id do espectador → frequência da tela dele
 function videoPlan(pid){
   const q = QUALITY[currentQ()];
   const vt = activeVideoTrack();
-  const srcH = turboShare && vt === turboShare.ses.track ? turboShare.ses.h : ((vt && vt.getSettings && vt.getSettings().height) || q.h);
+  const srcH = (vt && vt.getSettings && vt.getSettings().height) || q.h;
   return planFor(q, srcH, wantH.get(pid), wantHz.get(pid));
 }
 /* Tamanho: o da qualidade escolhida, ou a metade quando a tela de quem assiste é bem pequena (celular, miniatura).
@@ -3306,8 +3048,7 @@ async function onQualityChange(){
   if (!localStream) return;
   const q = QUALITY[currentQ()];
   const vt = localStream.getVideoTracks()[0];
-  if (turboActive()) await retuneTurbo();
-  else if (vt) try{ await vt.applyConstraints({width:{ideal:q.w, max:q.w}, height:{ideal:q.h, max:q.h}, frameRate:{ideal:q.fps, max:q.fps}}); }catch{}
+  if (vt) try{ await vt.applyConstraints({width:{ideal:q.w, max:q.w}, height:{ideal:q.h, max:q.h}, frameRate:{ideal:q.fps, max:q.fps}}); }catch{}
   if (engine.share){ engine.share.low = false; engine.share.lowAt = 0; engineShareSync(); }
   for (const [pid, c] of outCalls) applyQuality(c.peerConnection, pid);
   toast('Qualidade alterada para ' + q.label + '.');
@@ -3408,7 +3149,7 @@ async function updateSendStats(){
   }
   const target = QUALITY[currentQ()].fps;
   const parts = [];
-  if (capFps != null) parts.push((capFps < target * 0.8 ? '!' : '') + 'captura ' + Math.round(capFps) + 'fps' + (engine.share && engine.share.links.size ? ' (motor)' : turboActive() ? ' (turbo)' : fastCapture ? ' (modo rápido)' : ''));
+  if (capFps != null) parts.push((capFps < target * 0.8 ? '!' : '') + 'captura ' + Math.round(capFps) + 'fps' + (engine.share && engine.share.links.size ? ' (motor)' : fastCapture ? ' (modo rápido)' : ''));
   if (worst){
     parts.push((worst.fps < target * 0.8 ? '!' : '') + 'envio ' + Math.round(worst.fps) + 'fps' + (worst.h ? ' ' + worst.h + 'p' : ''));
     const hw = worst.hw != null ? worst.hw : (worst.impl ? !SW_ENC.test(worst.impl) : null);
@@ -3479,14 +3220,13 @@ function updatePip(){
 const sendPrev = new Map();
 let sendInfo = null, liveAlert = null, livePend = null, shareStartedAt = 0, costTimer = null, costMetrics = null, costMetricsAt = 0;
 let LIVE_HOLD = 4000, LIVE_GRACE = 10000;
-/* Uso da placa de vídeo (app 1.15+): o Telão Audio lê os contadores "GPU Engine" do Windows (os mesmos do
+/* Uso da placa de vídeo: o Telão Audio lê os contadores "GPU Engine" do Windows (os mesmos do
    Gerenciador de Tarefas) enquanto alguém pede; o pedido vai a cada 2 s com o painel aberto ou medindo. */
-const GPU_SHELL = 11, PRIO_SHELL = 12;
 let gpuLast = null, gprioLast = null;
-// Prioridade na placa (app 1.16+, experimental, liga em Opções): pedida ao começar a transmitir e devolvida ao parar.
-const gprioWanted = () => DESKTOP && (window.telaoDesktop.shell || 0) >= PRIO_SHELL && store.get('gpuPrio', true);
-function syncGpuPrio(){ if (DESKTOP && (window.telaoDesktop.shell || 0) >= PRIO_SHELL && helper.ready) helperSend({cmd: 'gprio', on: localStream && gprioWanted() ? '1' : '0'}); }
-const gpuAvailable = () => DESKTOP && (window.telaoDesktop.shell || 0) >= GPU_SHELL && helper.ready;
+// Prioridade na placa (experimental, liga em Opções): pedida ao começar a transmitir e devolvida ao parar.
+const gprioWanted = () => DESKTOP && store.get('gpuPrio', true);
+function syncGpuPrio(){ if (DESKTOP && helper.ready) helperSend({cmd: 'gprio', on: localStream && gprioWanted() ? '1' : '0'}); }
+const gpuAvailable = () => DESKTOP && helper.ready;
 function askGpu(){ if (gpuAvailable()) helperSend({cmd: 'gpu', pid: String(window.telaoDesktop.mainPid || 0)}); }
 const gpuFresh = () => gpuLast && Date.now() - gpuLast.at < 6000 ? gpuLast : null;
 const fmtMbps = x => (x >= 10 ? Math.round(x).toString() : x.toFixed(1).replace('.', ','));
@@ -3504,9 +3244,8 @@ function liveCondition(){
   if (!si || !localStream || Date.now() - si.at > 8000) return null;
   const active = si.viewers.filter(v => !v.paused);
   const up = active.reduce((a, v) => a + v.mbps, 0);
-  // o esperado é o que entra (o jogo pela turbo, ou a captura), até o limite da qualidade: jogo a 30 fps não é problema
-  const ts = turboActive() && turboShare && turboShare.ses && turboShare.ses.stat;
-  const src = ts && ts.win > 0 ? ts.win : si.capFps;
+  // o esperado é o que entra pela captura, até o limite da qualidade: jogo a 30 fps não é problema
+  const src = si.capFps;
   const expect = Math.min(si.target || 60, src > 0 ? src : si.target || 60);
   if (active.length && si.worst && expect >= 20 && si.worst.fps < expect * 0.6 && !privateOn)
     return {k: 'bad', lvl: 3, text: 'enviando ' + Math.round(si.worst.fps) + ' de ' + Math.round(expect) + ' fps',
@@ -3580,13 +3319,11 @@ function renderCost(){
   sec1.appendChild(costMeter('Upload', fmtMbps(up) + ' Mbps', cap ? 'de ~' + fmtMbps(cap) + ' que sua internet aguenta' : 'medindo o limite da sua internet…',
     cap ? up / cap * 100 : null, cap && up / cap > 0.85 ? 'warn' : ''));
   // processador (só no app)
-  const ts = turboActive() && turboShare && turboShare.ses && turboShare.ses.stat;
   if (DESKTOP && costMetrics && Date.now() - costMetricsAt < 6000){
     const cores = costMetrics.cores || 1;
     const tel = costMetrics.procs.reduce((a, p) => a + (p.cpu || 0), 0);
-    const cap2 = ts && ts.cpu != null ? ts.cpu : 0;
-    const total = (tel + cap2) / cores;
-    const sub = 'Telão ' + Math.round(tel / cores) + '%' + (ts ? ' · captura turbo ' + Math.round(cap2 / cores) + '%' : '');
+    const total = tel / cores;
+    const sub = 'Telão ' + Math.round(total) + '%';
     sec1.appendChild(costMeter('Processador', Math.round(total) + '%', sub, total, total > 60 ? 'bad' : total > 35 ? 'warn' : ''));
   } else if (DESKTOP){
     sec1.appendChild(costMeter('Processador', '…', 'medindo', null));
@@ -3643,8 +3380,7 @@ function renderCost(){
   // captura
   const f = document.createElement('div'); f.className = 'cfoot';
   const cs = document.createElement('span');
-  const capTxt = ts ? 'Captura turbo · jogo a ' + Math.round(ts.win) + ' fps · enviando ' + Math.round(ts.out)
-    : (fastCapture ? 'Captura modo rápido' : 'Captura normal') + (si && si.capFps != null ? ' · ' + Math.round(si.capFps) + ' fps' : '');
+  const capTxt = (engine.share && engine.share.links.size ? 'Captura pelo motor' : fastCapture ? 'Captura modo rápido' : 'Captura normal') + (si && si.capFps != null ? ' · ' + Math.round(si.capFps) + ' fps' : '');
   cs.textContent = privateOn ? 'Tela privada ligada · seus amigos veem a sua mensagem' : capTxt;
   const rb = document.createElement('button'); rb.type = 'button'; rb.className = 'ghost'; rb.textContent = 'Relatório completo';
   rb.onclick = () => { closePop(); openDiag(); };
@@ -3661,7 +3397,7 @@ function renderCost(){
 let amAway = false, awayWhy = '', awayAsk = null, lastInput = Date.now();
 let AWAY_ASK_MS = 45 * 60000, AWAY_GRACE_MS = 120000;
 const peerAway = new Map();    // id → {by}  (quem está ausente)
-const kickedIds = new Set();   // tirados da sala que ainda aparecem (versão antiga): não envio vídeo para eles
+const kickedIds = new Set();   // tirados da sala que ainda aparecem na lista (até o hub fechar a conexão): não envio vídeo para eles
 function roomBroadcast(data, except){ for (const m of members) if (me && m.id !== me.id && m.id !== except) hubSend({t: 'relay', to: m.id, data}); }
 const isAway = id => (me && id === me.id) ? amAway : peerAway.has(id);
 function goAway(why, by){
@@ -3872,7 +3608,7 @@ function onRelay(from, data){
   }
   if (data.k !== 'pause') return;
   const on = !!data.on;
-  if (!on && (peerAway.has(from) || kickedIds.has(from))) return;   // ausente continua pausado (um Telão antigo não sabe ficar ausente e pode pedir de novo)
+  if (!on && (peerAway.has(from) || kickedIds.has(from))) return;   // ausente continua pausado mesmo se pedir o vídeo de novo
   if (data.s && me && data.s !== me.id){ relayPause(data.s, from, on); return; }   // sou retransmissor desta tela
   if (on) pausedBy.set(from, true); else pausedBy.delete(from);
   const c = outCalls.get(from);
@@ -4938,26 +4674,20 @@ function buildFloatChat(f){
 }
 
 /* ---------- Camada por cima do jogo: reações e chat ---------- */
-const overlayItemAvailable = () => DESKTOP && !!window.telaoDesktop.overlayItem;
 const chatOverlayOn = () => !!store.get('overlayChat', true);
 function overlaySend(item){
   if (!me || !localStream || !overlayAvailable()) return;
   if (item.kind === 'chat' ? !chatOverlayOn() : !overlayOn()) return;
-  if (nativeOv && helper.ready){
-    const ok = v => typeof v === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,/.test(v) && v.length < 1100000 ? v : '';
-    const img = ok(item.img), av = img.length + ok(item.av).length < 1800000 ? ok(item.av) : '';
-    helperSend({cmd: 'ovitem', kind: item.kind === 'chat' ? 'chat' : 'react', text: String(item.text || '').slice(0, 220), who: String(item.who || '').slice(0, 24), img, av});
-    return;
-  }
-  if (overlayItemAvailable()){ try{ window.telaoDesktop.overlayItem(item); }catch{} return; }
-  // app antigo: só emojis curtos
-  if (item.kind === 'react' && item.text && item.text.length <= 4) window.telaoDesktop.overlayReact(item.text, item.who);
+  if (!nativeOv || !helper.ready) return;
+  const ok = v => typeof v === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,/.test(v) && v.length < 1100000 ? v : '';
+  const img = ok(item.img), av = img.length + ok(item.av).length < 1800000 ? ok(item.av) : '';
+  helperSend({cmd: 'ovitem', kind: item.kind === 'chat' ? 'chat' : 'react', text: String(item.text || '').slice(0, 220), who: String(item.who || '').slice(0, 24), img, av});
 }
 
 /* ---------- Retransmissão entre amigos ----------
    Quem transmite com a internet no limite (ou que não consegue chegar em alguém) pede a um amigo que já está
    assistindo para repassar o vídeo aos outros. O amigo pode parar quando quiser (e desligar de vez nas Opções). */
-const RELAY_BW_HOLD = 20000, RELAY_UNREACH_MS = 45000, RELAY_MIN_VER = '1.9.0';
+const RELAY_BW_HOLD = 20000, RELAY_UNREACH_MS = 45000;
 let myUp = (store.get('upKbps', null) || {}).v || 0;   // maior upload já medido aqui (kbps)
 let myHw = store.get('hwEnc', null);                    // este PC codifica pela placa de vídeo?
 const relayAllowed = () => !PHONE && store.get('relayOk', true) !== false;   // celular nunca repassa (bateria e dados)
@@ -4972,7 +4702,7 @@ let bwSince = 0, lastRelayTick = 0, relayCooldown = 0;
 // lado de quem retransmite
 const relayOut = new Map();      // "S|V" → {s, v, call, ok, want, paused}
 const relayPlanOf = new Map();   // S → {q, codec}
-const supportsRelay = id => { const x = peerVer.get(id); return !!(x && x.v && cmpVer(x.v, RELAY_MIN_VER) >= 0); };
+const supportsRelay = id => { const x = peerVer.get(id); return !!(x && x.v); };   // já se apresentou (anunciou a versão)
 const isRelayHub = id => [...relayVia.values()].includes(id);
 
 function sendBulletin(){
@@ -5300,7 +5030,7 @@ function statsTick(){
       s.st += dt; s.va += dt * n; s.ma = Math.max(s.ma, n);
       const q = QUALITY[currentQ()];
       if (q && q.h >= 1080 && q.fps >= 60) s.hq += dt;
-      if (turboActive() || (engine.share && engine.share.links.size)) s.tb += dt;
+      if (engine.share && engine.share.links.size) s.tb += dt;
       s.la = Math.max(s.la, lateOf(now));
       const gname = statsGame && statsGame.name;
       if (gname){ const e = s.g[gname] || [0, 0]; e[0] += dt; if (statsGame.id) e[1] = statsGame.id; s.g[gname] = e; }
@@ -5333,7 +5063,7 @@ const ACH = [
   {id: 'lo', n: 'Lotação', d: 'assistindo ao mesmo tempo', v: s => s.ma, t: [2, 3, 4, 5], f: n => n + (n === 1 ? ' pessoa' : ' pessoas')},
   {id: 'mt', n: 'Maratona', d: 'transmitindo sem parar', v: s => s.lg, t: [2, 4, 6, 8].map(HRS), f: fmtH},
   {id: 'hd', n: 'Alta definição', d: 'transmitindo em 1080p60', v: s => s.hq, t: [5, 20, 50, 100].map(HRS), f: fmtH},
-  {id: 'tb', n: 'Turbinado', d: 'com o motor ou a captura turbo', v: s => s.tb, t: [5, 20, 50, 100].map(HRS), f: fmtH},
+  {id: 'tb', n: 'Turbinado', d: 'com o motor de vídeo', v: s => s.tb, t: [5, 20, 50, 100].map(HRS), f: fmtH},
   {id: 'ap', n: 'Aplaudido', d: 'reações recebidas', v: s => s.rr, t: [100, 500, 3000, 10000], f: fmtN},
   {id: 'es', n: 'Espectador', d: 'assistindo os amigos', v: s => s.wa, t: [5, 20, 50, 100].map(HRS), f: fmtH},
   {id: 'fa', n: 'Fã de carteirinha', d: 'assistindo um mesmo amigo', v: s => Math.max(0, ...Object.values(s.w)), t: [5, 20, 50, 100].map(HRS), f: fmtH},
@@ -5492,7 +5222,7 @@ function renderStats(){
   };
   const fav = Object.entries(s.w).sort((a, c) => c[1] - a[1])[0];
   const stk = statsStreak(s);
-  sec('Transmitindo', [['Em alta qualidade (1080p60 ou mais)', fmtH(s.hq)], ['Com o motor ou a captura turbo', fmtH(s.tb)], ['Reações recebidas', fmtN(s.rr)], ['Internet enviada', s.bs >= 1024 ? (s.bs / 1024).toFixed(1).replace('.', ',') + ' GB' : Math.round(s.bs) + ' MB']],
+  sec('Transmitindo', [['Em alta qualidade (1080p60 ou mais)', fmtH(s.hq)], ['Com o motor de vídeo', fmtH(s.tb)], ['Reações recebidas', fmtN(s.rr)], ['Internet enviada', s.bs >= 1024 ? (s.bs / 1024).toFixed(1).replace('.', ',') + ' GB' : Math.round(s.bs) + ' MB']],
       [[fmtH(s.st), 'transmitidas'], [fmtH(s.va), 'assistidas pelos amigos'], [String(s.ma), 'maior plateia'], [fmtH(s.lg), 'maior transmissão']]);
   sec('Assistindo', [['Horas assistindo', fmtH(s.wa)], ['Quem ' + (mine ? 'você' : name) + ' mais assiste', fav ? fav[0] + ' · ' + fmtH(fav[1]) : '–'], ['Reações enviadas', fmtN(s.ra)], ['Clipes salvos', fmtN(s.cl)]]);
   sec('Sala e grupo', [['Noites no Telão', fmtN(s.ni)], ['Semanas seguidas', stk.cur + ' · recorde ' + stk.best], ['Mensagens e figurinhas', fmtN(s.ms)], ['Retransmitindo para amigos', fmtH(s.rl)], ['Transmitiu mais tarde', fmtLate(s.la)]]);
@@ -5628,10 +5358,8 @@ function syncMemOpt(){
 function syncOpts(){
   $('#optRelay').checked = relayAllowed();
   $('#optH265').checked = h265Auto();
-  $('#optPerfSec').hidden = !(DESKTOP && (window.telaoDesktop.shell || 0) >= PRIO_SHELL);
+  $('#optPerfSec').hidden = !DESKTOP;
   $('#optGpuPrio').checked = !!store.get('gpuPrio', true);
-  $('#optNativeOvBox').hidden = !(DESKTOP && (window.telaoDesktop.shell || 0) >= NATIVE_OV_SHELL);
-  $('#optNativeOv').checked = !!store.get('nativeOverlay', true);
   $('#optEngineBox').hidden = !engineAllowed();
   $('#optEngine').checked = store.get('engine', true) !== false;
   $('#optNvBox').hidden = !(engineAllowed() && engine.caps && engine.caps.nvenc !== undefined && (engine.caps.nvenc || /NVIDIA/i.test(engine.caps.encNames || '')));
@@ -5654,7 +5382,6 @@ function initOpts(){
     sendBulletin();
   };
   $('#optH265').onchange = () => { store.set('h265auto', $('#optH265').checked); h265PrefCache = null; toast('Vale a partir da próxima conexão (comece a transmitir de novo, ou recarregue quem assiste).'); };
-  $('#optNativeOv').onchange = () => { store.set('nativeOverlay', $('#optNativeOv').checked); if (localStream && (overlayOn() || chatOverlayOn())){ hideOverlay(); showOverlay(); } };
   $('#optTestWin').onclick = async () => {
     let ok = false; try{ ok = await window.telaoDesktop.openTest(room || ''); }catch{}
     toast(ok ? 'Abrindo a janela de teste' + (room ? ': ela já vem com o código da sala ' + room : '') + '.' : 'Não consegui abrir a janela de teste.', ok ? 'ok' : 'warn', 8000);
@@ -5716,244 +5443,25 @@ function watchFastWindow(hwnd, stream){
   }, 3000);
 }
 
-/* ---------- Captura turbo (app 1.12+, com o Telão Audio que vem junto) ----------
-   O Telão Audio pega cada quadro da janela direto do Windows, reduz e converte na placa de vídeo e só avisa
-   "quadro pronto". Assim a imagem não passa pelo motor de captura do Chromium (que no PC do Haru travava em ~40 fps).
-     gpu: a imagem fica na placa e o codificador lê de lá (zero cópia)
-     mem: a imagem vem pela memória (plano B, se a placa não deixar compartilhar)
-   A transmissão continua sendo o mesmo WebRTC de sempre: quem assiste não percebe diferença nenhuma. */
-const TURBO_SHELL = 9;
-const turboAvailable = () => DESKTOP && (window.telaoDesktop.shell || 0) >= TURBO_SHELL && !!window.telaoDesktop.turboImport &&
-  typeof MediaStreamTrackGenerator === 'function' && typeof VideoFrame === 'function';
-const turboOn = () => !!store.get('turbo', false);
-const turboModes = () => store.get('turboMode', 'gpu') === 'mem' ? ['mem', 'gpu'] : ['gpu', 'mem'];
-const TURBO_MODE_TXT = {gpu: 'pela placa', mem: 'pela memória'};
-const turboSessions = new Map();   // geração → sessão
-// Horário do quadro (o WebRTC usa para o ritmo de quem assiste). Teste: __turboBadTs = horário parado, o defeito da 1.12.0.
-const turboTs = () => window.__turboBadTs ? 1000 : Math.round(performance.now() * 1000);
-let turboGen = 0, turboPortP = null, turboShare = null, turboLast = null, turboTest = null;
-const turboLog = [];
-const turboNote = t => { turboLog.push(new Date().toLocaleTimeString('pt-BR') + ' ' + t); if (turboLog.length > 30) turboLog.shift(); };
-
-// Canal por onde o app entrega os quadros da placa (VideoFrame não atravessa a ponte do app, então vem por MessagePort).
-function turboPort(){
-  if (turboPortP) return turboPortP;
-  turboPortP = new Promise(resolve => {
-    const timer = setTimeout(() => { removeEventListener('message', on); turboPortP = null; resolve(null); }, 3000);
-    function on(ev){
-      if (ev.source !== window || !ev.data || !ev.data.telaoTurboPort || !ev.ports || !ev.ports[0]) return;
-      removeEventListener('message', on); clearTimeout(timer);
-      const port = ev.ports[0];
-      port.onmessage = m => {
-        const d = m.data || {}, s = turboSessions.get(d.gen);
-        if (s && d.f) s.push(d.f); else if (d.f) try{ d.f.close(); }catch{}
-      };
-      resolve(port);
-    }
-    addEventListener('message', on);
-    try{ window.telaoDesktop.turboOpen(); }catch{ clearTimeout(timer); removeEventListener('message', on); turboPortP = null; resolve(null); }
-  });
-  return turboPortP;
-}
+/* ---------- Alvo da captura do Telão Audio (motor de vídeo) ---------- */
 // Mesma placa que o Chromium usa: o Telão Audio cria as imagens nela (imagem de outra placa não dá pra compartilhar).
-let turboGpuIds = null;
-async function turboGpu(){
-  if (turboGpuIds) return turboGpuIds;
+let captureGpuIds = null;
+async function captureGpu(){
+  if (captureGpuIds) return captureGpuIds;
   try{
     const g = diagGpu || await window.telaoDesktop.gpu();
     const d = (g && g.devices || []).find(x => x.active) || (g && g.devices || [])[0];
-    turboGpuIds = {vendor: d ? d.vendorId || 0 : 0, device: d ? d.deviceId || 0 : 0};
-  }catch{ turboGpuIds = {vendor: 0, device: 0}; }
-  return turboGpuIds;
+    captureGpuIds = {vendor: d ? d.vendorId || 0 : 0, device: d ? d.deviceId || 0 : 0};
+  }catch{ captureGpuIds = {vendor: 0, device: 0}; }
+  return captureGpuIds;
 }
-async function turboTarget(chosen){
+async function captureTarget(chosen){
   if (!chosen) return null;
   if (chosen.type === 'window'){ const hwnd = chosen.id.split(':')[1] || ''; return hwnd ? {target: 'hwnd', hwnd} : null; }
   let r = null; try{ r = await window.telaoDesktop.monitorRect(chosen.id); }catch{}
   return r ? {target: 'monitor', x: Math.round(r.x + r.w / 2), y: Math.round(r.y + r.h / 2)} : null;
 }
-
-// Abre uma captura turbo. Resolve com a sessão quando o primeiro quadro chega; rejeita com o motivo se não der.
-function startTurbo(o){
-  return new Promise(async (resolve, reject) => {
-    if (!helper.ready) return reject(new Error('o Telão Audio não está conectado'));
-    const gpu = o.mode !== 'mem';
-    if (gpu && !(await turboPort())) return reject(new Error('o app não abriu o canal da placa'));
-    const ids = await turboGpu();
-    const gen = ++turboGen;
-    let gtr, writer;
-    try{ gtr = new MediaStreamTrackGenerator({kind: 'video'}); writer = gtr.writable.getWriter(); }
-    catch(e){ return reject(new Error('gerador de vídeo indisponível (' + e.message + ')')); }
-    const s = {gen, mode: gpu ? 'gpu' : 'mem', track: gtr, boxW: o.w, boxH: o.h, fps: o.fps, w: 0, h: 0, sw: 0, sh: 0, fmt: '', adapter: '',
-               frames: 0, dropped: 0, dropBusy: 0, dropSlot: 0, written: 0, lat: [], writing: 0, stat: null, ended: false, started: false, imported: false, onEnd: null, t0: performance.now()};
-    let ws = null, timer = null;
-    const cleanup = () => {
-      clearTimeout(timer);
-      turboSessions.delete(gen);
-      try{ if (ws && ws.readyState === 1) ws.send(JSON.stringify({cmd: 'vstop'})); }catch{}
-      try{ if (ws) ws.close(); }catch{}
-      if (gpu) try{ window.telaoDesktop.turboRelease(gen); }catch{}
-      try{ gtr.stop(); }catch{}
-    };
-    const info = () => ({mode: s.mode, w: s.w, h: s.h, sw: s.sw, sh: s.sh, fmt: s.fmt, adapter: s.adapter, border: s.border, minUpdate: s.minUpdate, stat: s.stat, frames: s.frames, dropped: s.dropped,
-                         noCopy: s.noCopy || null});
-    const end = reason => {   // parou sozinha (janela fechou, Telão Audio fechou...)
-      if (s.ended) return;
-      s.ended = true; cleanup();
-      turboLast = Object.assign(info(), {reason});
-      turboNote('turbo ' + s.mode + ' parou: ' + reason);
-      if (s.onEnd) s.onEnd(reason);
-    };
-    const fail = err => { if (s.started) return end(err.message); if (s.ended) return; s.ended = true; cleanup(); turboNote('turbo ' + s.mode + ' não iniciou: ' + err.message); reject(err); };
-    s.stop = () => { if (!s.ended){ s.ended = true; cleanup(); turboLast = Object.assign(info(), {reason: 'parada'}); } };
-    s.info = info;
-    s.push = f => {
-      if (s.ended){ try{ f.close(); }catch{} return; }
-      if (s.writing >= 2){ try{ f.close(); }catch{} s.dropped++; s.dropBusy++; return; }   // o codificador está atrasado: descarta em vez de acumular atraso
-      let vf = null;
-      if (s.mode === 'gpu' && !s.noCopy){
-        // O quadro que vem da placa carrega o horário de quando a imagem foi importada (sempre o mesmo), e com isso o
-        // WebRTC passa a mandar em rajadas: engasgo fixo a cada ~0,5 s pra quem assiste. Copiar para um quadro novo
-        // (cópia dentro da própria placa) dá a ele o horário certo.
-        try{
-          const W = f.displayWidth, Hh = f.displayHeight;
-          if (!s.cv || s.cv.width !== W || s.cv.height !== Hh){ s.cv = new OffscreenCanvas(W, Hh); s.cg = s.cv.getContext('2d', {alpha: false}); }
-          s.cg.drawImage(f, 0, 0);
-          vf = new VideoFrame(s.cv, {timestamp: turboTs()});
-        }catch(e){ s.noCopy = String(e && e.message || e); turboNote('cópia do quadro da placa falhou: ' + s.noCopy); }
-      }
-      // (trocar só o horário de um quadro já pronto não adianta: o WebRTC continua vendo o horário original)
-      if (vf) try{ f.close(); }catch{}
-      else vf = f;
-      const t0 = performance.now();
-      s.writing++; s.frames++; s.lastAt = t0;
-      writer.write(vf).then(() => { s.writing--; s.written++; s.lat.push(performance.now() - t0); if (s.lat.length > 240) s.lat.shift(); },
-                         () => { s.writing--; try{ vf.close(); }catch{} });
-      if (!s.started){ s.started = true; clearTimeout(timer); turboNote('turbo ' + s.mode + ' ok: ' + s.sw + 'x' + s.sh + ' → ' + s.w + 'x' + s.h + ' ' + s.fmt + (s.adapter ? ' · ' + s.adapter : '')); resolve(s); }
-    };
-    try{ ws = new WebSocket(HELPER_URL); }catch{ return fail(new Error('não consegui falar com o Telão Audio')); }
-    ws.binaryType = 'arraybuffer';
-    turboSessions.set(gen, s);
-    timer = setTimeout(() => fail(new Error(s.w ? 'nenhum quadro chegou' : 'o Telão Audio não respondeu (precisa do que vem com o app 1.12)')), 7000);
-    ws.onopen = () => ws.send(JSON.stringify({cmd: 'vstart', mode: s.mode, pid: String(window.telaoDesktop.mainPid || 0), target: o.target, hwnd: String(o.hwnd || ''),
-      x: String(o.x || 0), y: String(o.y || 0), w: String(o.w), h: String(o.h), fps: String(o.fps), vendor: String(ids.vendor || 0), device: String(ids.device || 0)}));
-    ws.onmessage = async ev => {
-      if (s.ended) return;
-      if (typeof ev.data !== 'string'){
-        const b = ev.data;
-        if (s.mode !== 'mem' || !(b instanceof ArrayBuffer) || b.byteLength < 16) return;
-        const dv = new DataView(b);
-        if (dv.getUint32(0, true) !== 0x31465654) return;   // "TVF1"
-        { const t = performance.now(); if (s.vfLast) s.vfGap = Math.max(s.vfGap || 0, t - s.vfLast); s.vfLast = t; s.vfN = (s.vfN || 0) + 1; }
-        const w = dv.getUint32(4, true), h = dv.getUint32(8, true), n = w * h * 3 / 2;
-        if (!w || !h || b.byteLength < 16 + n) return;
-        let f;
-        try{ f = new VideoFrame(new Uint8Array(b, 16, n), {format: 'NV12', codedWidth: w, codedHeight: h, timestamp: turboTs(),
-                                colorSpace: {primaries: 'bt709', transfer: 'bt709', matrix: 'bt709', fullRange: false}}); }
-        catch(e){ return fail(new Error('quadro inválido (' + e.message + ')')); }
-        s.push(f);
-        return;
-      }
-      let m; try{ m = JSON.parse(ev.data); }catch{ return; }
-      if (m.type === 'vstarted'){
-        Object.assign(s, {w: m.w | 0, h: m.h | 0, sw: m.sw | 0, sh: m.sh | 0, fmt: String(m.fmt || ''), adapter: String(m.adapter || ''), border: m.border, minUpdate: m.minUpdate});
-        if (gpu){
-          let r;
-          try{ r = await window.telaoDesktop.turboImport({gen, fmt: s.fmt, w: s.w, h: s.h, slots: m.slots}); }catch(e){ r = {ok: false, error: e.message}; }
-          if (s.ended) return;
-          if (!r || !r.ok) return fail(new Error('o app não conseguiu usar a imagem da placa (' + ((r && r.error) || '?') + ')'));
-          s.imported = true;
-        }
-      } else if (m.type === 'vf'){
-        { const t = performance.now(); if (s.vfLast) s.vfGap = Math.max(s.vfGap || 0, t - s.vfLast); s.vfLast = t; s.vfN = (s.vfN || 0) + 1; }
-        if (s.imported && !window.telaoDesktop.turboFrame(gen, m.s | 0)){ s.dropped++; s.dropSlot++; }
-      } else if (m.type === 'vstat'){
-        s.stat = m;
-      } else if (m.type === 'verror'){
-        fail(new Error(m.message || 'erro na captura'));
-      } else if (m.type === 'vended'){
-        end(m.reason || 'a captura parou');
-      }
-    };
-    ws.onclose = () => { if (!s.ended) fail(new Error('o Telão Audio fechou a conexão')); };
-  });
-}
-// Abre no modo preferido; se falhar, tenta o outro (e lembra qual funcionou).
-async function startTurboAny(tgt, q){
-  let err = null;
-  const modes = turboModes();
-  for (const mode of modes){
-    try{
-      const s = await startTurbo(Object.assign({}, tgt, {w: q.w, h: q.h, fps: q.fps, mode}));
-      if (mode !== modes[0]) store.set('turboMode', mode);
-      return s;
-    }catch(e){ err = e; }
-  }
-  throw err || new Error('captura turbo indisponível');
-}
-
-// Na transmissão: começa com a captura normal (imediato) e troca pela turbo assim que ela entrega o primeiro quadro.
-async function engageTurbo(chosen, stream){
-  const tgt = await turboTarget(chosen);
-  if (!tgt){ toast('A captura turbo não achou o alvo escolhido. Seguindo com a captura normal.', 'warn', 7000); return; }
-  let ses;
-  const q = turboWantBox() || QUALITY[currentQ()];
-  try{ ses = await startTurboAny(tgt, q); }
-  catch(e){ if (localStream === stream) toast('A captura turbo não iniciou (' + e.message + '). Seguindo com a captura normal.', 'warn', 9000); return; }
-  if (localStream !== stream){ ses.stop(); return; }
-  // Rede de segurança do modo pela placa: se a imagem chegar preta, vai pela memória (que sempre mostra o que chega).
-  if (ses.mode === 'gpu' && lumaBlack(await trackLuma(ses.track))){
-    turboNote('pela placa chegou imagem preta; trocando para a memória');
-    ses.stop();
-    try{ ses = await startTurbo(Object.assign({}, tgt, {w: q.w, h: q.h, fps: q.fps, mode: 'mem'})); }
-    catch(e){ if (localStream === stream) toast('A captura turbo não iniciou (' + e.message + '). Seguindo com a captura normal.', 'warn', 9000); return; }
-    if (!lumaBlack(await trackLuma(ses.track))) store.set('turboMode', 'mem');
-    if (localStream !== stream){ ses.stop(); return; }
-  }
-  attachTurbo(ses, stream, chosen, tgt);
-  toast('Captura turbo ligada (' + TURBO_MODE_TXT[ses.mode] + ', ' + ses.w + 'x' + ses.h + ').' +
-        (ses.border ? ' Neste Windows aparece uma borda amarela em volta do jogo: ela é só na sua tela, não vai na transmissão.' : ''), '', ses.border ? 9000 : 4000);
-}
-function attachTurbo(ses, stream, chosen, tgt){
-  const prev = turboShare;
-  const olds = stream.getVideoTracks();
-  let standby = prev ? prev.standby : null;
-  try{ ses.track.contentHint = 'motion'; }catch{}
-  stream.addTrack(ses.track);
-  for (const t of olds){
-    t.removeEventListener('ended', stopShare); stream.removeTrack(t);
-    if (!standby && !(t instanceof MediaStreamTrackGenerator) && t.readyState === 'live'){
-      // A captura normal fica de reserva, pequena e a poucos quadros/s: é ela que a miniatura mostra (ver pipTrack); se a
-      // turbo cair, ela volta na hora, e enquanto há uma captura aberta o Chromium continua dizendo qual codificador está em uso.
-      standby = t;
-      t.applyConstraints({width: {max: PIP_TURBO_PREVIEW.w}, height: {max: PIP_TURBO_PREVIEW.h}, frameRate: {max: PIP_TURBO_PREVIEW.fps}}).catch(() => {});
-    } else try{ t.stop(); }catch{}
-  }
-  turboShare = {ses, stream, chosen, tgt, standby, pending: null, retuning: false};
-  ses.onEnd = reason => turboLost(ses, reason);
-  if (prev && prev.ses !== ses) prev.ses.stop();
-  swapOutgoingVideo();
-  turboAdaptTimer();
-}
-async function turboLost(ses, reason){
-  if (!turboShare || turboShare.ses !== ses) return;
-  const {stream, chosen, standby} = turboShare;
-  turboShare = null;
-  if (localStream !== stream){ if (standby) try{ standby.stop(); }catch{} return; }
-  if (/janela fechou/.test(reason || '')){ if (standby) try{ standby.stop(); }catch{} toast('A janela do jogo fechou: transmissão encerrada.', 'warn', 6000); stopShare(); return; }
-  toast('A captura turbo parou (' + reason + '). Voltando para a captura normal…', 'warn', 8000);
-  if (standby && standby.readyState === 'live'){
-    const q = QUALITY[currentQ()];
-    try{ await standby.applyConstraints({width: {ideal: q.w, max: q.w}, height: {ideal: q.h, max: q.h}, frameRate: {ideal: q.fps, max: q.fps}}); }catch{}
-    if (localStream !== stream){ try{ standby.stop(); }catch{} return; }
-    for (const t of stream.getVideoTracks()){ stream.removeTrack(t); try{ t.stop(); }catch{} }
-    stream.addTrack(standby);
-    standby.addEventListener('ended', stopShare);
-    swapOutgoingVideo();
-    return;
-  }
-  await normalCaptureAgain(stream, chosen);
-}
+// Motor parou sem captura normal aberta: abre de novo a captura do Chromium na mesma janela/tela.
 async function normalCaptureAgain(stream, chosen){
   const q = QUALITY[currentQ()];
   try{
@@ -5971,108 +5479,6 @@ async function normalCaptureAgain(stream, chosen){
     stopShare();
   }
 }
-/* Tamanho sob medida: a turbo captura no maior tamanho que alguém está assistindo de verdade (até o da qualidade
-   escolhida). Se todo mundo assiste em 720p, ela já entrega 720p pronta da placa e o Telão não precisa reduzir nada
-   antes de codificar (reduzir a imagem da placa é o que deixava a codificação lenta). */
-function turboWantBox(){
-  const q = QUALITY[currentQ()];
-  let h = 0, fps = 0, n = 0;
-  for (const [pid, c] of outCalls){
-    const pc = c.peerConnection;
-    if (!pc || pc.connectionState !== 'connected') continue;
-    const hub = isRelayHub(pid);
-    if (pausedBy.get(pid) && !hub) continue;
-    n++;
-    const w = hub ? 0 : wantH.get(pid);   // quem repassa para outros recebe sempre o tamanho cheio
-    h = Math.max(h, smallWant(w, q.h) ? Math.round(q.h / 2) : q.h);
-    fps = Math.max(fps, planFor(q, q.h, w, wantHz.get(pid)).fps);
-  }
-  if (!n) return null;
-  return {w: Math.round(q.w * h / q.h / 2) * 2, h, fps: fps || q.fps};
-}
-/* Vigia da turbo pela placa: cada quadro dela passa pelo processo de vídeo do Telão, o mesmo que decodifica e mostra
-   as telas dos amigos. Quando os dois disputam (assistindo alguém enquanto transmite), os quadros ficam na fila e são
-   descartados: o Telão Audio entrega 60 e saem 15. Se a entrega cair bem abaixo do que chega por alguns segundos,
-   troca para a turbo pela memória (quadro vem pronto pelo processador, sem passar por ali), sem cortar. */
-const turboWatched = () => { let n = 0; for (const pid of tiles.keys()) if (!hiddenIds.has(pid)) n++; return n; };
-function turboRate(t){
-  const ses = t.ses, now = performance.now(), r = ses.rate || (ses.rate = {at: now, frames: ses.frames, written: ses.written, busy: ses.dropBusy, slot: ses.dropSlot, vf: ses.vfN || 0, fps: null});
-  const dt = (now - r.at) / 1000;
-  if (dt < 0.9) return r.fps;
-  r.fps = {out: (ses.written - r.written) / dt, busy: (ses.dropBusy - r.busy) / dt, slot: (ses.dropSlot - r.slot) / dt, vf: ((ses.vfN || 0) - r.vf) / dt, push: (ses.frames - r.frames) / dt,
-           gap: ses.vfGap || 0, lag: Math.max(0, now - r.at - 1000)};
-  ses.vfGap = 0;
-  Object.assign(r, {at: now, frames: ses.frames, written: ses.written, busy: ses.dropBusy, slot: ses.dropSlot, vf: ses.vfN || 0});
-  // linha do tempo (relatório): o que chegou do Telão Audio, o que foi entregue, o que o WebRTC viu e enviou
-  const si = sendInfo && Date.now() - sendInfo.at < 3000 ? sendInfo : null;
-  turboHist.push({at: Date.now(), mode: ses.mode, helper: ses.stat ? +ses.stat.out || 0 : 0, f: r.fps, src: si && si.capFps != null ? si.capFps : null,
-                  send: si && si.worst ? si.worst.fps : null, why: si && si.worst ? si.worst.reason || '' : '', watch: turboWatched()});
-  if (turboHist.length > 30) turboHist.shift();
-  return r.fps;
-}
-const TURBO_STARVE_S = 4;
-function turboStarveCheck(t){
-  const ses = t.ses, r = turboRate(t), helperOut = ses.stat && +ses.stat.out;
-  if (!r || !(helperOut >= 24) || performance.now() - ses.t0 < 5000) { t.starve = 0; return false; }
-  const want = Math.min(helperOut, ses.fps || helperOut), low = r.out < want * 0.7;
-  t.starve = low ? (t.starve || 0) + 1 : 0;
-  if (t.starve < (window.__turboStarveS || TURBO_STARVE_S)) return false;
-  t.starve = 0;
-  const what = 'turbo ' + ses.mode + ' entregando ' + Math.round(r.out) + ' de ' + Math.round(helperOut) + ' fps (descartando ' + Math.round(r.busy) +
-               '/s com o codificador ocupado, ' + Math.round(r.slot) + '/s sem quadro) · assistindo ' + turboWatched() + ' tela(s)';
-  if (ses.mode === 'gpu' && !t.memTried){
-    t.memTried = true;
-    turboNote(what + ' → trocando para a memória');
-    turboStarved = {at: Date.now(), what, to: 'mem'};
-    toast('A captura turbo pela placa estava perdendo quadros (' + Math.round(r.out) + ' de ' + Math.round(helperOut) + ' fps). Trocando para a turbo pela memória, sem cortar.', '', 6000);
-    retuneTurbo({w: ses.boxW, h: ses.boxH, fps: ses.fps}, 'mem');
-    return true;
-  }
-  if (!t.starveNoted){ t.starveNoted = true; turboNote(what); turboStarved = {at: Date.now(), what, to: null}; }
-  return false;
-}
-let turboStarved = null;
-const turboHist = [];
-let turboAdaptIv = null;
-function turboAdaptTimer(){
-  clearInterval(turboAdaptIv);
-  turboAdaptIv = setInterval(() => {
-    const t = turboShare;
-    if (!t || !turboActive()){ if (!t){ clearInterval(turboAdaptIv); turboAdaptIv = null; } return; }
-    if (t.retuning) return;
-    if (turboStarveCheck(t)) return;
-    if (window.__turboAdaptOff) return;
-    const b = turboWantBox();
-    if (!b || (b.w === t.ses.boxW && b.h === t.ses.boxH && b.fps === t.ses.fps)){ t.pending = null; return; }
-    const key = b.w + 'x' + b.h + '@' + b.fps, now = Date.now();
-    if (!t.pending || t.pending.key !== key){ t.pending = {key, since: now}; return; }
-    // subir (alguém pôs em tela cheia) vale rápido; descer espera mais, para não ficar reabrindo a captura à toa
-    const up = b.h > t.ses.boxH || b.fps > t.ses.fps, waitMs = (window.__turboAdaptMs || 1) * (up ? 1500 : 5000);
-    if (now - t.pending.since >= waitMs){ t.pending = null; retuneTurbo(b); }
-  }, 1000);
-}
-// Abre uma captura turbo nova no tamanho/ritmo novo e troca sem cortar (qualidade mudou ou quem assiste mudou).
-async function retuneTurbo(box, mode){
-  const t = turboShare;
-  if (!t || t.retuning) return;
-  const b = box || turboWantBox() || QUALITY[currentQ()];
-  const md = mode || t.ses.mode;
-  if (t.ses.boxW === b.w && t.ses.boxH === b.h && t.ses.fps === b.fps && md === t.ses.mode) return;
-  t.retuning = true;
-  try{
-    const ns = await startTurbo(Object.assign({}, t.tgt, {w: b.w, h: b.h, fps: b.fps, mode: md}));
-    if (turboShare !== t || localStream !== t.stream){ ns.stop(); return; }
-    turboNote('turbo: ' + (ns.mode !== t.ses.mode ? 'modo ' + t.ses.mode + ' → ' + ns.mode + ', ' : '') + 'tamanho ' + t.ses.w + 'x' + t.ses.h + '@' + t.ses.fps + ' → ' + ns.w + 'x' + ns.h + '@' + ns.fps);
-    attachTurbo(ns, t.stream, t.chosen, t.tgt);
-  }catch(e){ toast('Não consegui ajustar a captura turbo (' + e.message + ').', 'warn', 7000); }
-  finally{ t.retuning = false; }
-}
-function stopTurboShare(){
-  const t = turboShare; turboShare = null;
-  clearInterval(turboAdaptIv); turboAdaptIv = null;
-  if (t){ t.ses.stop(); if (t.standby) try{ t.standby.stop(); }catch{} }
-}
-const turboActive = () => !!(turboShare && localStream && localStream.getVideoTracks()[0] === turboShare.ses.track);
 
 /* ---------- Motor de vídeo (app nível 14: Telão Audio 1.18) ----------
    Quem transmite: o Telão Audio captura o jogo e codifica na placa de vídeo (Media Foundation); o Chromium só empacota
@@ -6083,7 +5489,6 @@ const turboActive = () => !!(turboShare && localStream && localStream.getVideoTr
    pede quadro completo à toa).
    Rede de segurança em camadas: se qualquer parte falhar, aquela transmissão/tela volta sozinha para o caminho normal;
    dá para desligar em Opções → Desempenho; e o arquivo flags.json do repositório desliga em todo mundo de uma vez. */
-const ENGINE_SHELL = 14;
 const ENGINE_TINY264 = 'AAAAAWdCwAzcEBOwEQAAAwABAAADADwPFCuAAAAAAWjODyyAAAABZYiEBLyYoAA4oycnJycnJycnJycnJycnJ111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111114A=';
 const ENGINE_TINY265 = 'AAAAAUABDAH//wQIAAADAJ+oAAADAAA8ugJAAAAAAUIBAQQIAAADAJ+oAAADAAA8oAgICRZbqSTK8BaAgAAAAwCAAAAPBAAAAAFEAcFysGJAAAABKAGvdlgi6677//xbZV8rBcUMW9cJAvamZTUgKIGiXsCTBgi8AHXA';
 const ENGINE_WORKER = `
@@ -6227,7 +5632,7 @@ onmessage = e => {
 const engine = {w: null, open: false, caps: null, hwnd: '', remote: store.get('engineRemote', null) || {}, log: [], vid: 0, rid: 0, sid: 0,
                 share: null, last: null, byVid: new Map(), views: new Map(), wstats: null, waiters: [], tick: null, warnedView: false, starts: 0};
 const engineNote = t => { engine.log.push(new Date().toLocaleTimeString('pt-BR') + ' ' + t); if (engine.log.length > 40) engine.log.shift(); };
-const engineAllowed = () => DESKTOP && (window.telaoDesktop.shell || 0) >= ENGINE_SHELL && typeof RTCRtpScriptTransform === 'function' && !PHONE;
+const engineAllowed = () => DESKTOP && typeof RTCRtpScriptTransform === 'function' && !PHONE;
 const engineOn = () => engineAllowed() && store.get('engine', true) !== false && engine.remote.on !== false && !window.__engineOff;
 const engineSendOk = () => engineOn() && engine.remote.send !== false && engine.open && !!(engine.caps && engine.caps.enc && engine.caps.enc.h264) &&
                            typeof MediaStreamTrackGenerator === 'function' && typeof VideoFrame === 'function';
@@ -6295,7 +5700,7 @@ function engineHelper(m){
       if (m.crash) engineNote('o Telão Audio tinha fechado com erro: ' + String(m.crash).split('\n')[0].slice(0, 160));
       if (m.crash) engine.crash = String(m.crash).slice(0, 1500);
       // caiu no meio da transmissão e voltou: o motor entra de novo (antes ficava no caminho normal até o fim)
-      if (engine.lostAt && Date.now() - engine.lostAt < 10 * 60000 && localStream && !engine.share && !turboShare && !privateOn && lastChosen &&
+      if (engine.lostAt && Date.now() - engine.lostAt < 10 * 60000 && localStream && !engine.share && !privateOn && lastChosen &&
           (lastChosen.type === 'window' || lastChosen.type === 'screen')){
         const st = localStream, ch = lastChosen; engine.lostAt = 0;
         setTimeout(() => { if (localStream === st && !engine.share && engineSendOk()) engageEngine(ch, st).then(ok => { if (ok) engineNote('motor voltou depois do Telão Audio reconectar'); }).catch(() => {}); }, 2000);
@@ -6368,9 +5773,9 @@ const ENGINE_DUMMY = {h264: engineBlank(256, 144), h265: engineBlank(640, 360)};
 const ENGINE_STEPS = [360, 480, 540, 720, 900, 1080, 1440, 2160];
 const engineLinked = pid => !!(engine.share && engine.share.links.has(pid));
 async function engageEngine(chosen, stream){
-  const tgt = await turboTarget(chosen);
+  const tgt = await captureTarget(chosen);
   if (!tgt){ engineNote('motor: não achei o alvo da captura'); return false; }
-  const ids = await turboGpu();
+  const ids = await captureGpu();
   const r = await engineAsk({cmd: 'ecap', target: tgt.target, hwnd: String(tgt.hwnd || ''), x: String(tgt.x || 0), y: String(tgt.y || 0),
                              vendor: String(ids.vendor || 0), device: String(ids.device || 0), dd: engineDdOn() ? '1' : '0'}, m => m.type === 'ecapok' || m.type === 'ecaperr', 8000);
   if (localStream !== stream){ if (r && r.type === 'ecapok') engineCmd({cmd: 'estop'}); return true; }
@@ -6594,7 +5999,7 @@ function engineLinkHealth(){
 // A captura normal fica de reserva (miniatura e quem não está no motor). Com todo mundo no motor, ela fica pequena.
 function engineSyncStandby(){
   const E = engine.share;
-  if (!E || turboShare || !localStream) return;
+  if (!E || !localStream) return;
   const vt = localStream.getVideoTracks()[0]; if (!vt || vt.readyState !== 'live') return;
   let normal = 0, inEngine = 0;
   for (const [pid, c] of outCalls){
@@ -6614,7 +6019,7 @@ function engineSyncStandby(){
   if (!E.lowAt){ E.lowAt = now; return; }
   if (now - E.lowAt < 4000) return;
   E.low = true;
-  vt.applyConstraints({width: {max: PIP_TURBO_PREVIEW.w}, height: {max: PIP_TURBO_PREVIEW.h}, frameRate: {max: PIP_TURBO_PREVIEW.fps}}).catch(() => {});
+  vt.applyConstraints({width: {max: PIP_STANDBY.w}, height: {max: PIP_STANDBY.h}, frameRate: {max: PIP_STANDBY.fps}}).catch(() => {});
 }
 /* Captura do Chromium fechada: com todo mundo no motor por um tempo, ninguém vê a captura normal (só a miniatura), mas
    ela segue aberta no Chromium, com os quadros passando pelo processo de vídeo e ocupando memória. Ela fecha e uma trilha
@@ -6684,19 +6089,17 @@ function engineShareEnd(why, fallback){
   const off = E.off;
   for (const pid of [...E.links.keys()]) engineUnlink(pid, why, false, null, E);
   engineCmd({cmd: 'estop'});
-  let reopen = Promise.resolve();
   if (off){
-    if (fallback && localStream === E.stream){ E.off = off; reopen = engineCapOn(E, 'motor parou'); }
+    if (fallback && localStream === E.stream){ E.off = off; engineCapOn(E, 'motor parou').catch(() => {}); }
     else { engineCapDrop(E); try{ off.gen.stop(); }catch{} }
   }
-  else if (E.low && localStream === E.stream && !turboShare){
+  else if (E.low && localStream === E.stream){
     const vt = localStream.getVideoTracks()[0], q = QUALITY[currentQ()];
     if (vt) vt.applyConstraints({width: {ideal: q.w, max: q.w}, height: {ideal: q.h, max: q.h}, frameRate: {ideal: q.fps, max: q.fps}}).catch(() => {});
   }
   if (fallback && localStream === E.stream){
+    // se foi o Telão Audio que caiu, o app abre ele de novo e o motor volta sozinho (ver vcaps)
     toast('O motor de vídeo parou (' + why + '). A transmissão continua pelo caminho normal.', 'warn', 8000);
-    // Telão Audio caiu: a turbo também depende dele; o app abre ele de novo e o motor volta sozinho (ver vcaps)
-    if (why !== 'o Telão Audio fechou') reopen.then(() => { if (localStream === E.stream && DESKTOP && turboAvailable() && turboOn() && !turboShare) return engageTurbo(E.chosen, E.stream); }).catch(() => {});
   }
 }
 // Parâmetros do envio para quem está no motor: sem reduzir o vídeo de mentira e com folga de taxa para o vídeo de verdade.
@@ -6923,7 +6326,7 @@ function engineReport(){
   const L = [];
   if (!DESKTOP) return L;
   const c = engine.caps;
-  L.push('Motor de vídeo: ' + (!engineAllowed() ? 'indisponível (app nível ' + (window.telaoDesktop.shell || 0) + ')' :
+  L.push('Motor de vídeo: ' + (!engineAllowed() ? 'indisponível (só no app desktop)' :
     (store.get('engine', true) === false ? 'DESLIGADO nas Opções' : engine.remote.on === false ? 'DESLIGADO remotamente' : 'ligado') +
     ' · Telão Audio ' + (engine.open ? 'conectado' : 'desconectado') + (c ? ' · codifica ' + (['h264', 'h265'].filter(k => c.enc[k]).join('+') || 'nada') + ' · decodifica ' + (['h264', 'h265'].filter(k => c.dec[k]).join('+') || 'nada') : ' · sem resposta do motor (Telão Audio antigo?)') +
     (engine.remote.send === false ? ' · envio desligado remotamente' : '') + (engine.remote.view !== false ? '' : ' · tela desligada remotamente') + (engine.hwnd ? '' : ' · sem janela do app')));
@@ -6953,285 +6356,46 @@ function engineReport(){
   return L;
 }
 
-/* Teste no Diagnóstico: captura normal × turbo (placa) × turbo (memória) na janela do jogo, cada uma codificada
-   localmente na qualidade escolhida (nada vai para a rede). Mostra quantos quadros chegam e quantos saem. */
-async function trackLuma(track){
-  const v = document.createElement('video'); v.muted = true; v.playsInline = true;
-  v.srcObject = new MediaStream([track]);
-  try{ await v.play(); }catch{}
-  await sleep(700);
-  try{
-    const c = document.createElement('canvas'); c.width = 64; c.height = 36;
-    const g = c.getContext('2d', {willReadFrequently: true}); g.drawImage(v, 0, 0, 64, 36);
-    const d = g.getImageData(0, 0, 64, 36).data; let sum = 0, sq = 0; const n = d.length / 4;
-    for (let i = 0; i < d.length; i += 4){ const y = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]; sum += y; sq += y * y; }
-    const mean = sum / n;
-    return {mean, sd: Math.sqrt(Math.max(0, sq / n - mean * mean)), w: v.videoWidth, h: v.videoHeight};
-  }catch{ return null; }
-  finally{ v.pause(); v.srcObject = null; }
-}
-async function measureCapture(track, q, secs, ses){
-  const a = new RTCPeerConnection(), b = new RTCPeerConnection();
-  try{
-    a.onicecandidate = e => { if (e.candidate) b.addIceCandidate(e.candidate).catch(() => {}); };
-    b.onicecandidate = e => { if (e.candidate) a.addIceCandidate(e.candidate).catch(() => {}); };
-    // ritmo do lado de quem recebe: horário de cada quadro que chega (é o que define se a imagem anda lisa ou em rajadas)
-    const rx = {ts: [], on: false};
-    b.ontrack = e => {
-      if (e.track.kind !== 'video' || typeof MediaStreamTrackProcessor !== 'function') return;
-      const rd = new MediaStreamTrackProcessor({track: e.track}).readable.getReader();
-      (async () => { for (;;){ const {value, done} = await rd.read(); if (done) break; if (rx.on) rx.ts.push(value.timestamp); value.close(); } })().catch(() => {});
-    };
-    const tr = a.addTransceiver(track, {direction: 'sendonly', sendEncodings: [{maxBitrate: q.kbps * 1000, maxFramerate: q.fps}]});
-    const codec = currentCodec();
-    const caps = window.RTCRtpSender && RTCRtpSender.getCapabilities ? RTCRtpSender.getCapabilities('video') : null;
-    const mine = caps ? caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/' + codec.toLowerCase()) : [];
-    if (codec === 'H264') mine.sort((x, y) => h264Score(y.sdpFmtpLine) - h264Score(x.sdpFmtpLine));
-    if (mine.length) try{ tr.setCodecPreferences([...mine, ...caps.codecs.filter(c => /rtx|red|ulpfec|flexfec/i.test(c.mimeType))]); }catch{}
-    const kb = Math.round(q.kbps * 0.9);
-    const boost = sdp => startBitrateSdp(sdp).replace(/x-google-start-bitrate=\d+/g, 'x-google-start-bitrate=' + kb + ';x-google-min-bitrate=' + Math.round(kb * 0.7));
-    await a.setLocalDescription(await a.createOffer());
-    await b.setRemoteDescription({type: 'offer', sdp: boost(a.localDescription.sdp)});
-    await b.setLocalDescription(await b.createAnswer());
-    await a.setRemoteDescription({type: 'answer', sdp: boost(b.localDescription.sdp)});
-    for (let k = 0; k < 25 && a.connectionState !== 'connected'; k++) await sleep(200);
-    if (a.connectionState !== 'connected') return {error: 'conexão de teste não abriu'};
-    try{ const p = tr.sender.getParameters(); p.degradationPreference = 'maintain-framerate'; await tr.sender.setParameters(p); }catch{}
-    const luma = await trackLuma(track);
-    await sleep(1500);
-    const read = async () => {
-      const rep = await a.getStats(); let o = null, src = null; const cs = {};
-      rep.forEach(r => { if (r.type === 'codec') cs[r.id] = r; if (r.type === 'outbound-rtp' && r.kind === 'video') o = r; if (r.type === 'media-source' && r.kind === 'video') src = r; });
-      return {o, src, mime: o ? ((cs[o.codecId] || {}).mimeType || '').replace(/^video\//i, '') : '', t: performance.now()};
-    };
-    const hasMetrics = !!window.telaoDesktop.metrics;
-    if (hasMetrics) try{ await window.telaoDesktop.metrics(); }catch{}
-    const s1 = await read();
-    rx.on = true;
-    const stats = [];
-    for (let k = 0; k < secs; k++){ await sleep(1000); if (ses && ses.stat) stats.push(ses.stat); }
-    rx.on = false;
-    const s2 = await read();
-    let m = null; if (hasMetrics) try{ m = await window.telaoDesktop.metrics(); }catch{}
-    if (!s2.o) return {error: 'sem estatísticas'};
-    const dt = (s2.t - s1.t) / 1000;
-    const d = k => ((s2.o[k] || 0) - ((s1.o && s1.o[k]) || 0));
-    const enc = d('framesEncoded');
-    const srcFps = s2.src && s1.src && s2.src.frames != null ? (s2.src.frames - (s1.src.frames || 0)) / dt : (s2.src && s2.src.framesPerSecond) || null;
-    const impl = s2.o.encoderImplementation || '';
-    const hw = s2.o.powerEfficientEncoder != null ? !!s2.o.powerEfficientEncoder : (HW_RE.test(impl) ? true : SW_RE.test(impl) ? false : null);
-    const lim = s2.o.qualityLimitationDurations && s1.o && s1.o.qualityLimitationDurations ? s2.o.qualityLimitationDurations : null;
-    const cpu = m ? m.procs.reduce((x, p) => x + p.cpu, 0) : null;
-    const hs = stats.length ? stats.reduce((x, st) => ({win: x.win + st.win, out: x.out + st.out, ms: x.ms + st.ms, cpu: x.cpu + (st.cpu || 0)}), {win: 0, out: 0, ms: 0, cpu: 0}) : null;
-    if (hs) for (const k in hs) hs[k] /= stats.length;
-    return {srcFps, outFps: enc / dt, encMs: enc > 0 ? d('totalEncodeTime') / enc * 1000 : null, impl, hw, mime: s2.mime, h: s2.o.frameHeight || 0, w: s2.o.frameWidth || 0,
-            limit: s2.o.qualityLimitationReason || '', limDur: lim, cpu, sysCpu: m ? m.sysCpu : null, helper: hs, luma, rx: rxRhythm(rx.ts, dt)};
-  } finally { a.close(); b.close(); }
-}
-// Intervalos entre os quadros recebidos: travadas (saltos > 200 ms, como o engasgo da 1.12.0) e irregularidade.
-function rxRhythm(ts, secs){
-  if (ts.length < 10) return ts.length ? {fps: ts.length / secs, jumps: 0, dev: null} : null;
-  const d = ts.slice(1).map((x, i) => (x - ts[i]) / 1000).filter(x => x > -1000);
-  const med = [...d].sort((a, b) => a - b)[Math.floor(d.length / 2)];
-  const dev = d.map(x => Math.abs(x - med)).sort((a, b) => a - b);
-  return {fps: ts.length / secs, jumps: d.filter(x => x > 200).length, med, dev: dev[Math.min(dev.length - 1, Math.floor(dev.length * 0.95))]};
-}
-const rxBad = r => !!(r && r.rx && r.rx.jumps >= 2);
-const turboRowName = k => ({normal: 'Normal (Chromium)', gpu: 'Turbo pela placa', mem: 'Turbo pela memória'})[k] || k;
-async function runTurboTest(){
-  if (!turboAvailable() || turboTest && turboTest.running) return;
-  const btn = $('#tbRun'), msg = t => { $('#tbMsg').textContent = t; };
-  if (localStream){ msg('Pare a transmissão antes de testar: o teste usa a mesma captura.'); return; }
-  btn.disabled = true;
-  const rows = [];
-  turboTest = {running: true, rows, q: currentQ(), at: Date.now()};
-  renderTurboTest();
-  let normalStream = null;
-  try{
-    $('#diag').hidden = true;
-    const chosen = await openPicker();
-    $('#diag').hidden = false;
-    if (!chosen){ msg(''); return; }
-    turboTest.target = chosen.name;
-    const q = QUALITY[currentQ()];
-    const tgt = await turboTarget(chosen);
-    for (let k = 5; k > 0; k--){ msg('Começando em ' + k + ' s: pode voltar para o jogo (leva uns 40 s; não transmite nada).'); await sleep(window.__turboCountMs || 1000); }
-    msg('Medindo a captura normal…');
-    try{
-      await window.telaoDesktop.select(chosen.id, false);
-      normalStream = await navigator.mediaDevices.getDisplayMedia({video: {width: {ideal: q.w, max: q.w}, height: {ideal: q.h, max: q.h}, frameRate: {ideal: q.fps, max: q.fps}}, audio: false, selfBrowserSurface: 'exclude'});
-      const t = normalStream.getVideoTracks()[0]; try{ t.contentHint = 'motion'; }catch{}
-      rows.push(Object.assign({key: 'normal'}, await measureCapture(t, q, 8)));
-      t.applyConstraints({width: {max: 320}, height: {max: 180}, frameRate: {max: 1}}).catch(() => {});   // fica aberta, quase parada (como na transmissão)
-    }catch(e){ rows.push({key: 'normal', error: e.message}); }
-    renderTurboTest();
-    for (const mode of ['gpu', 'mem']){
-      msg('Medindo a captura turbo ' + TURBO_MODE_TXT[mode] + '…');
-      let ses = null;
-      try{
-        if (!tgt) throw new Error('alvo não encontrado');
-        ses = await startTurbo(Object.assign({}, tgt, {w: q.w, h: q.h, fps: q.fps, mode}));
-        try{ ses.track.contentHint = 'motion'; }catch{}
-        const r = await measureCapture(ses.track, q, 8, ses);
-        rows.push(Object.assign({key: mode, size: ses.w + 'x' + ses.h, fmt: ses.fmt, adapter: ses.adapter, border: ses.border, minUpdate: ses.minUpdate, dropped: ses.dropped}, r));
-      }catch(e){ rows.push({key: mode, error: e.message}); }
-      finally{ if (ses) ses.stop(); }
-      renderTurboTest();
-    }
-    msg('Pronto.');
-    toast('Teste da captura turbo pronto (Diagnóstico).', '', 6000);
-  }finally{
-    if (normalStream) normalStream.getTracks().forEach(t => t.stop());
-    $('#diag').hidden = false;
-    turboTest.running = false;
-    btn.disabled = false;
-    renderTurboTest();
-  }
-}
-const lumaBlack = l => l && l.mean < 6 && l.sd < 3;
-function renderTurboTest(){
-  const sec = $('#dgTurboSec');
-  sec.hidden = !turboAvailable();
-  const tb = $('#tbTable tbody'); tb.textContent = '';
-  const rows = turboTest ? turboTest.rows : [];
-  $('#tbTable').hidden = !rows.length;
-  for (const r of rows){
-    const tr = document.createElement('tr');
-    const det = r.error ? 'falhou: ' + r.error : [
-      r.h ? r.w + 'x' + r.h : '', r.mime ? r.mime + (r.hw === true ? ' na placa' : r.hw === false ? ' no processador' : '') : '',
-      r.encMs != null ? r.encMs.toFixed(1) + ' ms/quadro' : '', r.limit && r.limit !== 'none' ? 'gargalo: ' + r.limit : '',
-      r.cpu != null ? 'Telão ' + Math.round(r.cpu + (r.helper ? r.helper.cpu : 0)) + '% de um núcleo' : '',
-      r.helper ? 'Windows entregou ' + Math.round(r.helper.win) : '', lumaBlack(r.luma) ? 'IMAGEM PRETA?' : '',
-      r.rx ? (rxBad(r) ? 'ENGASGA: ' + r.rx.jumps + ' travadas pra quem recebe' : 'ritmo liso pra quem recebe') : ''].filter(Boolean).join(' · ');
-    const cells = [[turboRowName(r.key), ''], [r.error ? '–' : r.srcFps != null ? Math.round(r.srcFps) + ' fps' : '?', ''],
-                   [r.error ? '–' : Math.round(r.outFps) + ' fps', ''], [det, r.error || lumaBlack(r.luma) || rxBad(r) ? 'dg-bad' : '']];
-    for (const [t, c] of cells){ const td = document.createElement('td'); td.textContent = t; if (c) td.className = c; tr.appendChild(td); }
-    tb.appendChild(tr);
-  }
-  const box = $('#tbAdvice');
-  box.textContent = ''; box.className = 'dg-advice';
-  box.hidden = !turboTest || turboTest.running || !rows.length;
-  if (box.hidden) return;
-  const say = t => { const d = document.createElement('div'); d.textContent = t; box.appendChild(d); };
-  const norm = rows.find(r => r.key === 'normal' && !r.error);
-  const good = rows.filter(r => r.key !== 'normal' && !r.error && !lumaBlack(r.luma) && !rxBad(r)).sort((x, y) => y.outFps - x.outFps);
-  if (!good.length){
-    box.classList.add('warn');
-    say('A captura turbo não funcionou neste PC. Copie o relatório e me mande: ele diz em que passo parou.');
-    return;
-  }
-  const best = good[0], nf = norm ? norm.outFps : 0;
-  if (best.outFps >= nf + 3){
-    say('A captura turbo ' + TURBO_MODE_TXT[best.key] + ' entregou ' + Math.round(best.outFps) + ' fps' + (norm ? ', contra ' + Math.round(nf) + ' da captura normal' : '') + '.');
-    const b = document.createElement('button'); b.className = 'primary';
-    const on = turboOn() && store.get('turboMode', 'gpu') === best.key;
-    b.textContent = on ? 'Captura turbo já está ligada' : 'Ligar a captura turbo (' + TURBO_MODE_TXT[best.key] + ')';
-    b.disabled = on;
-    b.onclick = () => { store.set('turbo', true); store.set('turboMode', best.key); toast('Captura turbo ligada. Vale a partir da próxima transmissão.'); renderTurboTest(); };
-    box.appendChild(b);
-  } else {
-    say('Neste PC a captura turbo não fez diferença (' + Math.round(best.outFps) + ' × ' + Math.round(nf) + ' fps). Pode deixar desligada.');
-  }
-}
-function turboReport(){
-  const L = [];
-  if (!DESKTOP) return L;
-  L.push('Captura turbo: ' + (turboAvailable() ? (turboOn() ? 'ligada' : 'desligada') + ' · modo preferido ' + store.get('turboMode', 'gpu') : 'indisponível (app nível ' + (window.telaoDesktop.shell || 0) + ')') +
-         (turboActive() ? ' · EM USO ' + turboShare.ses.mode + ' ' + turboShare.ses.w + 'x' + turboShare.ses.h + (turboShare.ses.stat ? ' (Windows ' + turboShare.ses.stat.win + ' / saída ' + turboShare.ses.stat.out + ' fps, ' + turboShare.ses.stat.ms + ' ms, Telão Audio ' + turboShare.ses.stat.cpu + '%)' : '') : ''));
-  if (turboActive()){
-    const ts = turboShare.ses, lat = ts.lat.slice().sort((a, b) => a - b), r = turboRate(turboShare);
-    L.push('Turbo em uso: ' + ts.mode + ' · cópia do quadro da placa ' + (ts.mode !== 'gpu' ? '-' : ts.noCopy ? 'FALHOU (' + ts.noCopy + ')' : 'ok') + ' · descartados ' + ts.dropped +
-           ' (codificador ocupado ' + ts.dropBusy + ', sem quadro ' + ts.dropSlot + ')' + (r ? ' · entregando agora ' + r.out.toFixed(1) + ' fps' : '') +
-           (lat.length ? ' · entrega ' + lat[lat.length >> 1].toFixed(1) + ' ms (95% abaixo de ' + lat[Math.floor(lat.length * 0.95)].toFixed(1) + ')' : '') + ' · assistindo ' + turboWatched() + ' tela(s)');
-  }
-  if (turboHist.length){
-    L.push('Turbo segundo a segundo (Telão Audio → chegou → entregue · descartes ocupado/sem quadro · maior intervalo entre quadros · atraso da página · WebRTC vê → envia · telas assistindo):');
-    const f0 = n => n == null ? '-' : Math.round(n);
-    for (const h of turboHist.slice(-20)) L.push('  ' + new Date(h.at).toLocaleTimeString('pt-BR') + ' ' + h.mode + ' ' + f0(h.helper) + ' → ' + f0(h.f.vf) + ' → ' + f0(h.f.out) + ' · ' + f0(h.f.busy) + '/' + f0(h.f.slot) +
-                                                 ' · ' + f0(h.f.gap) + ' ms · ' + f0(h.f.lag) + ' ms · ' + f0(h.src) + ' → ' + f0(h.send) + (h.why && h.why !== 'none' ? ' (' + h.why + ')' : '') + ' · ' + h.watch);
-  }
-  if (turboStarved) L.push('Turbo perdendo quadros (' + new Date(turboStarved.at).toLocaleTimeString('pt-BR') + '): ' + turboStarved.what + (turboStarved.to ? ' → trocou para ' + turboStarved.to : ''));
-  if (turboLast) L.push('Última captura turbo: ' + JSON.stringify(turboLast));
-  if (turboTest && turboTest.rows.length){
-    L.push('Teste da captura turbo (' + new Date(turboTest.at).toLocaleTimeString('pt-BR') + ', ' + turboTest.q + ', "' + (turboTest.target || '?') + '"):');
-    for (const r of turboTest.rows){
-      if (r.error){ L.push('  ' + r.key + ': falhou — ' + r.error); continue; }
-      L.push('  ' + r.key + ': chegam ' + (r.srcFps != null ? Math.round(r.srcFps) : '?') + ' · saem ' + Math.round(r.outFps) + ' fps · ' + r.w + 'x' + r.h + ' ' + r.mime + ' ' + (r.impl || '') +
-             (r.encMs != null ? ' ' + r.encMs.toFixed(1) + 'ms' : '') + ' limite=' + (r.limit || '-') + (r.limDur ? ' ' + JSON.stringify(r.limDur) : '') +
-             ' · Telão ' + (r.cpu != null ? Math.round(r.cpu) + '%' : '?') + ' · PC ' + (r.sysCpu != null ? r.sysCpu + '%' : '?') +
-             (r.helper ? ' · Telão Audio: Windows ' + r.helper.win.toFixed(1) + ' saída ' + r.helper.out.toFixed(1) + ' ' + r.helper.ms.toFixed(2) + 'ms ' + r.helper.cpu.toFixed(1) + '%' : '') +
-             (r.size ? ' · ' + r.size + ' ' + r.fmt + ' borda=' + r.border + ' intervalo=' + r.minUpdate + ' descartados=' + r.dropped + ' · ' + r.adapter : '') +
-             (r.luma ? ' · luz ' + Math.round(r.luma.mean) + '±' + Math.round(r.luma.sd) : '') +
-             (r.rx ? ' · recebe ' + Math.round(r.rx.fps) + ' fps, travadas ' + r.rx.jumps + (r.rx.dev != null ? ', irregularidade ' + r.rx.dev.toFixed(1) + 'ms' : '') : ''));
-    }
-  }
-  for (const t of turboLog.slice(-10)) L.push('  ' + t);
-  return L;
-}
-
-/* Camada de reações por cima do jogo (app desktop 1.6+): janela transparente do próprio app. */
+/* Camada de reações e chat por cima do jogo: desenhada pelo Telão Audio (Direct2D), numa janela transparente que não
+   recebe clique e fica fora das capturas. Sem o Telão Audio conectado, não há camada. */
 let lastChosen = null;
-const overlayAvailable = () => DESKTOP && !!window.telaoDesktop.overlayShow;
-const NATIVE_OV_SHELL = 13;
 let nativeOv = false;
-const nativeOverlayWanted = () => DESKTOP && (window.telaoDesktop.shell || 0) >= NATIVE_OV_SHELL && helper.ready && store.get('nativeOverlay', true);
+const overlayAvailable = () => DESKTOP;
 const overlayOn = () => !!store.get('overlay', true);
 async function showOverlay(){
   syncOverlayBtn();
-  if (!overlayAvailable() || (!overlayOn() && !chatOverlayOn()) || !localStream) return;
+  if (!overlayAvailable() || (!overlayOn() && !chatOverlayOn()) || !localStream || !helper.ready) return;
   const c = lastChosen;
-  let rect = null;
+  let area = null;
   if (c && c.type === 'window'){
     const r = await helperQuery({cmd: 'winrect', hwnd: c.id.split(':')[1] || ''}, 'winrect', 2000);
-    if (r && r.ok) rect = r;
+    if (r && r.ok) area = r;
   }
-  // camada desenhada pelo Telão Audio (app 1.16.1+): não disputa a placa do Telão com a captura turbo
-  if (nativeOverlayWanted()){
-    let area = rect;
-    if (!area && c && c.type === 'screen'){ try{ area = await window.telaoDesktop.monitorRect(c.id); }catch{} }
-    if (!area && window.telaoDesktop.monitorRect){ try{ area = await window.telaoDesktop.monitorRect(''); }catch{} }
-    if (area && area.w > 100 && area.h > 100){
-      const r = await helperQuery({cmd: 'ovshow', x: String(area.x), y: String(area.y), w: String(area.w), h: String(area.h)}, 'ovshow', 4000);
-      if (r && r.ok){ nativeOv = true; try{ await window.telaoDesktop.overlayHide(); }catch{} return; }
-      turboNote('camada do Telão Audio indisponível: usando a do app');
-    }
-  }
+  if (!area && c && c.type === 'screen'){ try{ area = await window.telaoDesktop.monitorRect(c.id); }catch{} }
+  if (!area && window.telaoDesktop.monitorRect){ try{ area = await window.telaoDesktop.monitorRect(''); }catch{} }
   nativeOv = false;
-  try{ await window.telaoDesktop.overlayShow(c ? c.id : '', rect); }catch{}
+  if (!area || !(area.w > 100 && area.h > 100) || !localStream) return;
+  const r = await helperQuery({cmd: 'ovshow', x: String(area.x), y: String(area.y), w: String(area.w), h: String(area.h)}, 'ovshow', 4000);
+  nativeOv = !!(r && r.ok && localStream);
 }
 function hideOverlay(){
   if (nativeOv){ helperSend({cmd: 'ovhide'}); nativeOv = false; }
-  if (overlayAvailable()) window.telaoDesktop.overlayHide().catch(() => {});
 }
 function syncOverlayBtn(){
   const c = $('#pipChat');
   c.hidden = !DESKTOP;
-  c.classList.toggle('off', !overlayItemAvailable() || !chatOverlayOn());
-  c.title = !overlayItemAvailable() ? 'Chat por cima do jogo: precisa do app 1.9 (ele se atualiza sozinho; reinicie quando aparecer o aviso).'
-    : 'Chat por cima do jogo: ' + (chatOverlayOn() ? 'ligado' : 'desligado') + '. Clique para ' + (chatOverlayOn() ? 'desligar' : 'ligar') + '.';
+  c.classList.toggle('off', !chatOverlayOn());
+  c.title = 'Chat por cima do jogo: ' + (chatOverlayOn() ? 'ligado' : 'desligado') + '. Clique para ' + (chatOverlayOn() ? 'desligar' : 'ligar') + '.';
   const b = $('#pipOverlay');
   b.hidden = !DESKTOP;
-  if (!overlayAvailable()){
-    b.classList.add('off');
-    b.title = 'Reações por cima do jogo: precisa do app 1.6 ou mais novo. Clique para saber como atualizar.';
-    return;
-  }
   b.classList.toggle('off', !overlayOn());
   b.title = 'Reações por cima do jogo: ' + (overlayOn() ? 'ligado' : 'desligado') + '. Clique para ' + (overlayOn() ? 'desligar' : 'ligar') + '. (Precisa do jogo em janela ou janela sem bordas.)';
 }
 function toggleOverlay(){
-  if (!overlayAvailable()){
-    const d = document.createElement('div'); d.className = 'toast warn';
-    d.textContent = 'As reações por cima do jogo precisam do app 1.6 (você está no app ' + (window.telaoDesktop.version || 'antigo') + '). A interface se atualiza sozinha, mas essa parte só vem baixando o app novo uma vez. ';
-    if (RELEASES_URL){ const a = document.createElement('button'); a.className = 'linkish'; a.textContent = 'Baixar o app novo'; a.onclick = () => window.open(RELEASES_URL, '_blank'); d.appendChild(a); }
-    $('#toasts').appendChild(d); setTimeout(() => d.remove(), 12000);
-    return;
-  }
   store.set('overlay', !overlayOn());
   if (overlayOn() || chatOverlayOn()) showOverlay(); else { hideOverlay(); syncOverlayBtn(); }
 }
 function toggleChatOverlay(){
-  if (!overlayItemAvailable()){ toast('O chat por cima do jogo precisa do app 1.9. O app se atualiza sozinho: quando aparecer "Reiniciar e atualizar", é só clicar.', 'warn', 9000); return; }
   store.set('overlayChat', !chatOverlayOn());
   if (overlayOn() || chatOverlayOn()) showOverlay(); else { hideOverlay(); syncOverlayBtn(); }
 }
@@ -7702,7 +6866,7 @@ function requestRecall(pid){
   pullTried.delete(pid);
   hubSend({t:'relay', to: pid, data: {k:'recall'}});
   const t = tiles.get(pid);
-  if (t){ try{ t.call && t.call.close(); }catch{} }   // quem transmite em versão antiga refaz sozinho ao ver a conexão fechar
+  if (t){ try{ t.call && t.call.close(); }catch{} }
   syncWaits();
 }
 
@@ -8058,7 +7222,6 @@ async function openDiag(){
   $('#dgVer').textContent = DESKTOP && diagGpu ? 'Telão Desktop ' + diagGpu.versions.app + ' · Chromium ' + diagGpu.versions.chrome : 'Telão no navegador';
   $('#dgForget').hidden = !badDecode.size;
   renderDiagTable();
-  renderTurboTest();
   renderLive();
   clearInterval(diagLiveTimer);
   diagLiveTimer = setInterval(renderLive, 2000);
@@ -8295,7 +7458,7 @@ async function renderLive(){
 function diagReport(){
   const L = [];
   L.push('TELÃO — relatório de vídeo (' + new Date().toLocaleString('pt-BR') + ')');
-  L.push('Versão do Telão: ' + TELAO_VERSION + (DESKTOP && diagGpu ? ' · página ' + diagGpu.versions.page + ' · app nível ' + diagGpu.versions.shell : '') + ' · na sala: ' + (members.filter(m => !me || m.id !== me.id).map(m => { const x = versionInfo(m); return m.name + '=' + (x ? (x.v || '<1.4') : '?'); }).join(', ') || 'ninguém'));
+  L.push('Versão do Telão: ' + TELAO_VERSION + (DESKTOP && diagGpu ? ' · página ' + diagGpu.versions.page + ' · app nível ' + diagGpu.versions.shell : '') + ' · na sala: ' + (members.filter(m => !me || m.id !== me.id).map(m => { const x = versionInfo(m); return m.name + '=' + (x ? (x.v || 'desconhecida') : '?'); }).join(', ') || 'ninguém'));
   L.push(DESKTOP && diagGpu ? 'Telão Desktop ' + diagGpu.versions.app + ' · Electron ' + diagGpu.versions.electron + ' · Chromium ' + diagGpu.versions.chrome + ' · ' + diagGpu.platform
                             : 'Navegador: ' + navigator.userAgent);
   if (DESKTOP && diagGpu){
@@ -8316,7 +7479,6 @@ function diagReport(){
            (r.encMs != null ? ' ' + r.encMs.toFixed(1) + 'ms/quadro' : '') + (r.limit ? ' limite=' + r.limit : '') + ' encoder=' + (r.impl || '-') + (r.note ? ' (' + r.note + ')' : ''));
   if (!diagResults.length) L.push('(teste de encoder não executado)');
   for (const el of $('#dgLive').children) L.push('Ao vivo — ' + el.textContent);
-  L.push(...turboReport());
   L.push(...engineReport());
   if (perfLast){ L.push('--- medição de uso real ---'); L.push(perfLast.text); }
   L.push('--- conexão com a sala ---');
@@ -8332,7 +7494,6 @@ function initDiag(){
   $('#diag').onclick = e => { if (e.target === $('#diag')) closeDiag(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#diag').hidden) closeDiag(); });
   $('#dgRun').onclick = runDiag;
-  $('#tbRun').onclick = () => runTurboTest().catch(e => { $('#tbMsg').textContent = 'Não consegui testar: ' + e.message; });
   initPerf();
   $('#dgCopy').onclick = async () => {
     const txt = diagReport();
@@ -8752,7 +7913,7 @@ function uiFrames(){
 async function runPerf(){
   if (perfRun) return;
   const secs = window.__perfSecs || PERF_SECS;
-  const run = perfRun = {t0: Date.now(), secs, samples: [], conns: new Map(), procs: [], ui: [], turbo: [], motor: [], gpu: [], ctx: perfContext()};
+  const run = perfRun = {t0: Date.now(), secs, samples: [], conns: new Map(), procs: [], ui: [], motor: [], gpu: [], ctx: perfContext()};
   syncPerfUi();
   let prev = new Map(), prevT = performance.now();
   if (DESKTOP && window.telaoDesktop.metrics) try{ await window.telaoDesktop.metrics(); }catch{}   // zera a contagem de processador
@@ -8779,7 +7940,6 @@ async function runPerf(){
     if (DESKTOP && window.telaoDesktop.metrics) try{ run.procs.push(await window.telaoDesktop.metrics()); }catch{}
     askGpu();
     { const g = gpuFresh(); if (g && !g.none && (!run.gpu.length || run.gpu[run.gpu.length - 1].at !== g.at)) run.gpu.push(g); else if (g && g.none) run.gpuNone = g.none; }
-    if (turboActive() && turboShare.ses.stat){ const x = turboShare.ses, st = x.stat; run.turbo.push({win: st.win, out: st.out, ms: st.ms, p95: st.p95, cpu: st.cpu, size: x.w + 'x' + x.h, mode: x.mode}); }
     if (engine.share) for (const S of engine.share.ses.values()) if (S.state === 'ok' && S.stat) run.motor.push({key: S.id + ' ' + S.codec.toUpperCase() + ' ' + S.w + 'x' + S.h + '@' + S.fps + ' (' + (S.enc || '?') + ')', in: +S.stat.in || 0, out: +S.stat.out || 0, lat: +S.stat.lat || 0, kbps: +S.stat.kbps || 0, target: S.kbps, qp: +S.stat.qp || 0});
     if (!document.hidden) run.ui.push(...(await uiFrames()));
     run.long = perfLong - long0;
@@ -8793,7 +7953,7 @@ async function runPerf(){
 }
 function perfContext(){
   const q = QUALITY[currentQ()];
-  return {sharing: !!localStream, quality: q.label, target: q.fps, codec: currentCodec(), private: privateOn, fast: fastCapture, turbo: turboActive() ? turboShare.ses.mode : '',
+  return {sharing: !!localStream, quality: q.label, target: q.fps, codec: currentCodec(), private: privateOn, fast: fastCapture,
     tiles: tiles.size, hidden: hiddenIds.size, relaying: relayOut.size, members: members.length, clips: !!store.get('clips', false)};
 }
 // ---------- resumo ----------
@@ -8807,7 +7967,7 @@ function perfSummary(run){
   const L = [], W = [];
   const c = run.ctx;
   L.push('Medição de uso real: ' + Math.round((Date.now() - run.t0) / 1000) + ' s · ' + new Date(run.t0).toLocaleString('pt-BR'));
-  L.push('Situação: ' + (c.sharing ? 'transmitindo (' + c.quality + ', ' + c.codec + (c.private ? ', tela privada' : '') + (c.fast ? ', modo rápido' : '') + (c.turbo ? ', captura turbo ' + TURBO_MODE_TXT[c.turbo] : '') + ')' : 'sem transmitir') +
+  L.push('Situação: ' + (c.sharing ? 'transmitindo (' + c.quality + ', ' + c.codec + (c.private ? ', tela privada' : '') + (c.fast ? ', modo rápido' : '') + ')' : 'sem transmitir') +
     ' · assistindo ' + (c.tiles - c.hidden) + (c.hidden ? ' (+' + c.hidden + ' ocultas)' : '') + (c.relaying ? ' · repassando ' + c.relaying : '') + (c.clips ? ' · clipes ligados' : '') + ' · ' + c.members + ' na sala');
   // processos (app)
   if (run.procs.length){
@@ -8843,34 +8003,14 @@ function perfSummary(run){
       if (gprioLast) L.push('  Prioridade do Telão na placa: ' + (gprioLast.ok ? 'alta (' + gprioLast.ok + ' processos)' : 'o Windows recusou (precisa de administrador?)'));
       if (avg(gs) > 95) W.push('Placa de vídeo no limite (' + f0(avg(gs)) + '%): o jogo está usando quase tudo. Limitar o FPS do jogo deixa folga para a transmissão não engasgar.');
       else if (avg(enc) > 80) W.push('O encoder da placa está quase cheio (' + f0(avg(enc)) + '%): muita gente recebendo em formatos diferentes, ou qualidade alta demais para esta placa.');
-    } else L.push('  (uso da placa de vídeo: ' + (run.gpuNone ? run.gpuNone : DESKTOP && (window.telaoDesktop.shell || 0) < GPU_SHELL ? 'precisa do app 1.15' : 'Telão Audio não respondeu') + '; veja no Gerenciador de Tarefas → Desempenho → GPU)');
+    } else L.push('  (uso da placa de vídeo: ' + (run.gpuNone ? run.gpuNone : 'Telão Audio não respondeu') + '; veja no Gerenciador de Tarefas → Desempenho → GPU)');
     if (sys.length && avg(sys) > 90) W.push('PC com o processador no limite (' + f0(avg(sys)) + '%): o jogo e o Telão estão disputando. Baixar a qualidade da transmissão ou limitar o FPS do jogo ajuda.');
     else if (avg(tel) / cores > 35) W.push('O Telão está usando bastante processador (≈' + f0(avg(tel) / cores) + '% do total). Se a codificação estiver no processador, prefira H.264 (placa de vídeo).');
   } else {
     L.push('');
     L.push('PROCESSADOR E MEMÓRIA: só o app desktop consegue medir (no navegador fica de fora).');
   }
-  // captura turbo: o lado do Telão Audio (quanto o Windows entregou = ritmo do próprio jogo na tela)
   const target = c.target;
-  let turboSaid = false;
-  if (run.turbo && run.turbo.length){
-    const T = run.turbo, win = nums(T, 'win'), out = nums(T, 'out');
-    const sizes = [...new Set(T.map(x => x.size))];
-    L.push('');
-    L.push('CAPTURA TURBO (' + (TURBO_MODE_TXT[T[T.length - 1].mode] || '') + ' · ' + sizes.join(' → ') + ')');
-    L.push('  o Windows entregou: ' + f0(avg(win)) + ' quadros/s (mín ' + f0(Math.min(...win)) + ') · é o ritmo do próprio jogo na tela');
-    L.push('  a captura passou adiante: ' + f0(avg(out)) + ' quadros/s (mín ' + f0(Math.min(...out)) + ') · preparo ' + f1(avg(nums(T, 'ms'))) + ' ms por quadro (95% abaixo de ' + f1(pct(nums(T, 'p95'), 0.95)) + ' ms) · Telão Audio ' + f0(avg(nums(T, 'cpu'))) + '% de um núcleo');
-    if (avg(win) < target * 0.9){ turboSaid = true; W.push('O próprio jogo mostrou só ' + f0(avg(win)) + ' quadros/s na tela (meta: ' + target + '): a captura não tem como passar disso. Limitar o jogo num FPS que ele sustente, ou aliviar o processador, deixa a transmissão mais estável.'); }
-    else if (avg(out) < Math.min(target, avg(win)) * 0.9){
-      turboSaid = true;
-      const gsys = run.gpu && run.gpu.length ? avg(nums(run.gpu, 'sys')) : null, sysCpu = run.procs.length ? avg(nums(run.procs, 'sysCpu')) : null;
-      const why = gsys != null && gsys > 85 ? 'a placa de vídeo está quase toda com o jogo (' + f0(gsys) + '%) e a captura fica na fila atrás dele. Limitar o FPS do jogo um pouco abaixo do que ele aguenta (ex.: travar em 60) deixa folga'
-        : sysCpu != null && sysCpu > 85 ? 'o processador está quase todo ocupado (' + f0(sysCpu) + '%)'
-        : avg(nums(T, 'ms')) > 6 ? 'o preparo de cada quadro está lento (' + f1(avg(nums(T, 'ms'))) + ' ms): a placa de vídeo provavelmente está ocupada com o jogo'
-        : 'o Telão Audio não está dando conta';
-      W.push('A captura turbo passou adiante só ' + f0(avg(out)) + ' de ' + f0(Math.min(target, avg(win))) + ' quadros/s: ' + why + '.');
-    }
-  }
   // motor de vídeo: cada codificação do Telão Audio
   if (run.motor && run.motor.length){
     L.push('');
@@ -8903,9 +8043,9 @@ function perfSummary(run){
       if (enc.length) L.push('  codificação: ' + f1(avg(enc)) + ' ms por quadro (95% abaixo de ' + f1(pct(enc, 0.95)) + ' ms)');
       L.push('  limitado pelo processador ' + pc1(limCpu) + ' do tempo · pela rede ' + pc1(limBw) +
         ' · perda ' + pc1(avg(nums(live, 'loss'))) + ' · reenvio ' + pc1(avg(nums(live, 'retx'))) + ' · atraso ' + f0(avg(nums(live, 'rtt'))) + ' ms');
-      if (e.kind === 'out' && cap.length && avg(cap) < target * 0.8 && !turboSaid && !live.some(x => x.motor) && !(run.motor && run.motor.length)) W.push('Captura da tela abaixo do esperado (' + f0(avg(cap)) + ' de ' + target + ' fps). ' + (c.turbo ? 'A captura turbo já está ligada: confira se o próprio jogo está abaixo disso.'
-        : turboAvailable() ? 'Experimente a "Captura turbo" no seletor de tela (dá pra comparar antes em Diagnóstico → Testar captura turbo); também acontece se o próprio jogo estiver abaixo disso.'
-        : 'No Windows 10, experimente o "Modo rápido" no seletor; também acontece se o próprio jogo estiver abaixo disso.'));
+      if (e.kind === 'out' && cap.length && avg(cap) < target * 0.8 && !live.some(x => x.motor) && !(run.motor && run.motor.length)) W.push('Captura da tela abaixo do esperado (' + f0(avg(cap)) + ' de ' + target + ' fps). ' +
+        (engineOn() ? 'O motor de vídeo não entrou nesta transmissão: veja a linha "Motor" no relatório; também acontece se o próprio jogo estiver abaixo disso.'
+                    : 'Ligue o motor de vídeo em Opções → Desempenho; no Windows 10 sem o motor, o "Modo rápido" do seletor ajuda. Também acontece se o próprio jogo estiver abaixo disso.'));
       // motor ligado, mas esta pessoa está no caminho normal: ela vê a captura do Chromium, que com jogo em tela cheia no
       // primeiro plano pode parar (o motor, que captura pelo Telão Audio, segue normal)
       if (e.kind === 'out' && cap.length && avg(cap) < target * 0.5 && !live.some(x => x.motor) && run.motor && run.motor.length)

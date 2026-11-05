@@ -4,7 +4,6 @@
 //   - Telão Audio embutido, iniciado escondido junto com o app
 //   - sem economia de energia em segundo plano, para a transmissão não engasgar com o app minimizado
 const {app, BrowserWindow, desktopCapturer, session, ipcMain, shell, Menu, screen, net, powerMonitor} = require('electron');
-const sharedTexture = (() => { try{ return require('electron').sharedTexture || null; }catch{ return null; } })();
 const path = require('path');
 const fs = require('fs');
 const {spawn} = require('child_process');
@@ -49,7 +48,6 @@ let win = null;
 let helper = null;
 let pendingSource = null;   // {id, systemAudio}: escolhido na página, consumido pelo getDisplayMedia
 let updater = null;
-let overlay = null;          // camada transparente das reações, por cima do jogo
 
 function helperPath(){
   return app.isPackaged
@@ -228,7 +226,7 @@ app.whenReady().then(() => {
     for (const w of BrowserWindow.getAllWindows()){
       if (w.isDestroyed()) continue;
       let pid = 0; try{ pid = w.webContents.getOSProcessId(); }catch{}
-      const label = w === win ? 'janela principal do Telão' : w === overlay ? 'camada por cima do jogo' : /^about:blank/.test(w.webContents.getURL()) ? 'janela flutuante' : 'outra janela do Telão';
+      const label = w === win ? 'janela principal do Telão' : /^about:blank/.test(w.webContents.getURL()) ? 'janela flutuante' : 'outra janela do Telão';
       if (pid && !labels.has(pid)) labels.set(pid, label);
     }
     const names = {Browser: 'processo principal', GPU: 'vídeo e composição (placa)', Utility: 'serviços (rede, áudio)', Zygote: 'auxiliar', Sandbox_helper: 'auxiliar'};
@@ -277,37 +275,6 @@ app.whenReady().then(() => {
     return true;
   });
 
-  // ---- captura turbo: imagens que o Telão Audio deixa na placa de vídeo ----
-  // O Telão Audio cria as texturas e já entrega os handles valendo neste processo; aqui elas viram
-  // "texturas importadas" do Chromium e seguem para a página, que monta os quadros sem copiar nada.
-  const turboTex = new Map();   // geração → [texturas importadas]
-  const turboRelease = gen => { const l = turboTex.get(gen); if (!l) return; turboTex.delete(gen); for (const t of l) try{ t.release(); }catch{} };
-  ipcMain.handle('telao:turboImport', async (e, info) => {
-    if (!sharedTexture) return {ok: false, error: 'esta versão do app não tem textura compartilhada'};
-    if (!win || win.isDestroyed() || e.sender !== win.webContents) return {ok: false, error: 'janela inválida'};
-    const i = info || {}, gen = i.gen, w = i.w, h = i.h;
-    if (!Number.isInteger(gen) || gen < 1 || !Number.isInteger(w) || !Number.isInteger(h) || w < 16 || h < 16 || w > 4096 || h > 4096 ||
-        (i.fmt !== 'nv12' && i.fmt !== 'bgra') || !Array.isArray(i.slots) || !i.slots.length || i.slots.length > 8 || !i.slots.every(x => /^\d{1,20}$/.test(String(x))))
-      return {ok: false, error: 'pedido inválido'};
-    turboRelease(gen);
-    const list = [];
-    const colorSpace = i.fmt === 'nv12' ? {primaries: 'bt709', transfer: 'bt709', matrix: 'bt709', range: 'limited'}
-                                        : {primaries: 'bt709', transfer: 'srgb', matrix: 'rgb', range: 'full'};
-    try{
-      for (let k = 0; k < i.slots.length; k++){
-        const handle = Buffer.alloc(8); handle.writeBigUInt64LE(BigInt(i.slots[k]));
-        const imp = sharedTexture.importSharedTexture({textureInfo: {pixelFormat: i.fmt, codedSize: {width: w, height: h}, colorSpace, handle: {ntHandle: handle}}});
-        list.push(imp);
-        await sharedTexture.sendSharedTexture({frame: win.webContents.mainFrame, importedSharedTexture: imp}, gen, k);
-      }
-    }catch(err){
-      for (const t of list) try{ t.release(); }catch{}
-      return {ok: false, error: String(err && err.message || err).slice(0, 200)};
-    }
-    turboTex.set(gen, list);
-    return {ok: true};
-  });
-  ipcMain.handle('telao:turboRelease', (_e, gen) => { turboRelease(gen); return true; });
   // Monitor escolhido no seletor ("screen:...") → retângulo em pixels físicos (o Telão Audio acha o monitor por ele).
   ipcMain.handle('telao:monitorRect', async (_e, sourceId) => {
     try{
@@ -412,84 +379,6 @@ app.whenReady().then(() => {
     return true;
   });
 
-  // ---- camada de reações sobre o jogo ----
-  // Transparente, sempre por cima, não recebe clique nem foco e fica fora de capturas de tela
-  // (quem compartilha a tela inteira não reenvia as reações na transmissão).
-  const overlayDisplay = (sourceId, rect) => {
-    const all = screen.getAllDisplays();
-    const m = /^screen:(\d+):/.exec(String(sourceId || ''));
-    if (m){ const d = all.find(x => String(x.id) === m[1]); if (d) return d; }
-    if (rect && rect.mw > 0){
-      const dip = process.platform === 'win32' ? screen.screenToDipRect(null, {x: rect.mx, y: rect.my, width: rect.mw, height: rect.mh})
-                                               : {x: rect.mx, y: rect.my, width: rect.mw, height: rect.mh};
-      return screen.getDisplayMatching(dip);
-    }
-    return screen.getPrimaryDisplay();
-  };
-  // A camada é uma faixa no lado direito da área do jogo e só fica visível enquanto há reações
-  // animando (some ~3,5 s depois da última). Assim, na maior parte do tempo não há nada por cima do jogo.
-  let overlayActive = false, overlayHideTimer = null, overlayBounds = null;
-  const toDip = r => process.platform === 'win32' ? screen.screenToDipRect(null, r) : r;
-  async function ensureOverlay(){
-    if (overlay && !overlay.isDestroyed()) return overlay;
-    overlay = new BrowserWindow({
-      show: false, frame: false, transparent: true, resizable: false, movable: false, focusable: false,
-      skipTaskbar: true, hasShadow: false, alwaysOnTop: true, fullscreenable: false, backgroundColor: '#00000000',
-      webPreferences: {preload: path.join(__dirname, 'overlay-preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false},
-    });
-    overlay.setAlwaysOnTop(true, 'screen-saver');
-    overlay.setIgnoreMouseEvents(true);
-    overlay.setContentProtection(true);
-    await overlay.loadFile(path.join(__dirname, 'overlay.html'));
-    return overlay;
-  }
-  ipcMain.handle('telao:overlayShow', async (_e, sourceId, rect) => {
-    const d = overlayDisplay(sourceId, rect);
-    let a = d.bounds;   // área do jogo (DIP): monitor inteiro ou a janela escolhida
-    if (rect && rect.w > 0 && !/^screen:/.test(String(sourceId))){
-      const g = toDip({x: rect.x, y: rect.y, width: rect.w, height: rect.h});
-      const x1 = Math.max(g.x, d.bounds.x), y1 = Math.max(g.y, d.bounds.y);
-      const x2 = Math.min(g.x + g.width, d.bounds.x + d.bounds.width), y2 = Math.min(g.y + g.height, d.bounds.y + d.bounds.height);
-      if (x2 - x1 > 100 && y2 - y1 > 100) a = {x: x1, y: y1, width: x2 - x1, height: y2 - y1};
-    }
-    const w = Math.round(Math.min(360, Math.max(180, a.width * 0.25)));
-    overlayBounds = {x: a.x + a.width - w, y: a.y, width: w, height: a.height};
-    const o = await ensureOverlay();
-    o.setBounds(overlayBounds);
-    overlayActive = true;
-    return {display: d.id, bounds: overlayBounds};
-  });
-  ipcMain.handle('telao:overlayHide', () => {
-    overlayActive = false; clearTimeout(overlayHideTimer);
-    if (overlay && !overlay.isDestroyed()) overlay.hide();
-    return true;
-  });
-  // A camada some sozinha quando nada mais está animando (reação ~3,5 s; mensagem do chat ~9 s).
-  let overlayHideAt = 0;
-  const overlayKeep = ms => {
-    overlayHideAt = Math.max(overlayHideAt, Date.now() + ms);
-    clearTimeout(overlayHideTimer);
-    overlayHideTimer = setTimeout(() => { if (overlay && !overlay.isDestroyed()) overlay.hide(); overlayHideAt = 0; }, overlayHideAt - Date.now());
-  };
-  const overlayShowNow = () => { if (!overlay.isVisible()){ if (overlayBounds) overlay.setBounds(overlayBounds); overlay.showInactive(); } };
-  ipcMain.on('telao:overlayReact', (_e, emoji, who) => {
-    if (!overlayActive || !overlay || overlay.isDestroyed()) return;
-    overlayShowNow();
-    overlay.webContents.send('overlay:item', {kind: 'react', text: String(emoji).slice(0, 4), who: String(who || '').slice(0, 24)});
-    overlayKeep(3500);
-  });
-  const IMG_URL = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
-  const cleanImg = v => typeof v === 'string' && v.length < 600000 && IMG_URL.test(v) ? v : '';
-  ipcMain.on('telao:overlayItem', (_e, it) => {
-    if (!overlayActive || !overlay || overlay.isDestroyed() || !it || typeof it !== 'object') return;
-    const kind = it.kind === 'chat' ? 'chat' : 'react';
-    const item = {kind, text: String(it.text || '').slice(0, kind === 'chat' ? 220 : 16), who: String(it.who || '').slice(0, 24), img: cleanImg(it.img), av: cleanImg(it.av)};
-    if (!item.text && !item.img) return;
-    overlayShowNow();
-    overlay.webContents.send('overlay:item', item);
-    overlayKeep(kind === 'chat' ? 9000 : 3500);
-  });
-
   // ---- atualização automática ----
   ipcMain.handle('telao:ready', (_e, v) => { updater.pageReady(v); if (!PROFILE){ updater.markAppOk(); cleanExeIcon(); } return {shell: SHELL_VERSION, cached: !!(updater.loaded && updater.loaded.cached)}; });
   ipcMain.handle('telao:applyApp', () => PROFILE ? false : updater.applyApp());
@@ -509,7 +398,7 @@ app.whenReady().then(() => {
   if (!PROFILE) updater.start();
 });
 
-app.on('before-quit', () => { stopHelper(); if (overlay && !overlay.isDestroyed()) overlay.destroy(); });
+app.on('before-quit', () => { stopHelper(); });
 app.on('will-quit', scheduleExeIcon);
 app.on('window-all-closed', () => { stopHelper(); app.quit(); });
 // a camada não é "janela de verdade": fechar a janela principal fecha o app mesmo com ela aberta

@@ -1,28 +1,30 @@
 {
-  "version": "1.23.1",
-  "minShell": 2,
-  "page": "versoes/telao-1.23.1.html",
-  "sha256": "d14661eb23d0ccafd7c82b0d5c3e8942e5227266ba4a87f554b3e7d08808df54",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.23.1",
+  "version": "1.24.0",
+  "minShell": 14,
+  "page": "versoes/telao-1.24.0.html",
+  "sha256": "c34b965550e513085dc1a7c628c7d989fafa3afd0950945dd190415d2da1caba",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.24.0",
   "notes": [
-    "Todo mundo sempre na mesma versão: cada versão nova passa a ser a mínima. Quem estiver fora de sala atualiza sozinho; quem estiver numa sala termina a sessão normalmente e atualiza ao sair; com versão antiga, não entra em sala"
+    "App mais enxuto: saem a captura turbo (o motor de vídeo faz o trabalho dela; se ele não entrar, a transmissão segue pela captura normal), a configuração manual de servidor TURN, a camada antiga de reações por cima do jogo (fica a desenhada pelo Telão Audio) e o código que existia só para conversar com versões antigas",
+    "Se sair uma versão nova enquanto você está numa sala, o aviso agora explica que o Telão atualiza sozinho quando você sair (antes pedia para baixar o arquivo novo)",
+    "Novidades: a lista mostra só as últimas 10 versões"
   ],
   "app": {
-    "version": "1.23.1",
+    "version": "1.24.0",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.23.1/app.asar",
-        "sha256": "a29ce5fd198fac0a8c7704b6a28732adcdd483fa61777aa61572ba1ef3b51ed4",
-        "size": 716922
+        "path": "versoes/app-1.24.0/app.asar",
+        "sha256": "f5ccb341eb182123d972d11dc9453a099961def98487a2dc26b40d1b9e04182d",
+        "size": 632878
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.23.1/telao-audio.exe",
-        "sha256": "2509abf6eaeb2c589ac4a740fc05b463072ccaf0827f73791df45e53c8eda2fd",
-        "size": 836096
+        "path": "versoes/app-1.24.0/telao-audio.exe",
+        "sha256": "360a27e9604c08bf701012d1e59cd79685d0aacde43f56736c5ed3c8c0f82cf3",
+        "size": 722432
       }
     }
   },
-  "minVersion": "1.23.1"
+  "minVersion": "1.24.0"
 }

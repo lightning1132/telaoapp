@@ -1,17 +1,5 @@
 // Ponte mínima entre a página do Telão e o processo principal. A página detecta o modo desktop por window.telaoDesktop.
-const {contextBridge, ipcRenderer, sharedTexture} = require('electron');
-
-// Captura turbo: o processo principal manda as texturas importadas para cá; a cada "quadro pronto" a página
-// pede o quadro N e ele vai para ela por um MessagePort (VideoFrame não atravessa o contextBridge).
-const turboSlots = new Map();   // geração → [texturas]
-let turboPort = null;
-try{
-  if (sharedTexture) sharedTexture.setSharedTextureReceiver(async ({importedSharedTexture}, gen, slot) => {
-    let a = turboSlots.get(gen); if (!a) turboSlots.set(gen, a = []);
-    if (a[slot]) try{ a[slot].release(); }catch{}
-    a[slot] = importedSharedTexture;
-  });
-}catch{}
+const {contextBridge, ipcRenderer} = require('electron');
 const arg = name => ((process.argv.find(a => a.startsWith('--' + name + '=')) || '').split('=')[1]) || '';
 
 contextBridge.exposeInMainWorld('telaoDesktop', {
@@ -30,10 +18,6 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   applyUpdate: () => ipcRenderer.invoke('telao:applyUpdate'),
   applyApp: () => ipcRenderer.invoke('telao:applyApp'),
   onUpdate: cb => ipcRenderer.on('telao:update', (_e, info) => cb(info)),
-  overlayShow: (sourceId, rect) => ipcRenderer.invoke('telao:overlayShow', sourceId, rect),
-  overlayHide: () => ipcRenderer.invoke('telao:overlayHide'),
-  overlayReact: (emoji, who) => ipcRenderer.send('telao:overlayReact', emoji, who),
-  overlayItem: item => ipcRenderer.send('telao:overlayItem', item),
   screenForWindow: m => ipcRenderer.invoke('telao:screenFor', m),
   steamSearch: term => ipcRenderer.invoke('telao:steamSearch', term),
   metrics: () => ipcRenderer.invoke('telao:metrics'),
@@ -50,26 +34,6 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   closeScene: () => ipcRenderer.invoke('telao:closeScene'),
   natGesture: () => ipcRenderer.invoke('telao:natGesture'),
   floatWindows: true,
-  turbo: !!sharedTexture,
   mainPid: parseInt(arg('telao-main-pid'), 10) || 0,
   monitorRect: id => ipcRenderer.invoke('telao:monitorRect', id),
-  turboOpen: () => {
-    if (turboPort) try{ turboPort.close(); }catch{}
-    const ch = new MessageChannel(); turboPort = ch.port1;
-    window.postMessage({telaoTurboPort: true}, '*', [ch.port2]);
-    return true;
-  },
-  turboImport: info => ipcRenderer.invoke('telao:turboImport', info),
-  turboFrame: (gen, slot) => {
-    const a = turboSlots.get(gen), t = a && a[slot];
-    if (!t || !turboPort) return false;
-    const f = t.getVideoFrame();
-    turboPort.postMessage({gen, slot, f}, [f]);
-    return true;
-  },
-  turboRelease: gen => {
-    const a = turboSlots.get(gen);
-    if (a){ turboSlots.delete(gen); for (const t of a) if (t) try{ t.release(); }catch{} }
-    return ipcRenderer.invoke('telao:turboRelease', gen);
-  },
 });

@@ -1,5 +1,5 @@
 /* ============================ Motor de vídeo (Windows) ============================
-   Quem transmite: o Telão Audio captura o jogo (mesma captura da turbo), comprime na placa (Media Foundation, codificador
+   Quem transmite: o Telão Audio captura o jogo (Windows Graphics Capture), comprime na placa (Media Foundation, codificador
    da própria placa) e entrega os quadros prontos ao Telão; o Chromium só os leva pela rede.
    Quem assiste: o Telão entrega os quadros comprimidos que chegam; o Telão Audio decodifica na placa e desenha numa
    janela própria, posicionada exatamente sobre a tela do amigo na sala.
