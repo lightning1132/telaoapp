@@ -1,30 +1,29 @@
 {
-  "version": "1.24.0",
+  "version": "1.24.1",
   "minShell": 14,
-  "page": "versoes/telao-1.24.0.html",
-  "sha256": "c34b965550e513085dc1a7c628c7d989fafa3afd0950945dd190415d2da1caba",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.24.0",
+  "page": "versoes/telao-1.24.1.html",
+  "sha256": "b5b99310e5875edbd44f6b52237e3dd0eba469ec5709e8b1fff0b95a49c52e65",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.24.1",
   "notes": [
-    "App mais enxuto: saem a captura turbo (o motor de vídeo faz o trabalho dela; se ele não entrar, a transmissão segue pela captura normal), a configuração manual de servidor TURN, a camada antiga de reações por cima do jogo (fica a desenhada pelo Telão Audio) e o código que existia só para conversar com versões antigas",
-    "Se sair uma versão nova enquanto você está numa sala, o aviso agora explica que o Telão atualiza sozinho quando você sair (antes pedia para baixar o arquivo novo)",
-    "Novidades: a lista mostra só as últimas 10 versões"
+    "Segurança: um site aberto no navegador não consegue mais usar o Telão Audio (capturar janela, tela ou som do jogo) enquanto o Telão está aberto. O app passa uma chave própria ao Telão Audio, e conexões que se apresentam como \"null\" (o que qualquer site consegue fazer) são recusadas",
+    "A biblioteca de conexão (PeerJS) vem dentro do Telão, conferida junto com a página, em vez de ser baixada de um site de terceiros a cada abertura"
   ],
   "app": {
-    "version": "1.24.0",
+    "version": "1.24.1",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.24.0/app.asar",
-        "sha256": "f5ccb341eb182123d972d11dc9453a099961def98487a2dc26b40d1b9e04182d",
-        "size": 632878
+        "path": "versoes/app-1.24.1/app.asar",
+        "sha256": "f9959a63940e610f06ab30da401ce0c2d4a038ac8217c61a1020dfebeac89e37",
+        "size": 727134
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.24.0/telao-audio.exe",
-        "sha256": "360a27e9604c08bf701012d1e59cd79685d0aacde43f56736c5ed3c8c0f82cf3",
-        "size": 722432
+        "path": "versoes/app-1.24.1/telao-audio.exe",
+        "sha256": "b9ef8dbf6e702ddf3c9e6f86d7f8d0db47e28b19c384ba946aed10a2f7ca1afe",
+        "size": 725504
       }
     }
   },
-  "minVersion": "1.24.0"
+  "minVersion": "1.24.1"
 }

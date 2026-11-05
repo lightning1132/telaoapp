@@ -35,5 +35,6 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   natGesture: () => ipcRenderer.invoke('telao:natGesture'),
   floatWindows: true,
   mainPid: parseInt(arg('telao-main-pid'), 10) || 0,
+  helperKey: /^[0-9a-f]{64}$/.test(arg('telao-helper-key')) ? arg('telao-helper-key') : '',   // vai na conexão com o Telão Audio
   monitorRect: id => ipcRenderer.invoke('telao:monitorRect', id),
 });

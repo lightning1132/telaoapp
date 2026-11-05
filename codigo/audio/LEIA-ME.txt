@@ -58,8 +58,11 @@ usam. Quando ninguém pede por 8 s, ele para de ler. Não muda nada na placa nem
 
 SEGURANÇA
 - O programa só escuta conexões do próprio PC (127.0.0.1), nunca da rede.
-- Aceita automaticamente o Telão aberto como arquivo. Se um site tentar se conectar,
-  a janela pergunta antes. A lista de sites aprovados fica em telao-audio-origens.txt.
+- Aberto pelo Telão Desktop, recebe uma chave aleatória e só libera o motor de vídeo, a captura de vídeo,
+  a camada por cima do jogo e o uso da placa para quem mostra essa chave (o próprio app). Conexões com
+  origem "null" (que qualquer site consegue forjar) são sempre recusadas.
+- Se um site tentar se conectar para usar o áudio, a janela pergunta antes. A lista de sites aprovados
+  fica em telao-audio-origens.txt.
 - Não injeta nada no jogo: quem entrega o áudio é o próprio Windows. Não mexe com anti-cheat.
 
 PROBLEMAS

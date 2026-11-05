@@ -94,6 +94,40 @@ static std::string httpHeader(const std::string& req, const std::string& name){
   return "";
 }
 
+// Parâmetro da URL do pedido ("GET /?k=abc HTTP/1.1" → k = "abc"). Só letras e números (a chave é hexadecimal).
+static std::string queryParam(const std::string& req, const std::string& name){
+  size_t eol = req.find("\r\n"); std::string line = req.substr(0, eol == std::string::npos ? req.size() : eol);
+  size_t a = line.find(' '), b = line.rfind(' ');
+  if (a == std::string::npos || b <= a) return "";
+  std::string path = line.substr(a + 1, b - a - 1);
+  size_t q = path.find('?'); if (q == std::string::npos) return "";
+  std::string qs = path.substr(q + 1);
+  for (size_t p = 0; p <= qs.size();){
+    size_t e = qs.find('&', p); if (e == std::string::npos) e = qs.size();
+    std::string kv = qs.substr(p, e - p); size_t eq = kv.find('=');
+    if (eq != std::string::npos && kv.substr(0, eq) == name){
+      std::string v = kv.substr(eq + 1);
+      for (char ch : v) if (!((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))) return "";
+      return v;
+    }
+    p = e + 1;
+  }
+  return "";
+}
+// Comparação sem atalho (o tempo não denuncia quantos caracteres batem).
+static bool sameKey(const std::string& a, const std::string& b){
+  if (a.size() != b.size() || a.empty()) return false;
+  unsigned char d = 0; for (size_t i = 0; i < a.size(); i++) d |= (unsigned char)(a[i] ^ b[i]);
+  return d == 0;
+}
+/* Quem é "o app do Telão" (motor, captura, camada, placa de vídeo): página aberta pelo app, que o Chromium apresenta com
+   origem "file://". Um site nunca consegue mandar essa origem (só "null", por iframe isolado ou data:, e "null" é recusado).
+   Aberto pelo app, o Telão Audio recebe também uma chave aleatória (--key) e exige a mesma chave na conexão. */
+static bool isAppConn(const std::string& origin, const std::string& key, const std::string& want){
+  if (origin.rfind("file://", 0) != 0) return false;
+  return want.empty() || sameKey(key, want);
+}
+
 // Lê um campo string de um JSON simples ({"cmd":"start","name":"x.exe"}).
 static std::string jsonStr(const std::string& j, const std::string& key){
   std::string pat = "\"" + key + "\"";
@@ -405,6 +439,13 @@ int main(){
   std::string req = "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nsec-websocket-key: abc==\r\nOrigin: null\r\n\r\n";
   check(httpHeader(req, "Sec-WebSocket-Key") == "abc==", "header case-insensitive");
   check(httpHeader(req, "origin") == "null", "origin");
+  {
+    std::string r1 = "GET /?k=ab12CD HTTP/1.1\r\nHost: x\r\n\r\n", r2 = "GET /?x=1&k=zz9 HTTP/1.1\r\n\r\n", r3 = "GET /?k=a%27b HTTP/1.1\r\n\r\n", r4 = "GET / HTTP/1.1\r\n\r\n";
+    check(queryParam(r1, "k") == "ab12CD" && queryParam(r2, "k") == "zz9" && queryParam(r3, "k") == "" && queryParam(r4, "k") == "", "chave na URL do pedido");
+    check(sameKey("abc", "abc") && !sameKey("abc", "abd") && !sameKey("", "") && !sameKey("ab", "abc"), "comparação da chave");
+    check(isAppConn("file://", "k1", "k1") && !isAppConn("file://", "k2", "k1") && !isAppConn("file://", "", "k1"), "app: origem do app e chave certa");
+    check(isAppConn("file://", "", "") && !isAppConn("null", "", "") && !isAppConn("null", "k1", "k1") && !isAppConn("https://x.github.io", "k1", "k1"), "site (ou iframe isolado, origem null) nunca é o app");
+  }
   check(jsonStr("{\"cmd\":\"start\",\"target\":\"app\",\"name\":\"Marvel-Win64-Shipping.exe\"}", "name") == "Marvel-Win64-Shipping.exe", "json name");
   check(jsonStr("{\"cmd\": \"list\"}", "cmd") == "list", "json with space");
   check(jsonEsc("a\"b\\c\n") == "a\\\"b\\\\c\\u000a", "json escape");
@@ -775,7 +816,9 @@ struct Conn {
   CRITICAL_SECTION sendLock;
   volatile LONG alive;
   std::string origin;
+  bool app = false;   // o app do Telão (ver isAppConn): motor, captura de vídeo, camada e placa de vídeo só para ele
 };
+static std::string gKey;   // chave que o app passou ao abrir este Telão Audio (vazia: aberto à mão)
 
 static bool sendAll(SOCKET s, const char* d, int n){
   while (n > 0){ int k = send(s, d, n, 0); if (k <= 0) return false; d += k; n -= k; }
@@ -817,7 +860,7 @@ static void loadOrigins(){
 }
 static bool originAllowed(const std::string& o){
   if (o.empty()) return false;                                 // navegadores sempre mandam Origin
-  if (o == "null" || o.rfind("file://", 0) == 0) return true;  // Telão aberto como arquivo local
+  if (o == "null" || o.rfind("file://", 0) == 0) return false; // "null" qualquer site consegue mandar; "file://" só entra como app (isAppConn)
   EnterCriticalSection(&gOriginLock);
   bool ok = false;
   for (auto& x : gOrigins) if (x == o) ok = true;
@@ -1276,7 +1319,7 @@ static DWORD WINAPI gpuThread(void*){
   return 0;
 }
 static void gpuRequest(Conn* c, const std::string& msg){
-  if (!(c->origin == "null" || c->origin.rfind("file://", 0) == 0)){ wsText(c, "{\"type\":\"gpu\",\"ok\":false,\"error\":\"só no app do Telão\"}"); return; }
+  if (!c->app){ wsText(c, "{\"type\":\"gpu\",\"ok\":false,\"error\":\"só no app do Telão\"}"); return; }
   DWORD pid = (DWORD)strtoul(jsonStr(msg, "pid").c_str(), nullptr, 10);
   EnterCriticalSection(&gGpuLock);
   gGpuRoot = gBoostRoot ? gBoostRoot : pid;
@@ -1314,7 +1357,7 @@ static void applyGpuPrio(bool on){
   gGprioOk = ok; gGprioFail = fail; gGprioStatus = last;
 }
 static void gprioRequest(Conn* c, const std::string& msg){
-  if (!(c->origin == "null" || c->origin.rfind("file://", 0) == 0)) return;
+  if (!c->app) return;
   bool on = jsonStr(msg, "on") == "1";
   InterlockedExchange(&gGprioOn, on ? 1 : 0);
   gGprioOwner = on ? c : nullptr;
@@ -1751,7 +1794,7 @@ static void ovPost(OvCmd* c){
   if (gOvHwnd) PostMessageW(gOvHwnd, WM_APP + 1, 0, 0);
 }
 static void overlayCommand(Conn* c, const std::string& cmd, const std::string& msg){
-  if (!(c->origin == "null" || c->origin.rfind("file://", 0) == 0)) return;
+  if (!c->app) return;
   if (cmd == "ovshow"){
     bool ok = ovEnsure();
     if (ok){
@@ -1786,6 +1829,7 @@ static void handleCommand(Conn* c, const std::string& msg){
   if (cmd == "gprio"){ gprioRequest(c, msg); return; }
   if (cmd == "ovshow" || cmd == "ovhide" || cmd == "ovitem"){ overlayCommand(c, cmd, msg); return; }
   if (cmd == "winrect"){
+    if (!c->app){ wsText(c, "{\"type\":\"winrect\",\"ok\":false}"); return; }
     // Retângulo da janela (pixels físicos) e do monitor onde ela está: usado pela camada de reações do app.
     unsigned long long hv = strtoull(jsonStr(msg, "hwnd").c_str(), nullptr, 10);
     HWND hwnd = (HWND)(uintptr_t)hv;
@@ -1843,9 +1887,10 @@ static DWORD WINAPI connThread(void* arg){
   }
   std::string key = httpHeader(req, "Sec-WebSocket-Key");
   c->origin = httpHeader(req, "Origin");
+  c->app = isAppConn(c->origin, queryParam(req, "k"), gKey);
   if (key.empty()){
     const char* r = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"; sendAll(c->s, r, (int)strlen(r));
-  } else if (!originAllowed(c->origin)){
+  } else if (!c->app && !originAllowed(c->origin)){
     const char* r = "HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n"; sendAll(c->s, r, (int)strlen(r));
   } else {
     std::string r = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " +
@@ -1853,7 +1898,7 @@ static DWORD WINAPI connThread(void* arg){
     ok = sendAll(c->s, r.data(), (int)r.size());
   }
   if (ok){
-    logf("Telão conectado (origem: %s)", c->origin.c_str());
+    logf("Telão conectado (origem: %s%s)", c->origin.c_str(), c->app ? ", app" : "");
     // Mensagem grande chega em pedaços (o Chromium divide, por exemplo, um quadro de vídeo grande do motor): junta antes de usar.
     std::string frag; int fragOp = 0;
     while (c->alive){
@@ -2067,8 +2112,12 @@ int main(int argc, char** argv){
     int wc = 0; wchar_t** wv = toArgv ? toArgv(GetCommandLineW(), &wc) : nullptr;
     if (wv && wc >= 2 && wcscmp(wv[1], L"--patch-icon") == 0) return patchIconMain(wc, wv);
   }
-  for (int i = 1; i + 1 < argc; i++)
+  for (int i = 1; i + 1 < argc; i++){
     if (strcmp(argv[i], "--boost-tree") == 0) gBoostRoot = (DWORD)strtoul(argv[i + 1], nullptr, 10);
+    if (strcmp(argv[i], "--key") == 0){ std::string k = argv[i + 1]; bool hex = k.size() >= 32 && k.size() <= 128;
+      for (char ch : k) if (!((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f'))) hex = false;
+      if (hex) gKey = k; }
+  }
   SetConsoleOutputCP(CP_UTF8);
   SetConsoleTitleW(L"Telão Audio");
   {

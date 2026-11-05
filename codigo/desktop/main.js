@@ -55,6 +55,20 @@ function helperPath(){
     : path.join(__dirname, 'telao-audio.exe');
 }
 
+// Chave do Telão Audio: aleatória, criada uma vez e guardada na pasta de dados da janela principal (a janela de teste usa
+// a mesma). O Telão Audio aberto pelo app só atende motor, captura de vídeo, camada e placa de vídeo a quem mostra essa
+// chave; um site no navegador nunca a conhece. Fica igual entre aberturas: se um Telão Audio de antes ainda estiver
+// segurando a porta, a chave continua batendo.
+let helperKeyCache = null;
+function helperKey(){
+  if (helperKeyCache) return helperKeyCache;
+  const f = path.join(MAIN_USERDATA, 'telao-audio-chave.txt');
+  try{ const k = fs.readFileSync(f, 'utf8').trim(); if (/^[0-9a-f]{64}$/.test(k)) return (helperKeyCache = k); }catch{}
+  const k = require('crypto').randomBytes(32).toString('hex');
+  try{ fs.mkdirSync(MAIN_USERDATA, {recursive: true}); fs.writeFileSync(f, k); }catch{}
+  return (helperKeyCache = k);
+}
+
 function startHelper(){
   if (process.platform !== 'win32') return;
   const exe = helperPath();
@@ -63,7 +77,7 @@ function startHelper(){
     // Se já houver um Telão Audio aberto (porta ocupada), este sai sozinho e a página usa o que já existe.
     // --boost-tree: o helper tira os processos do Telão da economia de energia do Windows 11
     // (com o app minimizado, o Windows cortava o FPS pela metade).
-    const me = spawn(exe, ['--boost-tree', String(process.pid)], {windowsHide: true, stdio: 'ignore'});
+    const me = spawn(exe, ['--boost-tree', String(process.pid), '--key', helperKey()], {windowsHide: true, stdio: 'ignore'});
     helper = me;
     // caiu com erro: abre de novo (até 5 vezes em 10 min); a página reconecta e o motor volta sozinho
     me.on('exit', code => {
@@ -131,7 +145,7 @@ function createWindow(){
       nodeIntegration: false,
       backgroundThrottling: false,
       spellcheck: !MEM_SAVE,
-      additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION, '--telao-main-pid=' + process.pid,
+      additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION, '--telao-main-pid=' + process.pid, '--telao-helper-key=' + helperKey(),
                             '--telao-wco=' + (wco ? WCO_H : 0), ...(PROFILE ? ['--telao-perfil=' + PROFILE, '--telao-sala=' + ((process.argv.find(a => a.startsWith('--telao-sala=')) || '').split('=')[1] || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40),
                                            '--telao-modo=' + ((process.argv.find(a => a.startsWith('--telao-modo=')) || '').split('=')[1] || '').replace(/[^a-z]/gi, '').slice(0, 8)] : [])],
     },

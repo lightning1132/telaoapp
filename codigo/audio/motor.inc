@@ -1431,7 +1431,7 @@ static bool engineCommand(Conn* c, const std::string& cmd, const std::string& ms
   static const char* known[] = {"vcaps", "ecap", "estop", "esess", "eclose", "ekey", "erate", "dopen", "dclose", "drect", "dreact", "dfull", "dkey", "dsnap", nullptr};
   bool isEng = false; for (int i = 0; known[i]; i++) if (cmd == known[i]) isEng = true;
   if (!isEng) return false;
-  if (!(c->origin == "null" || c->origin.rfind("file://", 0) == 0)){ wsText(c, "{\"type\":\"eerror\",\"message\":\"o motor de vídeo só funciona no app do Telão\"}"); return true; }
+  if (!c->app){ wsText(c, "{\"type\":\"eerror\",\"message\":\"o motor de vídeo só funciona no app do Telão\"}"); return true; }
   if (cmd == "vcaps"){ wsText(c, engCaps()); return true; }
   if (cmd == "ecap"){
     engStop(nullptr);
