@@ -1158,7 +1158,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.26.1';
+const TELAO_VERSION = '1.26.2';
 // Atualização automática. REQUIRES_SHELL: nível do app desktop que esta página usa (main.js/preload/Telão Audio).
 // Todo mundo fica sempre na versão mais nova, então é sempre o nível do app atual (release.sh confere).
 const REQUIRES_SHELL = 14;
@@ -1166,7 +1166,9 @@ const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoap
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const JUKEBOX_URL = 'https://lightning1132.github.io/telaoapp/jukebox.html';       // preenchido no empacotamento: player do YouTube e busca da jukebox, no site do Telão
 const CHANGELOG = [
-  ['1.26.1', 'hoje', ['Jukebox: bloqueio de anúncios refeito. Além de cortar os pedidos de anúncio, o app tira os anúncios da resposta do player do YouTube antes de ele ler (a mesma técnica dos bloqueadores de navegador)',
+  ['1.26.2', 'hoje', ['Jukebox: ninguém perde mais o começo da música. Se o YouTube demora para começar a tocar, o relógio da sala espera o primeiro player começar (o cartão mostra "Carregando…"); antes, quando a música finalmente começava, o Telão pulava para frente para "alcançar" a sala',
+                      'Jukebox: o ✓ depois de adicionar uma música da busca volta a ser + em instantes, então dá para colocar a mesma música de novo (antes ficava travado até buscar outra vez)']],
+  ['1.26.1', '07/11', ['Jukebox: bloqueio de anúncios refeito. Além de cortar os pedidos de anúncio, o app tira os anúncios da resposta do player do YouTube antes de ele ler (a mesma técnica dos bloqueadores de navegador)',
                       'Jukebox: volume numa linha própria no cartão, com a barra larga e a porcentagem (antes a barra ficava espremida e não dava para arrastar)']],
   ['1.26.0', '07/11', ['Jukebox no app: a música vira só som. O vídeo do player fica escondido (o botão ▭ no cartão mostra de volta, se quiser)',
                       'Jukebox no app: bloqueio de anúncios no player, ligado de começo (dá para desligar no painel da jukebox)']],
@@ -1186,12 +1188,7 @@ const CHANGELOG = [
                       'Versão mínima: quando uma versão antiga deixar de funcionar com as novas, ela mostra "Atualize o Telão para continuar" e não entra em sala até atualizar']],
   ['1.22.2', '04/11', ['NVENC direto: quando alguém pedia quadro completo antes de passar 1 s do anterior, o Telão Audio codificava sem parar (quase 200 quadros/s) até poder mandar o quadro completo. Gastava a placa à toa, baixava a qualidade de cada quadro e fazia quem assistia cair do motor. Corrigido']],
   ['1.22.1', '03/11', ['Motor: transmite só a área interna da janela do jogo. Antes iam junto a barra de título e, no Windows 10, as bordas invisíveis da janela (faixas nas laterais e a imagem fora de escala)',
-                      'Teste padrão: nota exata, comparando a luminância do quadro decodificado com a cena no tamanho de verdade (antes as duas eram reduzidas de jeitos diferentes, e isso escondia diferença de qualidade). As notas novas não se comparam com as antigas']],
-  ['1.22.0', '03/11', ['Motor de vídeo em placas NVIDIA: o Telão Audio passa a falar direto com o codificador da placa (NVENC), em modo qualidade para quem assiste: 2 passadas, ajuste de detalhe por região da imagem e cota de bits por ~0,4 s em vez de por quadro. Mais detalhe pela mesma taxa',
-                      'Sem quadro completo a cada 4 s: a imagem se renova aos poucos a cada 3 s (corrige perdas sem o pico de um quadro inteiro). Quadro completo só quando alguém pede, no máximo 1 por segundo',
-                      'Jogo em tela cheia na frente: o motor captura o monitor em vez da janela (no Windows 10 a captura da janela congelava). Ao trocar de janela, volta na hora para só a janela do jogo',
-                      'Opções → Desempenho: dá para desligar o NVENC direto e a captura do monitor. Se o NVENC não abrir, ou se o Telão Audio cair dentro dele, o motor volta sozinho para o caminho anterior',
-                      'Relatório e teste padrão mostram o QP médio (quanto o codificador comprimiu: menor é mais detalhe)']]
+                      'Teste padrão: nota exata, comparando a luminância do quadro decodificado com a cena no tamanho de verdade (antes as duas eram reduzidas de jeitos diferentes, e isso escondia diferença de qualidade). As notas novas não se comparam com as antigas']]
 ];
 function cmpVer(a, b){
   const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0), pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -1799,7 +1796,7 @@ function sendGamesTo(pid){ const list = groupGames().slice(0, 40); if (list.leng
    todo pedido (adicionar, tirar, pular, pausar) vai para essa pessoa, que manda o estado novo para todos. Cada um
    ancora a posição no próprio relógio quando o estado chega e o player local acompanha (corrige se desviar > 2 s).
    Como todos guardam a cópia do estado, quem assumir a sala continua de onde estava. */
-const JB_MAX_Q = 50, JB_DRIFT = 2, JB_HEART_MS = 8000;
+const JB_MAX_Q = 50, JB_DRIFT = 2, JB_HEART_MS = 8000, JB_WAIT_MAX = 25000;
 const JB_VID = /^[A-Za-z0-9_-]{11}$/;
 const jb = {
   s: null,            // {rev, q: [item], cur: item+{pos, paused} | null, note: {n, txt} | null}
@@ -1808,6 +1805,7 @@ const jb = {
   ps: null,           // último estado do player local {vid, st, cur, dur, title}
   lastSeek: 0, lastLoad: '', noteSeen: 0, rid: 0, waits: new Map(),
   heart: 0, wanted: false, hasKey: null, tapHint: false, lastBy: '', localErr: '',
+  waitSince: 0, goSent: '',   // música nova: o relógio só anda quando o primeiro player da sala começar a tocar
 };
 const jbUrl = () => JUKEBOX_URL ? JUKEBOX_URL + '?v=' + TELAO_VERSION : '';
 const jbAvailable = () => !!jbUrl();
@@ -1820,7 +1818,7 @@ const jbVol = () => { const v = +store.get('jbVol', 60); return v >= 0 && v <= 1
 function jbPos(){
   const c = jb.s && jb.s.cur;
   if (!c) return 0;
-  return c.paused ? c.pos : c.pos + (performance.now() - jb.at) / 1000;
+  return c.paused || c.wait ? c.pos : c.pos + (performance.now() - jb.at) / 1000;
 }
 const jbFmt = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = String(s % 60).padStart(2, '0'); return h ? h + ':' + String(m).padStart(2, '0') + ':' + x : m + ':' + x; };
 function jbParseLink(t){
@@ -1847,7 +1845,7 @@ function jbCleanState(s){
   if (!s || typeof s !== 'object') return null;
   const q = (Array.isArray(s.q) ? s.q : []).slice(0, JB_MAX_Q).map(x => jbCleanItem(x)).filter(Boolean);
   let cur = null;
-  if (s.cur){ const c = jbCleanItem(s.cur); if (c) cur = {...c, pos: Math.max(0, Math.min(36000, +s.cur.pos || 0)), paused: !!s.cur.paused}; }
+  if (s.cur){ const c = jbCleanItem(s.cur); if (c) cur = {...c, pos: Math.max(0, Math.min(36000, +s.cur.pos || 0)), paused: !!s.cur.paused, wait: !!s.cur.wait}; }
   const note = s.note && typeof s.note.txt === 'string' ? {n: +s.note.n || 0, txt: s.note.txt.slice(0, 200)} : null;
   return {rev: Math.max(0, +s.rev || 0), q, cur, note};
 }
@@ -1869,19 +1867,19 @@ function jbCommit(note){
 }
 function jbNext(why){
   const s = jb.s, was = s.cur;
-  s.cur = s.q.length ? {...s.q.shift(), pos: 0, paused: false} : null;
-  jb.at = performance.now();
+  s.cur = s.q.length ? {...s.q.shift(), pos: 0, paused: false, wait: true} : null;
+  jb.at = performance.now(); jb.waitSince = Date.now();
   jbCommit(why ? why.replace('%s', jbTitle(was)) : null);
 }
 function jbApply(op, by){
   if (!jb.s) jb.s = {rev: 0, q: [], cur: null, note: null};
   const s = jb.s, c = s.cur;
-  jb.lastBy = /^(dur|meta|end|err)$/.test(op.op) ? '' : by;
+  jb.lastBy = /^(dur|meta|end|err|go)$/.test(op.op) ? '' : by;
   if (op.op === 'add'){
     const it = jbCleanItem({vid: op.vid, title: op.title, ch: op.ch, dur: op.dur}, by);
     if (!it) return;
     it.id = Math.random().toString(36).slice(2, 10);
-    if (!c){ s.cur = {...it, pos: 0, paused: false}; jb.at = performance.now(); jbCommit(by + ' colocou ' + jbTitle(it) + ' para tocar'); return; }
+    if (!c){ s.cur = {...it, pos: 0, paused: false, wait: true}; jb.at = performance.now(); jb.waitSince = Date.now(); jbCommit(by + ' colocou ' + jbTitle(it) + ' para tocar'); return; }
     if (s.q.length >= JB_MAX_Q) return jbCommit('A fila está cheia (' + JB_MAX_Q + ' músicas)');
     s.q.push(it); jbCommit(by + ' adicionou ' + jbTitle(it) + ' à fila');
   }
@@ -1890,10 +1888,12 @@ function jbApply(op, by){
   else if (op.op === 'skip'){ if (c && c.id === op.id) jbNext(by + ' pulou %s'); }
   else if (op.op === 'pause'){
     if (!c || c.id !== op.id || c.paused === !!op.on) return;
-    c.pos = jbPos(); c.paused = !!op.on; jb.at = performance.now();
+    c.pos = jbPos(); c.paused = !!op.on; c.wait = false; jb.at = performance.now();
     jbCommit(by + (c.paused ? ' pausou a música' : ' voltou a tocar a música'));
   }
   else if (op.op === 'clear'){ if (s.q.length){ s.q = []; jbCommit(by + ' limpou a fila'); } }
+  // o primeiro player da sala começou a tocar: agora o relógio da música anda (ninguém perde o começo)
+  else if (op.op === 'go'){ if (c && c.id === op.id && c.wait){ c.wait = false; c.pos = 0; jb.at = performance.now(); jbCommit(); } }
   // informações que chegam dos players
   else if (op.op === 'dur'){ const d = Math.round(+op.dur || 0); if (c && c.id === op.id && !c.dur && d > 0 && d < 36000){ c.pos = jbPos(); jb.at = performance.now(); c.dur = d; jbCommit(); } }
   else if (op.op === 'meta'){
@@ -1911,6 +1911,12 @@ function jbApply(op, by){
 setInterval(() => {
   if (!jbOwner() || !jb.s || !jb.s.cur) return;
   const c = jb.s.cur;
+  // ninguém começou a tocar em 25 s (todo mundo sem som, ou o YouTube não carregou): o relógio anda assim mesmo
+  if (c.wait){
+    if (!jb.waitSince) jb.waitSince = Date.now();
+    if (Date.now() - jb.waitSince > (window.__jbWaitMax || JB_WAIT_MAX)){ c.wait = false; c.pos = 0; jb.at = performance.now(); jbCommit(); }
+    return;
+  }
   if (!c.paused && c.dur > 0 && jbPos() >= c.dur + 1) return jbNext();
   if (!c.paused && Date.now() - jb.heart > JB_HEART_MS) jbBroadcast();
 }, 500);
@@ -1986,7 +1992,8 @@ function jbFromPlayer(){
   if (!p || !c || p.vid !== c.vid) return;
   if (p.dur > 0 && !c.dur) jbOp({op: 'dur', id: c.id, dur: Math.round(p.dur)});
   if (p.title && !c.title) jbOp({op: 'meta', id: c.id, title: p.title});
-  if (p.st === 0) jbOp({op: 'end', id: c.id});
+  if (p.st === 0 && !c.wait) jbOp({op: 'end', id: c.id});
+  if (p.st === 1 && c.wait && jb.goSent !== c.id){ jb.goSent = c.id; jbOp({op: 'go', id: c.id}); }
   jbSync();
 }
 // deixa o player local igual ao estado da sala
@@ -2011,7 +2018,7 @@ function jbSync(){
   const playing = p.st === 1, buffering = p.st === 3;
   if (c.paused){ if (playing || buffering) jbPost({t: 'pause'}); return; }
   if (!playing && !buffering && p.st !== 0 && Date.now() - jb.lastSeek > 1500){ jbPost({t: 'play'}); jb.lastSeek = Date.now(); }
-  if (playing && Math.abs(p.cur - want) > JB_DRIFT && Date.now() - jb.lastSeek > 3000 && (!c.dur || want < c.dur - 1)){
+  if (playing && !c.wait && Math.abs(p.cur - want) > JB_DRIFT && Date.now() - jb.lastSeek > 3000 && (!c.dur || want < c.dur - 1)){
     jbPost({t: 'seek', pos: want}); jb.lastSeek = Date.now();
   }
   // celular: o navegador às vezes não deixa começar sem um toque no player
@@ -2078,7 +2085,7 @@ function jbRenderCard(){
   $('#jbVid').textContent = jbNoVideo() ? '▭' : '▬';
   $('#jbVid').title = jbNoVideo() ? 'Mostrar o vídeo' : 'Esconder o vídeo (só o som)';
   $('#jbCardT').textContent = jbTitle(c);
-  $('#jbCardSub').textContent = (c.paused ? 'Pausada · ' : '') + (c.by ? 'por ' + c.by : '') + (jb.s.q.length ? ' · ' + jb.s.q.length + ' na fila' : '');
+  $('#jbCardSub').textContent = (c.paused ? 'Pausada · ' : c.wait ? 'Carregando… · ' : '') + (c.by ? 'por ' + c.by : '') + (jb.s.q.length ? ' · ' + jb.s.q.length + ' na fila' : '');
   $('#jbPlay').textContent = c.paused ? '▶' : '⏸';
   $('#jbPlay').title = c.paused ? 'Voltar a tocar para todos' : 'Pausar para todos';
   $('#jbMute').textContent = muted ? '🔇' : '🔊';
@@ -2136,7 +2143,9 @@ async function jbSubmit(){
     const it = jbCleanItem(x, '');
     if (it) res.appendChild(jbItemRow(it, {buttons: [{label: '+', title: 'Adicionar à fila', cls: 'jb-add', go: ev => {
       jbOp({op: 'add', vid: it.vid, title: it.title, ch: it.ch, dur: it.dur});
-      ev.currentTarget.textContent = '✓'; ev.currentTarget.disabled = true;
+      // ✓ só de confirmação: logo volta a ser + (dá para pôr a mesma música de novo depois)
+      const b = ev.currentTarget; b.textContent = '✓'; b.disabled = true;
+      setTimeout(() => { b.textContent = '+'; b.disabled = false; }, 1500);
     }}]}));
   }
 }
@@ -6917,6 +6926,8 @@ function showReact(streamerId, item, who, fromId){
    quadro-chave (pedimos um a cada 2 s); o clipe é o cabeçalho + os blocos dos últimos ~30 s,
    com o relógio de cada bloco zerado no início. Nada é recodificado na hora de salvar. */
 const CLIP_SECONDS = 30, CLIP_KEEP_MS = 36000;
+// (window.__clipSecs: só nos testes, para não esperar 40 s de gravação)
+const clipSecs = () => window.__clipSecs || CLIP_SECONDS, clipKeepMs = () => window.__clipSecs ? (window.__clipSecs + 6) * 1000 : CLIP_KEEP_MS;
 const EB = {EBML: 0x1A45DFA3, SEGMENT: 0x18538067, CLUSTER: 0x1F43B675, TRACKS: 0x1654AE6B, TRACK: 0xAE, TNUM: 0xD7, TTYPE: 0x83,
             TIMECODE: 0xE7, SIMPLE: 0xA3, GROUP: 0xA0, BLOCK: 0xA1, REF: 0xFB};
 const EB_TOP = new Set([EB.CLUSTER, 0x1C53BB6B /*Cues*/, 0x1254C367 /*Tags*/, 0x114D9B74 /*SeekHead*/, 0x1549A966 /*Info*/, EB.TRACKS, EB.SEGMENT, EB.EBML]);
@@ -7025,7 +7036,7 @@ class WebmRing {
     const last = this.clusters[this.clusters.length - 1].tc;
     // mantém o último cluster com quadro-chave anterior ao corte, para o clipe sempre começar num quadro inteiro
     let cut = 0;
-    for (let i = 0; i < this.clusters.length; i++) if (this.clusters[i].key && this.clusters[i].tc <= last - CLIP_KEEP_MS) cut = i;
+    for (let i = 0; i < this.clusters.length; i++) if (this.clusters[i].key && this.clusters[i].tc <= last - clipKeepMs()) cut = i;
     if (cut > 0) this.clusters.splice(0, cut);
   }
   seconds(){ return this.clusters.length ? (this.clusters[this.clusters.length - 1].tc - this.clusters[0].tc) / 1000 : 0; }
@@ -7157,7 +7168,7 @@ function clipTile(pid){
   try{ cb.rec.requestData(); }catch{}
   setTimeout(() => cb.chain.then(() => {
     t.clipBtn.classList.remove('busy');
-    const c = cb.ring.clip(CLIP_SECONDS);
+    const c = cb.ring.clip(clipSecs());
     if (!c || c.seconds < 1){ toast('Ainda não tem vídeo suficiente guardado desta tela. Tente de novo em alguns segundos.', 'warn'); return; }
     if (DESKTOP && window.telaoDesktop.saveClip){
       // No app: o processo principal grava direto em Vídeos\Telão, com o nome completo.

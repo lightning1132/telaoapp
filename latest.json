@@ -1,29 +1,29 @@
 {
-  "version": "1.26.1",
+  "version": "1.26.2",
   "minShell": 14,
-  "page": "versoes/telao-1.26.1.html",
-  "sha256": "56ece809adceb562f24869d8a3aa1b7860462b81e6f0f301dab5231d7ffc71ae",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.26.1",
+  "page": "versoes/telao-1.26.2.html",
+  "sha256": "52e20297baaa5a5755840635d85148ba49649fe27e5d50205d37024fffd0a5bd",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.26.2",
   "notes": [
-    "Jukebox: bloqueio de anúncios refeito. Além de cortar os pedidos de anúncio, o app tira os anúncios da resposta do player do YouTube antes de ele ler (a mesma técnica dos bloqueadores de navegador)",
-    "Jukebox: volume numa linha própria no cartão, com a barra larga e a porcentagem (antes a barra ficava espremida e não dava para arrastar)"
+    "Jukebox: ninguém perde mais o começo da música. Se o YouTube demora para começar a tocar, o relógio da sala espera o primeiro player começar (o cartão mostra \"Carregando…\"); antes, quando a música finalmente começava, o Telão pulava para frente para \"alcançar\" a sala",
+    "Jukebox: o ✓ depois de adicionar uma música da busca volta a ser + em instantes, então dá para colocar a mesma música de novo (antes ficava travado até buscar outra vez)"
   ],
   "app": {
-    "version": "1.26.1",
+    "version": "1.26.2",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.26.1/app.asar",
-        "sha256": "717be237494d72670a7ca9c49aadb19caa3a936a8c520cb9720f5838bad74913",
-        "size": 760158
+        "path": "versoes/app-1.26.2/app.asar",
+        "sha256": "c26aa5398f4946b4142e1c19f9592855f1df44726221fb7d85b0acc80a20a3d2",
+        "size": 761000
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.26.1/telao-audio.exe",
+        "path": "versoes/app-1.26.2/telao-audio.exe",
         "sha256": "b9ef8dbf6e702ddf3c9e6f86d7f8d0db47e28b19c384ba946aed10a2f7ca1afe",
         "size": 725504
       }
     }
   },
-  "minVersion": "1.26.1"
+  "minVersion": "1.26.2"
 }
