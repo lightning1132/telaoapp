@@ -1,29 +1,31 @@
 {
-  "version": "1.24.1",
+  "version": "1.25.0",
   "minShell": 14,
-  "page": "versoes/telao-1.24.1.html",
-  "sha256": "b5b99310e5875edbd44f6b52237e3dd0eba469ec5709e8b1fff0b95a49c52e65",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.24.1",
+  "page": "versoes/telao-1.25.0.html",
+  "sha256": "b76e7d51818e02e955a870be444192d5648963bd1fa7b42170885967ac450857",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.25.0",
   "notes": [
-    "Segurança: um site aberto no navegador não consegue mais usar o Telão Audio (capturar janela, tela ou som do jogo) enquanto o Telão está aberto. O app passa uma chave própria ao Telão Audio, e conexões que se apresentam como \"null\" (o que qualquer site consegue fazer) são recusadas",
-    "A biblioteca de conexão (PeerJS) vem dentro do Telão, conferida junto com a página, em vez de ser baixada de um site de terceiros a cada abertura"
+    "Jukebox: botão \"Música\" na sala. Busque uma música ou cole um link do YouTube ou do YouTube Music, e a sala inteira ouve junto, no mesmo ponto. Quem entra no meio cai no ponto certo",
+    "Fila compartilhada: todo mundo adiciona, tira, passa uma música para tocar logo a seguir, pausa e pula. A fila continua se outra pessoa passar a segurar a sala",
+    "Cada um ouve no próprio PC pelo player oficial do YouTube (um cartão pequeno no canto), com o próprio volume; dá para parar de ouvir só para você. Nada passa pela transmissão nem pela sua internet de envio",
+    "Vídeo que o dono bloqueou fora do YouTube é pulado sozinho, com aviso"
   ],
   "app": {
-    "version": "1.24.1",
+    "version": "1.25.0",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.24.1/app.asar",
-        "sha256": "f9959a63940e610f06ab30da401ce0c2d4a038ac8217c61a1020dfebeac89e37",
-        "size": 727134
+        "path": "versoes/app-1.25.0/app.asar",
+        "sha256": "fc2a264ed7fb1b9a8cd5e70daf092983e37cd22f16f15402c6e8fb321d1e7a28",
+        "size": 753300
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.24.1/telao-audio.exe",
+        "path": "versoes/app-1.25.0/telao-audio.exe",
         "sha256": "b9ef8dbf6e702ddf3c9e6f86d7f8d0db47e28b19c384ba946aed10a2f7ca1afe",
         "size": 725504
       }
     }
   },
-  "minVersion": "1.24.1"
+  "minVersion": "1.25.0"
 }

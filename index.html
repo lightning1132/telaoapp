@@ -537,6 +537,51 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
   box-shadow:0 10px 30px rgba(0,0,0,.5);max-height:50%;overflow:auto;display:flex;flex-direction:column;gap:8px}
 #chatStk[hidden]{display:none}
 #chatBtn.on{border-color:var(--accent)}
+/* jukebox */
+#jbBtn.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+#jbBtn.playing svg{color:var(--accent)}
+#jb{width:340px;flex:none;display:flex;flex-direction:column;border-left:1px solid var(--line);background:var(--panel);position:relative}
+#jb[hidden]{display:none}
+#jb .jb-sub{font-size:12px}
+.jb-search{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--line)}
+.jb-search input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;outline:none}
+.jb-search input:focus{border-color:var(--accent)}
+.jb-body{flex:1;overflow:auto;padding:6px 10px 12px}
+#jbMsg{margin:6px 2px;font-size:13px}
+#jbMsg:empty{display:none}
+#jbRes:not(:empty){border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:4px}
+.jb-h{display:flex;align-items:center;gap:6px;margin:12px 2px 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.jb-h .grow{flex:1}
+.jb-clear{padding:2px 8px;font-size:11.5px;text-transform:none;letter-spacing:0}
+.jb-empty{margin:4px 2px;font-size:13px}
+.jb-row{display:flex;align-items:center;gap:8px;padding:5px 2px;border-radius:8px}
+.jb-row:hover{background:var(--panel2)}
+.jb-th{width:64px;height:36px;object-fit:cover;border-radius:5px;background:var(--panel2);flex:none}
+.jb-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.jb-tx b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jb-tx span{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jb-b{width:30px;height:30px;padding:0;display:grid;place-items:center;flex:none;font-size:14px}
+.jb-b.jb-add{border-color:var(--accent);color:var(--accent)}
+#jbCard{position:fixed;right:16px;bottom:16px;width:260px;z-index:13;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#room:has(#chat:not([hidden])) #jbCard,#room:has(#jb:not([hidden])) #jbCard{right:calc(16px + 340px)}
+#jbCard[hidden]{display:none}
+/* o player do YouTube fica sempre visível enquanto toca (regra do YouTube: pelo menos 200×200) */
+#jbFrameBox{width:260px;height:200px;background:#000}
+#jbFrameBox iframe{width:100%;height:100%;border:0;display:block}
+#jbCard.muted #jbFrameBox{height:0}
+#jbTap{margin:0;padding:6px 10px;font-size:12px;background:var(--warn);color:var(--warn-ink)}
+.jb-info{display:flex;flex-direction:column;gap:1px;padding:8px 10px 4px}
+.jb-info b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jb-info span{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jb-prog{height:3px;background:var(--panel2);margin:2px 10px}
+#jbBar{height:100%;width:0;background:var(--accent);transition:width 1s linear}
+.jb-ctl{display:flex;align-items:center;gap:4px;padding:6px 8px 8px}
+.jb-ctl .grow{flex:1}
+.jb-ctl .ghost{width:30px;height:30px;padding:0;display:grid;place-items:center;flex:none;background:var(--panel2);font-size:13px}
+#jbTime{font-size:11.5px;font-variant-numeric:tabular-nums;margin-left:4px;white-space:nowrap}
+#jbVolIn{width:52px;min-width:0;accent-color:var(--accent)}
+@media (max-width:760px){#jb{position:fixed;right:0;top:0;bottom:0;z-index:12;width:min(100%,360px)}
+  #room:has(#chat:not([hidden])) #jbCard,#room:has(#jb:not([hidden])) #jbCard{right:16px}}
 .badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
 .badge[hidden]{display:none}
 #pipChat.off{opacity:.45}
@@ -637,6 +682,10 @@ html.phone #bar .wm,html.phone #memSum,html.phone #bar .split,html.phone #status
 html.phone #codePill{margin-left:6px;padding:0 10px;min-width:0}
 html.phone #membersBtn{height:44px;padding:0 4px;min-width:0;overflow:hidden}
 html.phone #bar #chatBtn{position:relative;width:44px;height:44px;padding:0;justify-content:center;border:0;font-size:0;flex:none}
+html.phone #bar #jbBtn{width:44px;height:44px;padding:0;justify-content:center;border:0;font-size:0;flex:none}
+html.phone #jbCard{right:8px;bottom:8px;width:220px}
+html.phone #jbFrameBox{width:220px}
+html.phone #jbVolIn{display:none}   /* no celular, o volume é o do aparelho */
 html.phone #bar #chatBtn .badge{position:absolute;top:4px;right:2px;font-size:10px;line-height:16px;min-width:16px}
 html.phone #bar #moreBtn{width:44px;height:44px;border:0;flex:none}
 html.phone #emptyShare,html.phone #pip{display:none}
@@ -790,6 +839,7 @@ html:not(.cinema) #cineChat{display:none}
       <button id="shareMore" class="primary" aria-haspopup="true" aria-expanded="false" aria-label="Opções da transmissão" title="Qualidade, som e captura"><svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>
     <button id="clipsBtn" class="ghost" hidden title="O Telão está guardando os últimos 30 s de cada tela. Clique para desligar."><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 7.5L20 18M8.5 16.5L20 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Clipes ligados</button>
+    <button id="jbBtn" class="ghost" hidden title="Jukebox: música para a sala ouvir junto"><svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>Música</button>
     <button id="chatBtn" class="ghost" title="Chat da sala"><svg class="i" viewBox="0 0 24 24" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/></svg>Chat <span id="chatBadge" class="badge" hidden></span></button>
     <button id="moreBtn" class="ghost ico" aria-haspopup="true" aria-expanded="false" aria-label="Mais: opções, diagnóstico, sair" title="Opções, diagnóstico, sair"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
   </header>
@@ -820,6 +870,36 @@ html:not(.cinema) #cineChat{display:none}
       <button type="button" class="primary" id="chatSend">Enviar</button>
     </div>
   </aside>
+  <aside id="jb" hidden>
+    <div class="chat-head"><b>Jukebox</b><span class="muted jb-sub">cada um ouve no próprio PC</span><span class="grow"></span><button type="button" class="ghost" id="jbClose" title="Fechar">×</button></div>
+    <div class="jb-search">
+      <input id="jbIn" maxlength="300" placeholder="Buscar música ou colar link do YouTube" autocomplete="off" aria-label="Buscar música ou colar link do YouTube">
+      <button type="button" class="primary" id="jbGo">Buscar</button>
+    </div>
+    <div class="jb-body">
+      <p id="jbMsg" class="muted"></p>
+      <div id="jbRes"></div>
+      <h4 class="jb-h">Tocando agora</h4>
+      <div id="jbNow"></div>
+      <h4 class="jb-h" id="jbQHead" hidden>A seguir <span id="jbQCount" class="muted"></span><span class="grow"></span><button type="button" class="ghost jb-clear" id="jbClear" title="Tirar todas as músicas da fila">Limpar fila</button></h4>
+      <div id="jbQ"></div>
+    </div>
+  </aside>
+  </div>
+  <div id="jbCard" hidden>
+    <div id="jbFrameBox"></div>
+    <p id="jbTap" hidden>Toque no vídeo para ouvir</p>
+    <div class="jb-info"><b id="jbCardT"></b><span id="jbCardSub" class="muted"></span></div>
+    <div class="jb-prog"><div id="jbBar"></div></div>
+    <div class="jb-ctl">
+      <button type="button" class="ghost" id="jbPlay" title="Pausar para todos">⏸</button>
+      <button type="button" class="ghost" id="jbSkip" title="Pular para a próxima">⏭</button>
+      <span id="jbTime" class="muted"></span>
+      <span class="grow"></span>
+      <input type="range" id="jbVolIn" min="0" max="100" step="1" title="Volume (só seu)" aria-label="Volume da música (só seu)">
+      <button type="button" class="ghost" id="jbMute" title="Parar de ouvir só para mim">🔊</button>
+      <button type="button" class="ghost" id="jbOpen" title="Abrir a jukebox (buscar e ver a fila)">☰</button>
+    </div>
   </div>
 </section>
 
@@ -1065,14 +1145,19 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.24.1';
+const TELAO_VERSION = '1.25.0';
 // Atualização automática. REQUIRES_SHELL: nível do app desktop que esta página usa (main.js/preload/Telão Audio).
 // Todo mundo fica sempre na versão mais nova, então é sempre o nível do app atual (release.sh confere).
 const REQUIRES_SHELL = 14;
 const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoapp/main/latest.json';   // preenchido no empacotamento (endereço do latest.json no GitHub)
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
+const JUKEBOX_URL = 'https://lightning1132.github.io/telaoapp/jukebox.html';       // preenchido no empacotamento: player do YouTube e busca da jukebox, no site do Telão
 const CHANGELOG = [
-  ['1.24.1', 'hoje', ['Segurança: um site aberto no navegador não consegue mais usar o Telão Audio (capturar janela, tela ou som do jogo) enquanto o Telão está aberto. O app passa uma chave própria ao Telão Audio, e conexões que se apresentam como "null" (o que qualquer site consegue fazer) são recusadas',
+  ['1.25.0', 'hoje', ['Jukebox: botão "Música" na sala. Busque uma música ou cole um link do YouTube ou do YouTube Music, e a sala inteira ouve junto, no mesmo ponto. Quem entra no meio cai no ponto certo',
+                      'Fila compartilhada: todo mundo adiciona, tira, passa uma música para tocar logo a seguir, pausa e pula. A fila continua se outra pessoa passar a segurar a sala',
+                      'Cada um ouve no próprio PC pelo player oficial do YouTube (um cartão pequeno no canto), com o próprio volume; dá para parar de ouvir só para você. Nada passa pela transmissão nem pela sua internet de envio',
+                      'Vídeo que o dono bloqueou fora do YouTube é pulado sozinho, com aviso']],
+  ['1.24.1', '05/11', ['Segurança: um site aberto no navegador não consegue mais usar o Telão Audio (capturar janela, tela ou som do jogo) enquanto o Telão está aberto. O app passa uma chave própria ao Telão Audio, e conexões que se apresentam como "null" (o que qualquer site consegue fazer) são recusadas',
                       'A biblioteca de conexão (PeerJS) vem dentro do Telão, conferida junto com a página, em vez de ser baixada de um site de terceiros a cada abertura']],
   ['1.24.0', '05/11', ['App mais enxuto: saem a captura turbo (o motor de vídeo faz o trabalho dela; se ele não entrar, a transmissão segue pela captura normal), a configuração manual de servidor TURN, a camada antiga de reações por cima do jogo (fica a desenhada pelo Telão Audio) e o código que existia só para conversar com versões antigas',
                       'Se sair uma versão nova enquanto você está numa sala, o aviso agora explica que o Telão atualiza sozinho quando você sair (antes pedia para baixar o arquivo novo)',
@@ -1092,8 +1177,7 @@ const CHANGELOG = [
                       'Relatório e teste padrão mostram o QP médio (quanto o codificador comprimiu: menor é mais detalhe)']],
   ['1.21.5', '03/11', ['Motor: quando a janela do jogo é menor que a qualidade escolhida (ou tem tamanho quebrado), o motor abria uma codificação nova a cada 2–5 segundos sem parar. Cada troca é um quadro completo (engasgo) e, em algumas placas, derrubava o Telão Audio. Agora abre uma vez e fica']],
   ['1.21.4', '03/11', ['Telão Audio: corrigida a queda ao trocar de codificação no motor (aparecia em placas como a GTX 1050 Ti). O codificador soltava a última imagem depois que a codificação já tinha fechado, e o Telão Audio escrevia em memória liberada',
-                      'Se o Telão Audio cair no meio da transmissão, a transmissão espera ele voltar e retoma pelo motor, em vez de ir para a captura turbo']],
-  ['1.21.3', '03/11', ['Telão Audio: corrigida uma queda ao abrir o motor em H.265 com janela de tamanho quebrado (ex.: 1282x720) em placas mais antigas. Se ele cair por qualquer motivo, o app agora abre de novo sozinho e o motor volta']]
+                      'Se o Telão Audio cair no meio da transmissão, a transmissão espera ele voltar e retoma pelo motor, em vez de ir para a captura turbo']]
 ];
 function cmpVer(a, b){
   const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0), pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -1695,6 +1779,360 @@ async function onGameMsg(from, d){
 }
 function sendGamesTo(pid){ const list = groupGames().slice(0, 40); if (list.length) hubSend({t: 'relay', to: pid, data: {k: 'games', list}}); }
 
+/* ---------- Jukebox ----------
+   Música para a sala ouvir junto. Cada um toca no próprio PC/celular, pelo player oficial do YouTube (jukebox.html,
+   publicada no site do Telão); nada passa pela transmissão. Quem segura a sala guarda a fila e o relógio da música:
+   todo pedido (adicionar, tirar, pular, pausar) vai para essa pessoa, que manda o estado novo para todos. Cada um
+   ancora a posição no próprio relógio quando o estado chega e o player local acompanha (corrige se desviar > 2 s).
+   Como todos guardam a cópia do estado, quem assumir a sala continua de onde estava. */
+const JB_MAX_Q = 50, JB_DRIFT = 2, JB_HEART_MS = 8000;
+const JB_VID = /^[A-Za-z0-9_-]{11}$/;
+const jb = {
+  s: null,            // {rev, q: [item], cur: item+{pos, paused} | null, note: {n, txt} | null}
+  at: 0,              // performance.now() em que cur.pos foi ancorada
+  frame: null, frameOk: false, url: '', origin: '',
+  ps: null,           // último estado do player local {vid, st, cur, dur, title}
+  lastSeek: 0, lastLoad: '', noteSeen: 0, rid: 0, waits: new Map(),
+  heart: 0, wanted: false, hasKey: null, tapHint: false, lastBy: '', localErr: '',
+};
+const jbUrl = () => JUKEBOX_URL ? JUKEBOX_URL + '?v=' + TELAO_VERSION : '';
+const jbAvailable = () => !!jbUrl();
+const jbOwner = () => !!(me && hubOwner && hubOwner === me.id);
+const jbMuted = () => !!store.get('jbMute', false);
+const jbVol = () => { const v = +store.get('jbVol', 60); return v >= 0 && v <= 100 ? v : 60; };
+function jbPos(){
+  const c = jb.s && jb.s.cur;
+  if (!c) return 0;
+  return c.paused ? c.pos : c.pos + (performance.now() - jb.at) / 1000;
+}
+const jbFmt = s => { s = Math.max(0, Math.floor(s || 0)); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = String(s % 60).padStart(2, '0'); return h ? h + ':' + String(m).padStart(2, '0') + ':' + x : m + ':' + x; };
+function jbParseLink(t){
+  t = String(t || '').trim();
+  if (JB_VID.test(t)) return null;   // 11 letras soltas é busca, não link
+  let u; try{ u = new URL(/^https?:\/\//i.test(t) ? t : 'https://' + t); }catch{ return null; }
+  const h = u.hostname.replace(/^(www|m|music)\./, '');
+  let v = '';
+  if (h === 'youtu.be') v = u.pathname.slice(1, 12);
+  else if (h === 'youtube.com' || h === 'youtube-nocookie.com'){
+    v = u.searchParams.get('v') || '';
+    const m = /^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{11})/.exec(u.pathname);
+    if (!v && m) v = m[1];
+  }
+  return JB_VID.test(v) ? v : null;
+}
+function jbCleanItem(x, by){
+  if (!x || typeof x !== 'object' || !JB_VID.test(x.vid || '')) return null;
+  return {id: typeof x.id === 'string' && /^[a-z0-9]{6,12}$/.test(x.id) ? x.id : Math.random().toString(36).slice(2, 10),
+    vid: x.vid, title: String(x.title || '').slice(0, 140), ch: String(x.ch || '').slice(0, 80),
+    dur: Math.max(0, Math.min(36000, Math.round(+x.dur || 0))), by: String(by != null ? by : (x.by || '')).slice(0, 24)};
+}
+function jbCleanState(s){
+  if (!s || typeof s !== 'object') return null;
+  const q = (Array.isArray(s.q) ? s.q : []).slice(0, JB_MAX_Q).map(x => jbCleanItem(x)).filter(Boolean);
+  let cur = null;
+  if (s.cur){ const c = jbCleanItem(s.cur); if (c) cur = {...c, pos: Math.max(0, Math.min(36000, +s.cur.pos || 0)), paused: !!s.cur.paused}; }
+  const note = s.note && typeof s.note.txt === 'string' ? {n: +s.note.n || 0, txt: s.note.txt.slice(0, 200)} : null;
+  return {rev: Math.max(0, +s.rev || 0), q, cur, note};
+}
+const jbWire = () => jb.s ? {...jb.s, cur: jb.s.cur ? {...jb.s.cur, pos: jbPos()} : null} : null;
+const jbTitle = x => x ? (x.title || 'música ' + x.vid) : '';
+
+/* ---- quem segura a sala ---- */
+function jbSendTo(pid){ if (jb.s && me && pid !== me.id) hubSend({t: 'relay', to: pid, data: {k: 'jb', s: jbWire()}}); }
+function jbBroadcast(){ for (const m of members) if (me && m.id !== me.id) jbSendTo(m.id); jb.heart = Date.now(); }
+function jbCommit(note){
+  const s = jb.s;
+  s.rev++;
+  if (note){
+    s.note = {n: s.rev, txt: note}; jb.noteSeen = s.rev;
+    if (jb.lastBy !== myName) toast('🎵 ' + note, '', 5000);   // quem segura a sala também fica sabendo do que os outros fizeram
+  }
+  jbBroadcast();
+  jbRender(); jbSync();
+}
+function jbNext(why){
+  const s = jb.s, was = s.cur;
+  s.cur = s.q.length ? {...s.q.shift(), pos: 0, paused: false} : null;
+  jb.at = performance.now();
+  jbCommit(why ? why.replace('%s', jbTitle(was)) : null);
+}
+function jbApply(op, by){
+  if (!jb.s) jb.s = {rev: 0, q: [], cur: null, note: null};
+  const s = jb.s, c = s.cur;
+  jb.lastBy = /^(dur|meta|end|err)$/.test(op.op) ? '' : by;
+  if (op.op === 'add'){
+    const it = jbCleanItem({vid: op.vid, title: op.title, ch: op.ch, dur: op.dur}, by);
+    if (!it) return;
+    it.id = Math.random().toString(36).slice(2, 10);
+    if (!c){ s.cur = {...it, pos: 0, paused: false}; jb.at = performance.now(); jbCommit(by + ' colocou ' + jbTitle(it) + ' para tocar'); return; }
+    if (s.q.length >= JB_MAX_Q) return jbCommit('A fila está cheia (' + JB_MAX_Q + ' músicas)');
+    s.q.push(it); jbCommit(by + ' adicionou ' + jbTitle(it) + ' à fila');
+  }
+  else if (op.op === 'rm'){ const n = s.q.length; s.q = s.q.filter(x => x.id !== op.id); if (s.q.length !== n) jbCommit(); }
+  else if (op.op === 'top'){ const i = s.q.findIndex(x => x.id === op.id); if (i > 0){ s.q.unshift(...s.q.splice(i, 1)); jbCommit(); } }
+  else if (op.op === 'skip'){ if (c && c.id === op.id) jbNext(by + ' pulou %s'); }
+  else if (op.op === 'pause'){
+    if (!c || c.id !== op.id || c.paused === !!op.on) return;
+    c.pos = jbPos(); c.paused = !!op.on; jb.at = performance.now();
+    jbCommit(by + (c.paused ? ' pausou a música' : ' voltou a tocar a música'));
+  }
+  else if (op.op === 'clear'){ if (s.q.length){ s.q = []; jbCommit(by + ' limpou a fila'); } }
+  // informações que chegam dos players
+  else if (op.op === 'dur'){ const d = Math.round(+op.dur || 0); if (c && c.id === op.id && !c.dur && d > 0 && d < 36000){ c.pos = jbPos(); jb.at = performance.now(); c.dur = d; jbCommit(); } }
+  else if (op.op === 'meta'){
+    if (c && c.id === op.id && !c.title && typeof op.title === 'string' && op.title){ c.pos = jbPos(); jb.at = performance.now(); c.title = op.title.slice(0, 140); jbCommit(); }
+  }
+  else if (op.op === 'end'){ if (c && c.id === op.id && !c.paused && (!c.dur || jbPos() >= c.dur - 5)) jbNext(); }
+  else if (op.op === 'err'){
+    if (!c || c.id !== op.id) return;
+    const code = +op.code;
+    jbNext(code === 101 || code === 150 ? '%s não pode tocar fora do YouTube (o dono bloqueou); pulei'
+      : code === 100 ? '%s não existe mais no YouTube; pulei' : 'O YouTube não tocou %s; pulei');
+  }
+}
+// relógio de quem segura a sala: acaba a música → próxima; de tempos em tempos, a posição para todos acertarem
+setInterval(() => {
+  if (!jbOwner() || !jb.s || !jb.s.cur) return;
+  const c = jb.s.cur;
+  if (!c.paused && c.dur > 0 && jbPos() >= c.dur + 1) return jbNext();
+  if (!c.paused && Date.now() - jb.heart > JB_HEART_MS) jbBroadcast();
+}, 500);
+
+/* ---- pedidos de qualquer um ---- */
+function jbOp(op){
+  if (!me) return;
+  if (jbOwner()) return jbApply(op, myName);
+  if (!hubOwner){ toast('A sala ainda está conectando. Tente de novo em instantes.', 'warn'); return; }
+  hubSend({t: 'relay', to: hubOwner, data: {k: 'jbop', ...op}});
+}
+function onJbMsg(from, d){
+  if (d.k === 'jbop'){ if (jbOwner() && typeof d.op === 'string') jbApply(d, nameOf(from)); return; }
+  if (d.k === 'jbwant'){ if (jbOwner()) jbSendTo(from); return; }
+  if (d.k === 'jb'){
+    const s = jbCleanState(d.s);
+    if (!s) return;
+    // só vale o estado de quem segura a sala (ou mais novo, durante a troca de quem segura)
+    if (from !== hubOwner && jb.s && s.rev <= jb.s.rev) return;
+    if (jbOwner() && from !== hubOwner) return;
+    const first = !jb.s;
+    jb.s = s; jb.at = performance.now();
+    if (s.note && s.note.n > jb.noteSeen){ jb.noteSeen = s.note.n; if (!first) toast('🎵 ' + s.note.txt, '', 5000); }   // quem acabou de entrar não recebe aviso velho
+    jbRender(); jbSync();
+  }
+}
+// entrei na sala (ou quem segura mudou) e ainda não tenho a fila: peço
+function jbOnList(){ if (me && hubOwner && hubOwner !== me.id && !jb.s && !jb.wanted){ jb.wanted = true; hubSend({t: 'relay', to: hubOwner, data: {k: 'jbwant'}}); } }
+
+/* ---- player local (o quadro com a jukebox.html) ---- */
+function jbPost(m){ if (jb.frame && jb.frameOk) try{ jb.frame.contentWindow.postMessage(m, jb.origin); }catch{} }
+function jbEnsureFrame(){
+  if (jb.frame) return;
+  jb.url = jbUrl(); if (!jb.url) return;
+  jb.origin = new URL(jb.url).origin;
+  const f = document.createElement('iframe');
+  f.id = 'jbFrame'; f.src = jb.url; f.title = 'Player do YouTube da jukebox';
+  f.allow = 'autoplay; encrypted-media';
+  f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation');
+  jb.frame = f; jb.frameOk = false; jb.lastLoad = ''; jb.ps = null;
+  $('#jbFrameBox').appendChild(f);
+}
+// iframe só para a busca, quando ninguém está tocando nada (a busca também mora na jukebox.html)
+function jbFrameForSearch(){ jbEnsureFrame(); return jb.frame; }
+addEventListener('message', e => {
+  if (!jb.frame || e.source !== jb.frame.contentWindow || e.origin !== jb.origin) return;
+  const m = e.data;
+  if (!m || m.jb !== 1 || typeof m.t !== 'string') return;
+  if (m.t === 'ready'){ jb.frameOk = true; jb.hasKey = !!m.key; jbPost({t: 'vol', v: jbVol()}); jb.lastLoad = ''; jbSync(); jbRenderSearch(); return; }
+  if (m.t === 'res' || m.t === 'info'){ const w = jb.waits.get(m.rid); if (w){ jb.waits.delete(m.rid); w(m); } return; }
+  if (m.t === 'st'){ jb.ps = {vid: String(m.vid || ''), st: +m.st, cur: +m.cur || 0, dur: +m.dur || 0, title: String(m.title || '')}; jbFromPlayer(); return; }
+  if (m.t === 'err'){
+    const c = jb.s && jb.s.cur, code = +m.code;
+    if (!c || m.vid !== c.vid) return;
+    // vídeo bloqueado ou removido: vale para todos, pula. Outros erros são daqui (rede, bloqueador): só avisa aqui.
+    if (code === 100 || code === 101 || code === 150) jbOp({op: 'err', id: c.id, code});
+    else if (jb.localErr !== c.id){ jb.localErr = c.id; toast('🎵 O player do YouTube não carregou aqui (' + (m.code === 'api' ? 'sem acesso ao YouTube' : 'erro ' + m.code) + '). A música continua para os outros.', 'warn', 8000); }
+  }
+});
+function jbAsk(m, ms = 12000){
+  return new Promise(res => {
+    if (!jbFrameForSearch()) return res({err: 'indisponivel'});
+    const rid = ++jb.rid;
+    const t = setTimeout(() => { jb.waits.delete(rid); res({err: 'tempo'}); }, ms);
+    jb.waits.set(rid, x => { clearTimeout(t); res(x); });
+    const go = () => jb.frameOk ? jbPost({...m, rid}) : setTimeout(go, 200);
+    go();
+  });
+}
+// o que o player local conta: duração, título, fim da música
+function jbFromPlayer(){
+  const p = jb.ps, c = jb.s && jb.s.cur;
+  if (!p || !c || p.vid !== c.vid) return;
+  if (p.dur > 0 && !c.dur) jbOp({op: 'dur', id: c.id, dur: Math.round(p.dur)});
+  if (p.title && !c.title) jbOp({op: 'meta', id: c.id, title: p.title});
+  if (p.st === 0) jbOp({op: 'end', id: c.id});
+  jbSync();
+}
+// deixa o player local igual ao estado da sala
+function jbSync(){
+  const c = jb.s && jb.s.cur;
+  const listen = !!(c && me && !jbMuted() && jbAvailable());
+  jbRenderCard();
+  if (!listen){
+    if (jb.frame && jb.lastLoad){ jbPost({t: 'stop'}); jb.lastLoad = ''; }   // o quadro fica (a busca também mora nele), parado
+    return;
+  }
+  jbEnsureFrame();
+  if (!jb.frameOk) return;
+  const want = jbPos(), key = c.id;
+  if (jb.lastLoad !== key){
+    jb.lastLoad = key; jb.lastSeek = Date.now();
+    jbPost({t: 'load', vid: c.vid, pos: want, play: !c.paused});
+    return;
+  }
+  const p = jb.ps;
+  if (!p || p.vid !== c.vid) return;
+  const playing = p.st === 1, buffering = p.st === 3;
+  if (c.paused){ if (playing || buffering) jbPost({t: 'pause'}); return; }
+  if (!playing && !buffering && p.st !== 0 && Date.now() - jb.lastSeek > 1500){ jbPost({t: 'play'}); jb.lastSeek = Date.now(); }
+  if (playing && Math.abs(p.cur - want) > JB_DRIFT && Date.now() - jb.lastSeek > 3000 && (!c.dur || want < c.dur - 1)){
+    jbPost({t: 'seek', pos: want}); jb.lastSeek = Date.now();
+  }
+  // celular: o navegador às vezes não deixa começar sem um toque no player
+  jb.tapHint = !playing && !buffering && p.st !== 0 && Date.now() - jb.lastSeek > 1200 && Date.now() - jb.lastSeek < 30000 && PHONE;
+}
+
+/* ---- tela ---- */
+function jbItemRow(x, opts){
+  const row = document.createElement('div'); row.className = 'jb-row';
+  const img = document.createElement('img'); img.className = 'jb-th'; img.alt = ''; img.loading = 'lazy';
+  img.src = 'https://i.ytimg.com/vi/' + x.vid + '/mqdefault.jpg'; img.referrerPolicy = 'no-referrer';
+  img.onerror = () => { img.style.visibility = 'hidden'; };
+  const txt = document.createElement('div'); txt.className = 'jb-tx';
+  const t = document.createElement('b'); t.textContent = jbTitle(x);
+  const sub = document.createElement('span'); sub.className = 'muted';
+  sub.textContent = [x.ch, x.dur ? jbFmt(x.dur) : '', opts.by && x.by ? 'por ' + x.by : ''].filter(Boolean).join(' · ');
+  txt.append(t, sub);
+  row.append(img, txt);
+  for (const b of opts.buttons || []){
+    const k = document.createElement('button'); k.type = 'button'; k.className = 'ghost jb-b' + (b.cls ? ' ' + b.cls : '');
+    k.textContent = b.label; k.title = b.title; k.onclick = b.go;
+    row.appendChild(k);
+  }
+  return row;
+}
+function jbRender(){
+  const s = jb.s, c = s && s.cur;
+  $('#jbBtn').classList.toggle('playing', !!c && !c.paused);
+  if ($('#jb').hidden){ jbRenderCard(); return; }
+  const now = $('#jbNow'); now.textContent = '';
+  if (c){
+    now.appendChild(jbItemRow(c, {by: true, buttons: [
+      {label: c.paused ? '▶' : '⏸', title: c.paused ? 'Voltar a tocar para todos' : 'Pausar para todos', go: () => jbOp({op: 'pause', id: c.id, on: !c.paused})},
+      {label: '⏭', title: 'Pular para a próxima', go: () => jbOp({op: 'skip', id: c.id})},
+    ]}));
+  } else {
+    const e = document.createElement('p'); e.className = 'muted jb-empty';
+    e.textContent = 'Nada tocando. Busque uma música ou cole um link do YouTube ou do YouTube Music.';
+    now.appendChild(e);
+  }
+  const q = $('#jbQ'); q.textContent = '';
+  const list = s ? s.q : [];
+  $('#jbQHead').hidden = !list.length;
+  $('#jbQCount').textContent = list.length ? '(' + list.length + ')' : '';
+  list.forEach((x, i) => q.appendChild(jbItemRow(x, {by: true, buttons: [
+    ...(i > 0 ? [{label: '⤒', title: 'Tocar logo a seguir', go: () => jbOp({op: 'top', id: x.id})}] : []),
+    {label: '×', title: 'Tirar da fila', cls: 'jb-x', go: () => jbOp({op: 'rm', id: x.id})},
+  ]})));
+  jbRenderCard();
+}
+function jbRenderSearch(){
+  const nokey = jb.hasKey === false;
+  $('#jbIn').placeholder = nokey ? 'Cole um link do YouTube ou do YouTube Music' : 'Buscar música ou colar link do YouTube';
+}
+function jbRenderCard(){
+  const c = jb.s && jb.s.cur, card = $('#jbCard');
+  const show = !!(c && me && jbAvailable());
+  card.hidden = !show;
+  if (!show) return;
+  const muted = jbMuted();
+  card.classList.toggle('muted', muted);
+  $('#jbCardT').textContent = jbTitle(c);
+  $('#jbCardSub').textContent = (c.paused ? 'Pausada · ' : '') + (c.by ? 'por ' + c.by : '') + (jb.s.q.length ? ' · ' + jb.s.q.length + ' na fila' : '');
+  $('#jbPlay').textContent = c.paused ? '▶' : '⏸';
+  $('#jbPlay').title = c.paused ? 'Voltar a tocar para todos' : 'Pausar para todos';
+  $('#jbMute').textContent = muted ? '🔇' : '🔊';
+  $('#jbMute').title = muted ? 'Voltar a ouvir (a música continua para os outros)' : 'Parar de ouvir só para mim (a música continua para os outros)';
+  $('#jbVolIn').hidden = muted;
+  $('#jbTap').hidden = !jb.tapHint || muted;
+  jbRenderTime();
+}
+function jbRenderTime(){
+  const c = jb.s && jb.s.cur;
+  if (!c || $('#jbCard').hidden) return;
+  $('#jbTime').textContent = jbFmt(Math.min(jbPos(), c.dur || Infinity)) + (c.dur ? ' / ' + jbFmt(c.dur) : '');
+  $('#jbBar').style.width = c.dur ? Math.min(100, jbPos() / c.dur * 100).toFixed(1) + '%' : '0%';
+}
+setInterval(() => { if (jb.s && jb.s.cur){ jbRenderTime(); jbSync(); } }, 1000);
+
+function toggleJukebox(force){
+  const open = force != null ? force : $('#jb').hidden;
+  if (open && !$('#chat').hidden) toggleChat(false);
+  $('#jb').hidden = !open;
+  $('#jbBtn').classList.toggle('on', open);
+  $('#room').classList.toggle('side-jb', open);
+  if (open){ jbRender(); jbRenderSearch(); setTimeout(() => $('#jbIn').focus(), 40); }
+  scheduleRes();
+}
+async function jbSubmit(){
+  const t = $('#jbIn').value.trim();
+  if (!t) return;
+  const msg = $('#jbMsg'), res = $('#jbRes');
+  const vid = jbParseLink(t);
+  if (vid){
+    msg.textContent = 'Buscando o vídeo…'; res.textContent = '';
+    const r = await jbAsk({t: 'info', vid});
+    if (r.item){ jbOp({op: 'add', ...r.item}); $('#jbIn').value = ''; msg.textContent = ''; }
+    else if (r.err === 'bloqueado') msg.textContent = 'Esse vídeo não pode tocar fora do YouTube (o dono bloqueou).';
+    else if (r.err === 'naoachou') msg.textContent = 'Não achei esse vídeo no YouTube.';
+    else { jbOp({op: 'add', vid, title: '', ch: '', dur: 0}); $('#jbIn').value = ''; msg.textContent = ''; }   // o título vem do player
+    return;
+  }
+  if (jb.hasKey === false){ msg.textContent = 'A busca não está configurada nesta versão. Cole o link da música (YouTube ou YouTube Music).'; return; }
+  msg.textContent = 'Buscando…'; res.textContent = '';
+  const r = await jbAsk({t: 'search', q: t});
+  if (r.err){
+    msg.textContent = r.err === 'cota' ? 'A cota de buscas do YouTube de hoje acabou. Dá para colar o link da música; amanhã a busca volta.'
+      : r.err === 'chave' ? 'O YouTube recusou a busca (chave da API). Cole o link da música por enquanto.'
+      : r.err === 'semchave' ? 'A busca não está configurada nesta versão. Cole o link da música (YouTube ou YouTube Music).'
+      : 'Não consegui buscar agora (' + r.err + '). Tente de novo ou cole o link.';
+    return;
+  }
+  const items = r.items || [];
+  msg.textContent = items.length ? '' : 'Nada encontrado.';
+  for (const x of items.slice(0, 12)){
+    const it = jbCleanItem(x, '');
+    if (it) res.appendChild(jbItemRow(it, {buttons: [{label: '+', title: 'Adicionar à fila', cls: 'jb-add', go: ev => {
+      jbOp({op: 'add', vid: it.vid, title: it.title, ch: it.ch, dur: it.dur});
+      ev.currentTarget.textContent = '✓'; ev.currentTarget.disabled = true;
+    }}]}));
+  }
+}
+function initJukebox(){
+  $('#jbBtn').hidden = !jbAvailable();
+  $('#jbBtn').onclick = () => toggleJukebox();
+  $('#jbClose').onclick = () => toggleJukebox(false);
+  $('#jbGo').onclick = jbSubmit;
+  $('#jbIn').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); jbSubmit(); } });
+  $('#jbClear').onclick = () => jbOp({op: 'clear'});
+  $('#jbPlay').onclick = () => { const c = jb.s && jb.s.cur; if (c) jbOp({op: 'pause', id: c.id, on: !c.paused}); };
+  $('#jbSkip').onclick = () => { const c = jb.s && jb.s.cur; if (c) jbOp({op: 'skip', id: c.id}); };
+  $('#jbOpen').onclick = () => toggleJukebox(true);
+  $('#jbMute').onclick = () => { store.set('jbMute', !jbMuted()); jbSync(); };
+  const vi = $('#jbVolIn');
+  vi.value = jbVol();
+  vi.oninput = () => { store.set('jbVol', +vi.value); jbPost({t: 'vol', v: +vi.value}); };
+}
+
 /* ---------- Sala de sempre ----------
    Últimas 5 salas com um clique; uma delas pode ser a ★ (favorita), com entrada automática ao abrir. */
 let autoTimer = null;
@@ -1830,6 +2268,7 @@ function showRoom(){
   initPip();
   initPrivate();
   initChat();
+  initJukebox();
   initPhone();
   initRxEdit();
   initOpts();
@@ -2021,7 +2460,7 @@ function wireHubConn(c){
   c.on('data', msg => {
     if (c !== hubConn) return;
     lastHubMsg = Date.now();
-    if (msg && msg.t === 'list'){ hubOwner = typeof msg.owner === 'string' && msg.owner ? msg.owner : null; onList(msg.list); }
+    if (msg && msg.t === 'list'){ hubOwner = typeof msg.owner === 'string' && msg.owner ? msg.owner : null; onList(msg.list); jbOnList(); }
     else if (msg && msg.t === 'handover' && typeof msg.to === 'string') handover = {to: msg.to, at: Date.now()};
     else if (msg && msg.t === 'relay' && msg.data) onRelay(msg.from, msg.data);
     else if (msg && msg.t === 'chatlog' && Array.isArray(msg.list)){ for (const m of msg.list.slice(-CHAT_KEEP)) addChat(m, {history: true, via: hubConn && hubConn.peer}); }
@@ -2119,6 +2558,7 @@ function announceTo(pid){
   sendStickersTo(pid);
   sendGamesTo(pid);
   statsSendTo(pid);
+  if (jbOwner()) jbSendTo(pid);   // quem entra já recebe a fila e o ponto da música
 }
 function syncVersions(){
   if (!me) return;
@@ -3584,6 +4024,7 @@ function onRelay(from, data){
   if (data.k === 'setaway'){ if (!amAway) goAway('forced', String(data.by || nameOf(from)).slice(0, 24)); return; }
   if (data.k === 'kick'){ onKicked(from, data); return; }
   if (data.k === 'kicked'){ onKickNote(from, data); return; }
+  if (data.k === 'jb' || data.k === 'jbop' || data.k === 'jbwant'){ onJbMsg(from, data); return; }
   if (/^rly-(ok|no|fail|stop|lost)$/.test(data.k)){ onRelayMsgForStreamer(from, data); return; }
   if (data.k === 'hi'){
     peerVer.set(from, {v: String(data.v || '').slice(0, 20), d: !!data.d, ph: !!data.ph});
@@ -4635,6 +5076,7 @@ function syncChatBtn(){
 }
 function toggleChat(force){
   const open = force != null ? force : $('#chat').hidden;
+  if (open && !$('#jb').hidden) toggleJukebox(false);
   $('#chat').hidden = !open;
   store.set('chatOpen', open);
   if (open){ chatUnread = 0; renderChat(true); setTimeout(() => { const l = $('#chatList'); l.scrollTop = l.scrollHeight; $('#chatIn').focus(); }, 40); }

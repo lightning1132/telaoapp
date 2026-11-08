@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Telão · jukebox</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #p{position:absolute;inset:0;width:100%;height:100%}
+</style>
+</head>
+<body>
+<div id="p"></div>
+<script>
+/* Jukebox do Telão: o player oficial do YouTube, numa página própria publicada no GitHub Pages.
+   O Telão (app ou navegador) coloca esta página num quadro e conversa com ela por postMessage:
+     Telão → aqui: load {vid,pos,play} · play · pause · seek {pos} · vol {v} · stop · search {q,rid} · info {vid,rid}
+     aqui → Telão: ready {key} · st {vid,st,cur,dur,title} · err {vid,code} · res {rid,items|err} · info {rid,item|err}
+   Fica aqui (e não no Telão) porque o YouTube exige um site de verdade como origem do player, e a busca usa uma chave
+   restrita a este site. Só atende o Telão: quem coloca esta página num quadro precisa ser o app ou o site do Telão. */
+const YT_KEY = 'AIzaSyBztK_XnW_4108aJxmVaUGyWARGuiGF4mo';   // chave da YouTube Data API v3, preenchida no empacotamento (restrita ao site do Telão)
+const YT_IFRAME_API = 'https://www.youtube.com/iframe_api';
+const YT_DATA = 'https://www.googleapis.com/youtube/v3/';
+const YT_OEMBED = 'https://www.youtube.com/oembed';
+const PARENTS = ['file://', 'https://lightning1132.github.io'];
+
+const VID = /^[A-Za-z0-9_-]{11}$/;
+const parentOrigin = e => (location.ancestorOrigins && location.ancestorOrigins.length) ? location.ancestorOrigins[0] : e.origin;
+const send = m => { try{ parent.postMessage(Object.assign({jb: 1}, m), '*'); }catch{} };   // nada sigiloso: estado do player e resultados de busca
+const dec = s => { const t = document.createElement('textarea'); t.innerHTML = String(s || ''); return t.value; };
+const isoDur = s => { const m = /^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(String(s || '')); return m ? ((+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0)) : 0; };
+
+let player = null, ready = false, want = null, vol = 60, lastErrVid = '';
+function loadApi(){
+  const s = document.createElement('script'); s.src = YT_IFRAME_API; s.async = true;
+  s.onerror = () => send({t: 'err', vid: want ? want.vid : '', code: 'api'});
+  document.head.appendChild(s);
+}
+window.onYouTubeIframeAPIReady = () => {
+  player = new YT.Player('p', {
+    width: '100%', height: '100%',
+    playerVars: {playsinline: 1, rel: 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, origin: location.origin},
+    events: {
+      onReady: () => { ready = true; try{ player.setVolume(vol); }catch{} if (want) doLoad(want); report(); },
+      onStateChange: () => report(),
+      onError: e => { const v = cur().vid; if (v && v !== lastErrVid){ lastErrVid = v; send({t: 'err', vid: v, code: e && e.data}); } },
+    },
+  });
+};
+function cur(){
+  if (!player || !ready) return {vid: want ? want.vid : '', st: -2, cur: 0, dur: 0, title: ''};
+  let d = {}; try{ d = player.getVideoData() || {}; }catch{}
+  let st = -1, t = 0, dur = 0;
+  try{ st = player.getPlayerState(); t = player.getCurrentTime() || 0; dur = player.getDuration() || 0; }catch{}
+  return {vid: d.video_id || (want ? want.vid : ''), st, cur: t, dur, title: d.title || ''};
+}
+function report(){ send(Object.assign({t: 'st'}, cur())); }
+function doLoad(w){
+  lastErrVid = '';
+  try{
+    if (w.play) player.loadVideoById({videoId: w.vid, startSeconds: Math.max(0, w.pos || 0)});
+    else player.cueVideoById({videoId: w.vid, startSeconds: Math.max(0, w.pos || 0)});
+  }catch{}
+}
+setInterval(() => { if (player && ready) report(); }, 1000);
+
+async function getJson(url){
+  const r = await fetch(url, {credentials: 'omit'});
+  let j = null; try{ j = await r.json(); }catch{}
+  if (!r.ok){
+    const why = j && j.error && j.error.errors && j.error.errors[0] ? j.error.errors[0].reason : '';
+    throw new Error(why === 'quotaExceeded' || why === 'dailyLimitExceeded' ? 'cota'
+      : /key|referer|forbidden|accessNotConfigured|ipRefererBlocked/i.test(why) || r.status === 403 || r.status === 400 ? 'chave' : 'rede');
+  }
+  return j || {};
+}
+async function details(ids){
+  if (!ids.length) return new Map();
+  const j = await getJson(YT_DATA + 'videos?part=snippet,contentDetails,status&id=' + ids.join(',') + '&key=' + encodeURIComponent(YT_KEY));
+  const m = new Map();
+  for (const it of j.items || []){
+    if (!it || !VID.test(it.id)) continue;
+    const sn = it.snippet || {};
+    m.set(it.id, {vid: it.id, title: dec(sn.title).slice(0, 140), ch: dec(sn.channelTitle).slice(0, 80),
+      dur: isoDur(it.contentDetails && it.contentDetails.duration), ok: !(it.status && it.status.embeddable === false),
+      live: sn.liveBroadcastContent === 'live'});
+  }
+  return m;
+}
+async function search(q){
+  if (!YT_KEY) throw new Error('semchave');
+  const j = await getJson(YT_DATA + 'search?part=snippet&type=video&videoEmbeddable=true&maxResults=12&safeSearch=none&q=' + encodeURIComponent(q) + '&key=' + encodeURIComponent(YT_KEY));
+  const ids = (j.items || []).map(i => i && i.id && i.id.videoId).filter(v => VID.test(v || ''));
+  const d = await details(ids);
+  return ids.map(v => d.get(v)).filter(x => x && x.ok && !x.live).map(({ok, live, ...x}) => x);
+}
+async function info(vid){
+  if (YT_KEY){
+    const d = await details([vid]);
+    const x = d.get(vid);
+    if (!x) throw new Error('naoachou');
+    if (!x.ok) throw new Error('bloqueado');
+    return {vid, title: x.title, ch: x.ch, dur: x.dur};
+  }
+  // sem chave: o oEmbed do YouTube dá título e canal (a duração vem do player quando a música começa)
+  const j = await getJson(YT_OEMBED + '?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + vid));
+  return {vid, title: dec(j.title).slice(0, 140), ch: dec(j.author_name).slice(0, 80), dur: 0};
+}
+
+addEventListener('message', async e => {
+  if (e.source !== parent || !PARENTS.includes(parentOrigin(e))) return;
+  const m = e.data;
+  if (!m || typeof m !== 'object' || typeof m.t !== 'string') return;
+  if (m.t === 'load' && VID.test(m.vid || '')){
+    want = {vid: m.vid, pos: +m.pos || 0, play: !!m.play};
+    if (player && ready) doLoad(want); else if (!player && !document.querySelector('script[src="' + YT_IFRAME_API + '"]')) loadApi();
+  }
+  else if (m.t === 'play'){ if (want) want.play = true; try{ player.playVideo(); }catch{} }
+  else if (m.t === 'pause'){ if (want) want.play = false; try{ player.pauseVideo(); }catch{} }
+  else if (m.t === 'seek'){ try{ player.seekTo(Math.max(0, +m.pos || 0), true); }catch{} }
+  else if (m.t === 'vol'){ vol = Math.max(0, Math.min(100, Math.round(+m.v || 0))); try{ player.setVolume(vol); if (vol > 0) player.unMute(); }catch{} }
+  else if (m.t === 'stop'){ want = null; try{ player.stopVideo(); }catch{} }
+  else if (m.t === 'search' && typeof m.q === 'string'){
+    try{ send({t: 'res', rid: m.rid, items: await search(m.q.slice(0, 120))}); }
+    catch(err){ send({t: 'res', rid: m.rid, err: err.message}); }
+  }
+  else if (m.t === 'info' && VID.test(m.vid || '')){
+    try{ send({t: 'info', rid: m.rid, item: await info(m.vid)}); }
+    catch(err){ send({t: 'info', rid: m.rid, err: err.message}); }
+  }
+});
+send({t: 'ready', key: !!YT_KEY});
+</script>
+</body>
+</html>

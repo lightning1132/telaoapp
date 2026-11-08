@@ -15,6 +15,11 @@ O QUE MUDA EM RELAÇÃO AO TELÃO NO NAVEGADOR
 - Continua transmitindo liso com o app minimizado ou atrás do jogo.
 - Funciona junto com quem usa o Telão pelo navegador: mesma sala, mesmo código.
 
+NOVIDADES DO APP 1.25
+- Jukebox: botão "Música" na sala. Busque ou cole um link do YouTube/YouTube Music e todo mundo ouve junto,
+  no mesmo ponto, cada um pelo player oficial do YouTube no próprio PC (cartão pequeno no canto da sala).
+  Fila compartilhada, volume de cada um e opção de parar de ouvir só para você.
+
 NOVIDADES DO APP 1.24
 - App mais enxuto: saíram a captura turbo (o motor de vídeo faz o trabalho dela), a configuração manual de
   servidor TURN e a camada antiga de reações. As reações e o chat por cima do jogo são sempre desenhados pelo
