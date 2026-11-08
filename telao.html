@@ -566,9 +566,12 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 #room:has(#chat:not([hidden])) #jbCard,#room:has(#jb:not([hidden])) #jbCard{right:calc(16px + 340px)}
 #jbCard[hidden]{display:none}
 /* o player do YouTube fica sempre visível enquanto toca (regra do YouTube: pelo menos 200×200) */
-#jbFrameBox{width:260px;height:200px;background:#000}
-#jbFrameBox iframe{width:100%;height:100%;border:0;display:block}
-#jbCard.muted #jbFrameBox{height:0}
+#jbFrameBox{width:260px;height:200px;background:#000;overflow:hidden;position:relative}
+#jbFrameBox iframe{width:260px;height:200px;border:0;display:block}
+#jbCard.muted #jbFrameBox,#jbCard.novideo #jbFrameBox{height:0}   /* escondido: o quadro continua do mesmo tamanho, só recortado */
+#jbAcct{border-top:1px solid var(--line);padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+#jbAcct[hidden]{display:none}
+.jb-ab{font-size:12px}
 #jbTap{margin:0;padding:6px 10px;font-size:12px;background:var(--warn);color:var(--warn-ink)}
 .jb-info{display:flex;flex-direction:column;gap:1px;padding:8px 10px 4px}
 .jb-info b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -684,7 +687,7 @@ html.phone #membersBtn{height:44px;padding:0 4px;min-width:0;overflow:hidden}
 html.phone #bar #chatBtn{position:relative;width:44px;height:44px;padding:0;justify-content:center;border:0;font-size:0;flex:none}
 html.phone #bar #jbBtn{width:44px;height:44px;padding:0;justify-content:center;border:0;font-size:0;flex:none}
 html.phone #jbCard{right:8px;bottom:8px;width:220px}
-html.phone #jbFrameBox{width:220px}
+html.phone #jbFrameBox,html.phone #jbFrameBox iframe{width:220px}
 html.phone #jbVolIn{display:none}   /* no celular, o volume é o do aparelho */
 html.phone #bar #chatBtn .badge{position:absolute;top:4px;right:2px;font-size:10px;line-height:16px;min-width:16px}
 html.phone #bar #moreBtn{width:44px;height:44px;border:0;flex:none}
@@ -884,6 +887,9 @@ html:not(.cinema) #cineChat{display:none}
       <h4 class="jb-h" id="jbQHead" hidden>A seguir <span id="jbQCount" class="muted"></span><span class="grow"></span><button type="button" class="ghost jb-clear" id="jbClear" title="Tirar todas as músicas da fila">Limpar fila</button></h4>
       <div id="jbQ"></div>
     </div>
+    <div id="jbAcct" hidden>
+      <label class="tgl jb-ab"><input type="checkbox" id="jbAdblock"><span>Bloquear anúncios no player</span></label>
+    </div>
   </aside>
   </div>
   <div id="jbCard" hidden>
@@ -897,6 +903,7 @@ html:not(.cinema) #cineChat{display:none}
       <span id="jbTime" class="muted"></span>
       <span class="grow"></span>
       <input type="range" id="jbVolIn" min="0" max="100" step="1" title="Volume (só seu)" aria-label="Volume da música (só seu)">
+      <button type="button" class="ghost" id="jbVid" hidden title="Mostrar o vídeo">▭</button>
       <button type="button" class="ghost" id="jbMute" title="Parar de ouvir só para mim">🔊</button>
       <button type="button" class="ghost" id="jbOpen" title="Abrir a jukebox (buscar e ver a fila)">☰</button>
     </div>
@@ -1145,7 +1152,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.25.0';
+const TELAO_VERSION = '1.26.0';
 // Atualização automática. REQUIRES_SHELL: nível do app desktop que esta página usa (main.js/preload/Telão Audio).
 // Todo mundo fica sempre na versão mais nova, então é sempre o nível do app atual (release.sh confere).
 const REQUIRES_SHELL = 14;
@@ -1153,7 +1160,9 @@ const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoap
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const JUKEBOX_URL = 'https://lightning1132.github.io/telaoapp/jukebox.html';       // preenchido no empacotamento: player do YouTube e busca da jukebox, no site do Telão
 const CHANGELOG = [
-  ['1.25.0', 'hoje', ['Jukebox: botão "Música" na sala. Busque uma música ou cole um link do YouTube ou do YouTube Music, e a sala inteira ouve junto, no mesmo ponto. Quem entra no meio cai no ponto certo',
+  ['1.26.0', 'hoje', ['Jukebox no app: a música vira só som. O vídeo do player fica escondido (o botão ▭ no cartão mostra de volta, se quiser)',
+                      'Jukebox no app: bloqueio de anúncios no player, ligado de começo (dá para desligar no painel da jukebox)']],
+  ['1.25.0', '07/11', ['Jukebox: botão "Música" na sala. Busque uma música ou cole um link do YouTube ou do YouTube Music, e a sala inteira ouve junto, no mesmo ponto. Quem entra no meio cai no ponto certo',
                       'Fila compartilhada: todo mundo adiciona, tira, passa uma música para tocar logo a seguir, pausa e pula. A fila continua se outra pessoa passar a segurar a sala',
                       'Cada um ouve no próprio PC pelo player oficial do YouTube (um cartão pequeno no canto), com o próprio volume; dá para parar de ouvir só para você. Nada passa pela transmissão nem pela sua internet de envio',
                       'Vídeo que o dono bloqueou fora do YouTube é pulado sozinho, com aviso']],
@@ -1175,9 +1184,7 @@ const CHANGELOG = [
                       'Jogo em tela cheia na frente: o motor captura o monitor em vez da janela (no Windows 10 a captura da janela congelava). Ao trocar de janela, volta na hora para só a janela do jogo',
                       'Opções → Desempenho: dá para desligar o NVENC direto e a captura do monitor. Se o NVENC não abrir, ou se o Telão Audio cair dentro dele, o motor volta sozinho para o caminho anterior',
                       'Relatório e teste padrão mostram o QP médio (quanto o codificador comprimiu: menor é mais detalhe)']],
-  ['1.21.5', '03/11', ['Motor: quando a janela do jogo é menor que a qualidade escolhida (ou tem tamanho quebrado), o motor abria uma codificação nova a cada 2–5 segundos sem parar. Cada troca é um quadro completo (engasgo) e, em algumas placas, derrubava o Telão Audio. Agora abre uma vez e fica']],
-  ['1.21.4', '03/11', ['Telão Audio: corrigida a queda ao trocar de codificação no motor (aparecia em placas como a GTX 1050 Ti). O codificador soltava a última imagem depois que a codificação já tinha fechado, e o Telão Audio escrevia em memória liberada',
-                      'Se o Telão Audio cair no meio da transmissão, a transmissão espera ele voltar e retoma pelo motor, em vez de ir para a captura turbo']]
+  ['1.21.5', '03/11', ['Motor: quando a janela do jogo é menor que a qualidade escolhida (ou tem tamanho quebrado), o motor abria uma codificação nova a cada 2–5 segundos sem parar. Cada troca é um quadro completo (engasgo) e, em algumas placas, derrubava o Telão Audio. Agora abre uma vez e fica']]
 ];
 function cmpVer(a, b){
   const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0), pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -1799,6 +1806,9 @@ const jbUrl = () => JUKEBOX_URL ? JUKEBOX_URL + '?v=' + TELAO_VERSION : '';
 const jbAvailable = () => !!jbUrl();
 const jbOwner = () => !!(me && hubOwner && hubOwner === me.id);
 const jbMuted = () => !!store.get('jbMute', false);
+// só no app: o vídeo do player pode ficar escondido (a música vira só som). Na versão web o player fica sempre visível.
+const jbAppExtras = () => DESKTOP && !!window.telaoDesktop.ytStatus;
+const jbNoVideo = () => jbAppExtras() && !!store.get('jbHideVideo', true);
 const jbVol = () => { const v = +store.get('jbVol', 60); return v >= 0 && v <= 100 ? v : 60; };
 function jbPos(){
   const c = jb.s && jb.s.cur;
@@ -2056,6 +2066,10 @@ function jbRenderCard(){
   if (!show) return;
   const muted = jbMuted();
   card.classList.toggle('muted', muted);
+  card.classList.toggle('novideo', jbNoVideo());
+  $('#jbVid').hidden = !jbAppExtras() || muted;
+  $('#jbVid').textContent = jbNoVideo() ? '▭' : '▬';
+  $('#jbVid').title = jbNoVideo() ? 'Mostrar o vídeo' : 'Esconder o vídeo (só o som)';
   $('#jbCardT').textContent = jbTitle(c);
   $('#jbCardSub').textContent = (c.paused ? 'Pausada · ' : '') + (c.by ? 'por ' + c.by : '') + (jb.s.q.length ? ' · ' + jb.s.q.length + ' na fila' : '');
   $('#jbPlay').textContent = c.paused ? '▶' : '⏸';
@@ -2063,7 +2077,7 @@ function jbRenderCard(){
   $('#jbMute').textContent = muted ? '🔇' : '🔊';
   $('#jbMute').title = muted ? 'Voltar a ouvir (a música continua para os outros)' : 'Parar de ouvir só para mim (a música continua para os outros)';
   $('#jbVolIn').hidden = muted;
-  $('#jbTap').hidden = !jb.tapHint || muted;
+  $('#jbTap').hidden = !jb.tapHint || muted || jbNoVideo();
   jbRenderTime();
 }
 function jbRenderTime(){
@@ -2117,6 +2131,18 @@ async function jbSubmit(){
     }}]}));
   }
 }
+// bloqueio de anúncio no player (só no app)
+async function jbAcctRender(){
+  if (!jbAppExtras()) return;
+  $('#jbAcct').hidden = false;
+  let st = null; try{ st = await window.telaoDesktop.ytStatus(); }catch{}
+  if (st) $('#jbAdblock').checked = !!st.adblock;
+}
+// recarrega o player (depois de ligar ou desligar o bloqueio, para valer já na música atual)
+function jbReloadFrame(){
+  if (jb.frame){ jb.frame.remove(); jb.frame = null; jb.frameOk = false; jb.lastLoad = ''; jb.ps = null; }
+  jbSync();
+}
 function initJukebox(){
   $('#jbBtn').hidden = !jbAvailable();
   $('#jbBtn').onclick = () => toggleJukebox();
@@ -2128,6 +2154,11 @@ function initJukebox(){
   $('#jbSkip').onclick = () => { const c = jb.s && jb.s.cur; if (c) jbOp({op: 'skip', id: c.id}); };
   $('#jbOpen').onclick = () => toggleJukebox(true);
   $('#jbMute').onclick = () => { store.set('jbMute', !jbMuted()); jbSync(); };
+  $('#jbVid').onclick = () => { store.set('jbHideVideo', !jbNoVideo()); jbRenderCard(); };
+  if (jbAppExtras()){
+    $('#jbAdblock').onchange = async () => { try{ await window.telaoDesktop.ytAdblock($('#jbAdblock').checked); }catch{} jbAcctRender(); jbReloadFrame(); };
+    jbAcctRender();
+  }
   const vi = $('#jbVolIn');
   vi.value = jbVol();
   vi.oninput = () => { store.set('jbVol', +vi.value); jbPost({t: 'vol', v: +vi.value}); };

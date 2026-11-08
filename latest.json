@@ -1,31 +1,29 @@
 {
-  "version": "1.25.0",
+  "version": "1.26.0",
   "minShell": 14,
-  "page": "versoes/telao-1.25.0.html",
-  "sha256": "b76e7d51818e02e955a870be444192d5648963bd1fa7b42170885967ac450857",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.25.0",
+  "page": "versoes/telao-1.26.0.html",
+  "sha256": "70aec7b581c2463c3be7fd1e66be65e113c74caa335e66fff4c0243661d4c61c",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.26.0",
   "notes": [
-    "Jukebox: botão \"Música\" na sala. Busque uma música ou cole um link do YouTube ou do YouTube Music, e a sala inteira ouve junto, no mesmo ponto. Quem entra no meio cai no ponto certo",
-    "Fila compartilhada: todo mundo adiciona, tira, passa uma música para tocar logo a seguir, pausa e pula. A fila continua se outra pessoa passar a segurar a sala",
-    "Cada um ouve no próprio PC pelo player oficial do YouTube (um cartão pequeno no canto), com o próprio volume; dá para parar de ouvir só para você. Nada passa pela transmissão nem pela sua internet de envio",
-    "Vídeo que o dono bloqueou fora do YouTube é pulado sozinho, com aviso"
+    "Jukebox no app: a música vira só som. O vídeo do player fica escondido (o botão ▭ no cartão mostra de volta, se quiser)",
+    "Jukebox no app: bloqueio de anúncios no player, ligado de começo (dá para desligar no painel da jukebox)"
   ],
   "app": {
-    "version": "1.25.0",
+    "version": "1.26.0",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.25.0/app.asar",
-        "sha256": "fc2a264ed7fb1b9a8cd5e70daf092983e37cd22f16f15402c6e8fb321d1e7a28",
-        "size": 753300
+        "path": "versoes/app-1.26.0/app.asar",
+        "sha256": "065091c4ac76f53a0bee51b4f232d5bcac3b187e6c6af9193110e5c1c4c52a95",
+        "size": 756775
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.25.0/telao-audio.exe",
+        "path": "versoes/app-1.26.0/telao-audio.exe",
         "sha256": "b9ef8dbf6e702ddf3c9e6f86d7f8d0db47e28b19c384ba946aed10a2f7ca1afe",
         "size": 725504
       }
     }
   },
-  "minVersion": "1.25.0"
+  "minVersion": "1.26.0"
 }

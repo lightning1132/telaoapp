@@ -258,6 +258,25 @@ app.whenReady().then(() => {
   for (const ev of ['lock-screen', 'unlock-screen', 'suspend', 'resume']){
     powerMonitor.on(ev, () => { if (win && !win.isDestroyed()) win.webContents.send('telao:power', ev); });
   }
+  // ---- jukebox (só no app): bloqueio de anúncio no player ----
+  const jbConf = {adblock: (() => { try{ return JSON.parse(fs.readFileSync(path.join(MAIN_USERDATA, 'jukebox.json'), 'utf8')).adblock !== false; }catch{ return true; } })()};
+  ipcMain.handle('telao:ytStatus', e => (win && e.sender === win.webContents) ? {adblock: !!jbConf.adblock} : null);
+  // Bloqueio de anúncio no player: corta os pedidos de anúncio e de medição de anúncio.
+  // Funciona como os bloqueadores de navegador; o YouTube às vezes muda e o anúncio volta até a lista ser ajustada.
+  const AD_URLS = ['*://*.doubleclick.net/*', '*://*.googlesyndication.com/*', '*://*.googleadservices.com/*', '*://*.google.com/pagead/*',
+    '*://*.youtube.com/pagead/*', '*://*.youtube.com/api/stats/ads*', '*://*.youtube.com/get_midroll_info*', '*://*.youtube.com/ptracking*',
+    '*://*.youtube.com/youtubei/v1/log_event*', '*://*.youtube-nocookie.com/pagead/*'];
+  ses.webRequest.onBeforeRequest({urls: AD_URLS}, (d, cb) => {
+    // só o que o player da jukebox pede (nada do resto do app passa por esses endereços)
+    cb({cancel: !!jbConf.adblock && d.resourceType !== 'mainFrame'});
+  });
+  ipcMain.handle('telao:ytAdblock', (e, on) => {
+    if (!win || e.sender !== win.webContents) return null;
+    jbConf.adblock = !!on;
+    try{ fs.mkdirSync(MAIN_USERDATA, {recursive: true}); fs.writeFileSync(path.join(MAIN_USERDATA, 'jukebox.json'), JSON.stringify({adblock: jbConf.adblock})); }catch{}
+    return {adblock: jbConf.adblock};
+  });
+
   // Fundo da entrada: procura um jogo pelo nome na loja da Steam (no navegador a Steam bloqueia essa consulta).
   ipcMain.handle('telao:steamSearch', async (_e, term) => {
     term = String(term || '').replace(/\s+/g, ' ').trim().slice(0, 80);

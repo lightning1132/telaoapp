@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('telaoDesktop', {
   onUpdate: cb => ipcRenderer.on('telao:update', (_e, info) => cb(info)),
   screenForWindow: m => ipcRenderer.invoke('telao:screenFor', m),
   steamSearch: term => ipcRenderer.invoke('telao:steamSearch', term),
+  // jukebox: bloqueio de anúncio no player
+  ytStatus: () => ipcRenderer.invoke('telao:ytStatus'),
+  ytAdblock: on => ipcRenderer.invoke('telao:ytAdblock', !!on),
   metrics: () => ipcRenderer.invoke('telao:metrics'),
   wco: parseInt(arg('telao-wco'), 10) || 0,
   titleBar: c => ipcRenderer.invoke('telao:titleBar', c),
