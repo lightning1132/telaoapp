@@ -582,7 +582,10 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 .jb-ctl .grow{flex:1}
 .jb-ctl .ghost{width:30px;height:30px;padding:0;display:grid;place-items:center;flex:none;background:var(--panel2);font-size:13px}
 #jbTime{font-size:11.5px;font-variant-numeric:tabular-nums;margin-left:4px;white-space:nowrap}
-#jbVolIn{width:52px;min-width:0;accent-color:var(--accent)}
+.jb-vol{display:flex;align-items:center;gap:8px;padding:0 10px 10px 8px}
+.jb-vol .ghost{width:30px;height:30px;padding:0;display:grid;place-items:center;flex:none;background:var(--panel2);font-size:13px}
+#jbVolIn{flex:1;min-width:0;accent-color:var(--accent);cursor:pointer}
+#jbVolTxt{width:30px;text-align:right;font-size:11.5px;font-variant-numeric:tabular-nums}
 @media (max-width:760px){#jb{position:fixed;right:0;top:0;bottom:0;z-index:12;width:min(100%,360px)}
   #room:has(#chat:not([hidden])) #jbCard,#room:has(#jb:not([hidden])) #jbCard{right:16px}}
 .badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
@@ -688,7 +691,7 @@ html.phone #bar #chatBtn{position:relative;width:44px;height:44px;padding:0;just
 html.phone #bar #jbBtn{width:44px;height:44px;padding:0;justify-content:center;border:0;font-size:0;flex:none}
 html.phone #jbCard{right:8px;bottom:8px;width:220px}
 html.phone #jbFrameBox,html.phone #jbFrameBox iframe{width:220px}
-html.phone #jbVolIn{display:none}   /* no celular, o volume é o do aparelho */
+html.phone #jbVolIn,html.phone #jbVolTxt{display:none}   /* no celular, o volume é o do aparelho */
 html.phone #bar #chatBtn .badge{position:absolute;top:4px;right:2px;font-size:10px;line-height:16px;min-width:16px}
 html.phone #bar #moreBtn{width:44px;height:44px;border:0;flex:none}
 html.phone #emptyShare,html.phone #pip{display:none}
@@ -902,10 +905,13 @@ html:not(.cinema) #cineChat{display:none}
       <button type="button" class="ghost" id="jbSkip" title="Pular para a próxima">⏭</button>
       <span id="jbTime" class="muted"></span>
       <span class="grow"></span>
-      <input type="range" id="jbVolIn" min="0" max="100" step="1" title="Volume (só seu)" aria-label="Volume da música (só seu)">
       <button type="button" class="ghost" id="jbVid" hidden title="Mostrar o vídeo">▭</button>
-      <button type="button" class="ghost" id="jbMute" title="Parar de ouvir só para mim">🔊</button>
       <button type="button" class="ghost" id="jbOpen" title="Abrir a jukebox (buscar e ver a fila)">☰</button>
+    </div>
+    <div class="jb-vol">
+      <button type="button" class="ghost" id="jbMute" title="Parar de ouvir só para mim">🔊</button>
+      <input type="range" id="jbVolIn" min="0" max="100" step="1" title="Volume (só seu)" aria-label="Volume da música (só seu)">
+      <span id="jbVolTxt" class="muted"></span>
     </div>
   </div>
 </section>
@@ -1152,7 +1158,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.26.0';
+const TELAO_VERSION = '1.26.1';
 // Atualização automática. REQUIRES_SHELL: nível do app desktop que esta página usa (main.js/preload/Telão Audio).
 // Todo mundo fica sempre na versão mais nova, então é sempre o nível do app atual (release.sh confere).
 const REQUIRES_SHELL = 14;
@@ -1160,7 +1166,9 @@ const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoap
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const JUKEBOX_URL = 'https://lightning1132.github.io/telaoapp/jukebox.html';       // preenchido no empacotamento: player do YouTube e busca da jukebox, no site do Telão
 const CHANGELOG = [
-  ['1.26.0', 'hoje', ['Jukebox no app: a música vira só som. O vídeo do player fica escondido (o botão ▭ no cartão mostra de volta, se quiser)',
+  ['1.26.1', 'hoje', ['Jukebox: bloqueio de anúncios refeito. Além de cortar os pedidos de anúncio, o app tira os anúncios da resposta do player do YouTube antes de ele ler (a mesma técnica dos bloqueadores de navegador)',
+                      'Jukebox: volume numa linha própria no cartão, com a barra larga e a porcentagem (antes a barra ficava espremida e não dava para arrastar)']],
+  ['1.26.0', '07/11', ['Jukebox no app: a música vira só som. O vídeo do player fica escondido (o botão ▭ no cartão mostra de volta, se quiser)',
                       'Jukebox no app: bloqueio de anúncios no player, ligado de começo (dá para desligar no painel da jukebox)']],
   ['1.25.0', '07/11', ['Jukebox: botão "Música" na sala. Busque uma música ou cole um link do YouTube ou do YouTube Music, e a sala inteira ouve junto, no mesmo ponto. Quem entra no meio cai no ponto certo',
                       'Fila compartilhada: todo mundo adiciona, tira, passa uma música para tocar logo a seguir, pausa e pula. A fila continua se outra pessoa passar a segurar a sala',
@@ -1183,8 +1191,7 @@ const CHANGELOG = [
                       'Sem quadro completo a cada 4 s: a imagem se renova aos poucos a cada 3 s (corrige perdas sem o pico de um quadro inteiro). Quadro completo só quando alguém pede, no máximo 1 por segundo',
                       'Jogo em tela cheia na frente: o motor captura o monitor em vez da janela (no Windows 10 a captura da janela congelava). Ao trocar de janela, volta na hora para só a janela do jogo',
                       'Opções → Desempenho: dá para desligar o NVENC direto e a captura do monitor. Se o NVENC não abrir, ou se o Telão Audio cair dentro dele, o motor volta sozinho para o caminho anterior',
-                      'Relatório e teste padrão mostram o QP médio (quanto o codificador comprimiu: menor é mais detalhe)']],
-  ['1.21.5', '03/11', ['Motor: quando a janela do jogo é menor que a qualidade escolhida (ou tem tamanho quebrado), o motor abria uma codificação nova a cada 2–5 segundos sem parar. Cada troca é um quadro completo (engasgo) e, em algumas placas, derrubava o Telão Audio. Agora abre uma vez e fica']]
+                      'Relatório e teste padrão mostram o QP médio (quanto o codificador comprimiu: menor é mais detalhe)']]
 ];
 function cmpVer(a, b){
   const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0), pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -2077,6 +2084,8 @@ function jbRenderCard(){
   $('#jbMute').textContent = muted ? '🔇' : '🔊';
   $('#jbMute').title = muted ? 'Voltar a ouvir (a música continua para os outros)' : 'Parar de ouvir só para mim (a música continua para os outros)';
   $('#jbVolIn').hidden = muted;
+  $('#jbVolTxt').textContent = muted ? 'mudo' : jbVol() + '%';
+  $('#jbVolTxt').style.width = muted ? 'auto' : '';
   $('#jbTap').hidden = !jb.tapHint || muted || jbNoVideo();
   jbRenderTime();
 }
@@ -2161,7 +2170,7 @@ function initJukebox(){
   }
   const vi = $('#jbVolIn');
   vi.value = jbVol();
-  vi.oninput = () => { store.set('jbVol', +vi.value); jbPost({t: 'vol', v: +vi.value}); };
+  vi.oninput = () => { store.set('jbVol', +vi.value); jbPost({t: 'vol', v: +vi.value}); $('#jbVolTxt').textContent = vi.value + '%'; };
 }
 
 /* ---------- Sala de sempre ----------

@@ -143,9 +143,13 @@ function createWindow(){
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // o preload roda também nos quadros da página, mas lá ele só faz o bloqueio de anúncio no player do YouTube
+      // (a ponte do Telão fica só na página principal; ver preload.js)
+      nodeIntegrationInSubFrames: true,
       backgroundThrottling: false,
       spellcheck: !MEM_SAVE,
       additionalArguments: ['--telao-app-version=' + app.getVersion(), '--telao-shell=' + SHELL_VERSION, '--telao-main-pid=' + process.pid, '--telao-helper-key=' + helperKey(),
+                            ...(process.env.TELAO_ADBLOCK_TEST_HOST ? ['--telao-adblock-host=' + process.env.TELAO_ADBLOCK_TEST_HOST.replace(/[^a-z0-9.-]/gi, '')] : []),
                             '--telao-wco=' + (wco ? WCO_H : 0), ...(PROFILE ? ['--telao-perfil=' + PROFILE, '--telao-sala=' + ((process.argv.find(a => a.startsWith('--telao-sala=')) || '').split('=')[1] || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40),
                                            '--telao-modo=' + ((process.argv.find(a => a.startsWith('--telao-modo=')) || '').split('=')[1] || '').replace(/[^a-z]/gi, '').slice(0, 8)] : [])],
     },
@@ -261,8 +265,12 @@ app.whenReady().then(() => {
   // ---- jukebox (só no app): bloqueio de anúncio no player ----
   const jbConf = {adblock: (() => { try{ return JSON.parse(fs.readFileSync(path.join(MAIN_USERDATA, 'jukebox.json'), 'utf8')).adblock !== false; }catch{ return true; } })()};
   ipcMain.handle('telao:ytStatus', e => (win && e.sender === win.webContents) ? {adblock: !!jbConf.adblock} : null);
-  // Bloqueio de anúncio no player: corta os pedidos de anúncio e de medição de anúncio.
-  // Funciona como os bloqueadores de navegador; o YouTube às vezes muda e o anúncio volta até a lista ser ajustada.
+  // o preload pergunta, ao abrir o quadro do player do YouTube, se tira os anúncios da resposta do player
+  ipcMain.on('telao:adblockOn', e => { e.returnValue = !!(win && e.sender === win.webContents && jbConf.adblock); });
+  // Bloqueio de anúncio no player, em duas camadas (como os bloqueadores de navegador):
+  //   1) o preload, no quadro do YouTube, tira os anúncios da resposta do player (é ela que manda tocar o anúncio);
+  //   2) aqui, os pedidos de anúncio e de medição de anúncio são cortados.
+  // O YouTube às vezes muda e o anúncio volta até a lista ser ajustada.
   const AD_URLS = ['*://*.doubleclick.net/*', '*://*.googlesyndication.com/*', '*://*.googleadservices.com/*', '*://*.google.com/pagead/*',
     '*://*.youtube.com/pagead/*', '*://*.youtube.com/api/stats/ads*', '*://*.youtube.com/get_midroll_info*', '*://*.youtube.com/ptracking*',
     '*://*.youtube.com/youtubei/v1/log_event*', '*://*.youtube-nocookie.com/pagead/*'];

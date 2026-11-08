@@ -1,29 +1,29 @@
 {
-  "version": "1.26.0",
+  "version": "1.26.1",
   "minShell": 14,
-  "page": "versoes/telao-1.26.0.html",
-  "sha256": "70aec7b581c2463c3be7fd1e66be65e113c74caa335e66fff4c0243661d4c61c",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.26.0",
+  "page": "versoes/telao-1.26.1.html",
+  "sha256": "56ece809adceb562f24869d8a3aa1b7860462b81e6f0f301dab5231d7ffc71ae",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.26.1",
   "notes": [
-    "Jukebox no app: a música vira só som. O vídeo do player fica escondido (o botão ▭ no cartão mostra de volta, se quiser)",
-    "Jukebox no app: bloqueio de anúncios no player, ligado de começo (dá para desligar no painel da jukebox)"
+    "Jukebox: bloqueio de anúncios refeito. Além de cortar os pedidos de anúncio, o app tira os anúncios da resposta do player do YouTube antes de ele ler (a mesma técnica dos bloqueadores de navegador)",
+    "Jukebox: volume numa linha própria no cartão, com a barra larga e a porcentagem (antes a barra ficava espremida e não dava para arrastar)"
   ],
   "app": {
-    "version": "1.26.0",
+    "version": "1.26.1",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.26.0/app.asar",
-        "sha256": "065091c4ac76f53a0bee51b4f232d5bcac3b187e6c6af9193110e5c1c4c52a95",
-        "size": 756775
+        "path": "versoes/app-1.26.1/app.asar",
+        "sha256": "717be237494d72670a7ca9c49aadb19caa3a936a8c520cb9720f5838bad74913",
+        "size": 760158
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.26.0/telao-audio.exe",
+        "path": "versoes/app-1.26.1/telao-audio.exe",
         "sha256": "b9ef8dbf6e702ddf3c9e6f86d7f8d0db47e28b19c384ba946aed10a2f7ca1afe",
         "size": 725504
       }
     }
   },
-  "minVersion": "1.26.0"
+  "minVersion": "1.26.1"
 }
