@@ -1,29 +1,29 @@
 {
-  "version": "1.27.1",
+  "version": "1.27.2",
   "minShell": 14,
-  "page": "versoes/telao-1.27.1.html",
-  "sha256": "1314ef53e317c56c388867b5682748cef12f6f8a527cc10f9784c7c9f4cd3ff3",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.27.1",
+  "page": "versoes/telao-1.27.2.html",
+  "sha256": "207238b5e144f236a2eac9431ca964fd9d4d9869611a17df0e2ec7366e543934",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.27.2",
   "notes": [
-    "Jukebox: o cartão de controle agora pode ser arrastado para qualquer lugar (a posição fica guardada). Dois cliques nele voltam para o canto",
-    "Jukebox: botão – encolhe o cartão (só o título, a barra e tocar/pular); + mostra inteiro de novo"
+    "Jukebox: com o painel da música aberto, o cartão de controle e o vídeo em miniatura ficam no espaço livre do painel, sem cobrir nenhuma tela. Fechando o painel, o cartão volta a flutuar onde estava",
+    "Jukebox: o botão – (encolher) foi para o topo do cartão, sempre inteiro e fácil de clicar"
   ],
   "app": {
-    "version": "1.27.1",
+    "version": "1.27.2",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.27.1/app.asar",
-        "sha256": "e263fe4d0d32097c027eeed1ed46fdfce66c486cf64caecfd6fe854084edef19",
-        "size": 772108
+        "path": "versoes/app-1.27.2/app.asar",
+        "sha256": "407cd8111ffe68a07ffd45b0d7e217632de566eb0295f021cff560f1865765d7",
+        "size": 773345
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.27.1/telao-audio.exe",
+        "path": "versoes/app-1.27.2/telao-audio.exe",
         "sha256": "b9ef8dbf6e702ddf3c9e6f86d7f8d0db47e28b19c384ba946aed10a2f7ca1afe",
         "size": 725504
       }
     }
   },
-  "minVersion": "1.27.1"
+  "minVersion": "1.27.2"
 }
