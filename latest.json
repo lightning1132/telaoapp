@@ -1,29 +1,30 @@
 {
-  "version": "1.26.2",
+  "version": "1.27.0",
   "minShell": 14,
-  "page": "versoes/telao-1.26.2.html",
-  "sha256": "52e20297baaa5a5755840635d85148ba49649fe27e5d50205d37024fffd0a5bd",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.26.2",
+  "page": "versoes/telao-1.27.0.html",
+  "sha256": "d8da4179d7cea41ea548619950ec1153d42eaee041e8050595ca63d667ca6832",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.27.0",
   "notes": [
-    "Jukebox: ninguém perde mais o começo da música. Se o YouTube demora para começar a tocar, o relógio da sala espera o primeiro player começar (o cartão mostra \"Carregando…\"); antes, quando a música finalmente começava, o Telão pulava para frente para \"alcançar\" a sala",
-    "Jukebox: o ✓ depois de adicionar uma música da busca volta a ser + em instantes, então dá para colocar a mesma música de novo (antes ficava travado até buscar outra vez)"
+    "Vídeos juntos: o vídeo da jukebox pode ir para a tela, como mais uma tela da sala, ao lado de quem está transmitindo (botão ⤢ no cartão). Dá para destacar (as outras telas encolhem), destacar a tela de um amigo com o vídeo ao lado, ou pôr em tela cheia",
+    "Jukebox: o cartão e o vídeo ficam sempre por cima da tela compartilhada (antes, no app, a tela de quem transmitia cobria o player)",
+    "Jukebox: ⤡ volta o vídeo para o cartão; no app, ▬ continua deixando só o som"
   ],
   "app": {
-    "version": "1.26.2",
+    "version": "1.27.0",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.26.2/app.asar",
-        "sha256": "c26aa5398f4946b4142e1c19f9592855f1df44726221fb7d85b0acc80a20a3d2",
-        "size": 761000
+        "path": "versoes/app-1.27.0/app.asar",
+        "sha256": "532133d8166df8e1fc89dcdbe7eed268b3486b1c03aaad86e183540d49920492",
+        "size": 768480
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.26.2/telao-audio.exe",
+        "path": "versoes/app-1.27.0/telao-audio.exe",
         "sha256": "b9ef8dbf6e702ddf3c9e6f86d7f8d0db47e28b19c384ba946aed10a2f7ca1afe",
         "size": 725504
       }
     }
   },
-  "minVersion": "1.26.2"
+  "minVersion": "1.27.0"
 }

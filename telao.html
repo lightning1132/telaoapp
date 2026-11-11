@@ -565,10 +565,30 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 #jbCard{position:fixed;right:16px;bottom:16px;width:260px;z-index:13;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 #room:has(#chat:not([hidden])) #jbCard,#room:has(#jb:not([hidden])) #jbCard{right:calc(16px + 340px)}
 #jbCard[hidden]{display:none}
-/* o player do YouTube fica sempre visível enquanto toca (regra do YouTube: pelo menos 200×200) */
-#jbFrameBox{width:260px;height:200px;background:#000;overflow:hidden;position:relative}
-#jbFrameBox iframe{width:260px;height:200px;border:0;display:block}
-#jbCard.muted #jbFrameBox,#jbCard.novideo #jbFrameBox{height:0}   /* escondido: o quadro continua do mesmo tamanho, só recortado */
+/* lugar do vídeo no cartão (regra do YouTube: player visível com pelo menos 200×200) */
+#jbCardSlot{width:260px;height:0}
+#jbCard.mini #jbCardSlot{height:200px}
+/* o player em si: posicionado por cima do lugar dele (no cartão ou na tela da jukebox) */
+#jbFrameBox{position:fixed;left:0;top:0;width:260px;height:0;overflow:hidden;background:#000;z-index:14}
+#jbFrameBox[hidden]{display:none}
+#jbFrameBox.onstage{z-index:7}
+#jbFrameBox iframe{width:100%;height:100%;border:0;display:block}
+#jbFrameBox.jbcrop iframe{width:260px;height:200px}   /* escondido: o quadro continua do mesmo tamanho, só recortado */
+#jbFrameBox:fullscreen{background:#000}
+#jbFrameBox:fullscreen iframe{width:100%;height:100%}
+/* a jukebox como uma tela da sala, junto com as transmissões (dá para destacar e pôr em tela cheia) */
+.tile.jbt{display:flex;flex-direction:column;aspect-ratio:auto;background:#000;border:1px solid #2a303a}
+.tile.jbt[hidden]{display:none}
+.jbt-slot{flex:none;width:100%;aspect-ratio:16/9;background:#000}
+.tile.jbt .tstrip{flex:none;display:flex;align-items:center;gap:10px;height:56px;padding:0 8px 0 12px;min-width:0;background:#161920;color:#e9ebee}
+.jbt-ic{flex:none;font-size:16px}
+.jbt-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.jbt-t b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jbt-t span{font-size:12px;color:#a7b0bd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.jbt .tbar{position:static;opacity:1;background:none;padding:0;flex:none;z-index:auto}
+.tile.jbt .tbar .tgrp button{font-size:15px}
+.tile.jbt.is-focus{max-height:none}
+.tile.jbt.is-focus .jbt-slot{max-height:calc(100vh - 150px)}
 #jbAcct{border-top:1px solid var(--line);padding:8px 10px 10px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
 #jbAcct[hidden]{display:none}
 .jb-ab{font-size:12px}
@@ -690,7 +710,7 @@ html.phone #membersBtn{height:44px;padding:0 4px;min-width:0;overflow:hidden}
 html.phone #bar #chatBtn{position:relative;width:44px;height:44px;padding:0;justify-content:center;border:0;font-size:0;flex:none}
 html.phone #bar #jbBtn{width:44px;height:44px;padding:0;justify-content:center;border:0;font-size:0;flex:none}
 html.phone #jbCard{right:8px;bottom:8px;width:220px}
-html.phone #jbFrameBox,html.phone #jbFrameBox iframe{width:220px}
+html.phone #jbCardSlot{width:220px}
 html.phone #jbVolIn,html.phone #jbVolTxt{display:none}   /* no celular, o volume é o do aparelho */
 html.phone #bar #chatBtn .badge{position:absolute;top:4px;right:2px;font-size:10px;line-height:16px;min-width:16px}
 html.phone #bar #moreBtn{width:44px;height:44px;border:0;flex:none}
@@ -896,7 +916,7 @@ html:not(.cinema) #cineChat{display:none}
   </aside>
   </div>
   <div id="jbCard" hidden>
-    <div id="jbFrameBox"></div>
+    <div id="jbCardSlot"></div>
     <p id="jbTap" hidden>Toque no vídeo para ouvir</p>
     <div class="jb-info"><b id="jbCardT"></b><span id="jbCardSub" class="muted"></span></div>
     <div class="jb-prog"><div id="jbBar"></div></div>
@@ -906,6 +926,7 @@ html:not(.cinema) #cineChat{display:none}
       <span id="jbTime" class="muted"></span>
       <span class="grow"></span>
       <button type="button" class="ghost" id="jbVid" hidden title="Mostrar o vídeo">▭</button>
+      <button type="button" class="ghost" id="jbBig" hidden title="Levar o vídeo para a tela">⤢</button>
       <button type="button" class="ghost" id="jbOpen" title="Abrir a jukebox (buscar e ver a fila)">☰</button>
     </div>
     <div class="jb-vol">
@@ -914,6 +935,8 @@ html:not(.cinema) #cineChat{display:none}
       <span id="jbVolTxt" class="muted"></span>
     </div>
   </div>
+  <!-- o player fica sempre aqui (mudar um quadro de lugar na página recarrega o vídeo); só a posição acompanha o cartão ou a tela da jukebox -->
+  <div id="jbFrameBox" hidden></div>
 </section>
 
 <div id="winTop" aria-hidden="true"><svg class="logo" viewBox="0 0 100 100" style="width:22px;height:22px"><rect x="2" y="2" width="96" height="96" rx="24" style="fill:var(--panel2)"/><path d="M27 25c7-9 15-9 23 0s16 9 23 0" style="fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round"/><rect x="18" y="38" width="64" height="42" rx="9" style="fill:none;stroke:var(--text);stroke-width:7"/><path d="M40 88h20" style="stroke:var(--text);stroke-width:7;stroke-linecap:round"/></svg><span class="wm" style="font-size:16px">tel<span>ã</span>o</span></div>
@@ -1158,7 +1181,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.26.2';
+const TELAO_VERSION = '1.27.0';
 // Atualização automática. REQUIRES_SHELL: nível do app desktop que esta página usa (main.js/preload/Telão Audio).
 // Todo mundo fica sempre na versão mais nova, então é sempre o nível do app atual (release.sh confere).
 const REQUIRES_SHELL = 14;
@@ -1166,7 +1189,10 @@ const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoap
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const JUKEBOX_URL = 'https://lightning1132.github.io/telaoapp/jukebox.html';       // preenchido no empacotamento: player do YouTube e busca da jukebox, no site do Telão
 const CHANGELOG = [
-  ['1.26.2', 'hoje', ['Jukebox: ninguém perde mais o começo da música. Se o YouTube demora para começar a tocar, o relógio da sala espera o primeiro player começar (o cartão mostra "Carregando…"); antes, quando a música finalmente começava, o Telão pulava para frente para "alcançar" a sala',
+  ['1.27.0', 'hoje', ['Vídeos juntos: o vídeo da jukebox pode ir para a tela, como mais uma tela da sala, ao lado de quem está transmitindo (botão ⤢ no cartão). Dá para destacar (as outras telas encolhem), destacar a tela de um amigo com o vídeo ao lado, ou pôr em tela cheia',
+                      'Jukebox: o cartão e o vídeo ficam sempre por cima da tela compartilhada (antes, no app, a tela de quem transmitia cobria o player)',
+                      'Jukebox: ⤡ volta o vídeo para o cartão; no app, ▬ continua deixando só o som']],
+  ['1.26.2', '08/11', ['Jukebox: ninguém perde mais o começo da música. Se o YouTube demora para começar a tocar, o relógio da sala espera o primeiro player começar (o cartão mostra "Carregando…"); antes, quando a música finalmente começava, o Telão pulava para frente para "alcançar" a sala',
                       'Jukebox: o ✓ depois de adicionar uma música da busca volta a ser + em instantes, então dá para colocar a mesma música de novo (antes ficava travado até buscar outra vez)']],
   ['1.26.1', '07/11', ['Jukebox: bloqueio de anúncios refeito. Além de cortar os pedidos de anúncio, o app tira os anúncios da resposta do player do YouTube antes de ele ler (a mesma técnica dos bloqueadores de navegador)',
                       'Jukebox: volume numa linha própria no cartão, com a barra larga e a porcentagem (antes a barra ficava espremida e não dava para arrastar)']],
@@ -1187,8 +1213,6 @@ const CHANGELOG = [
                       'O app procura atualização de hora em hora (antes, a cada 6 h)',
                       'Versão mínima: quando uma versão antiga deixar de funcionar com as novas, ela mostra "Atualize o Telão para continuar" e não entra em sala até atualizar']],
   ['1.22.2', '04/11', ['NVENC direto: quando alguém pedia quadro completo antes de passar 1 s do anterior, o Telão Audio codificava sem parar (quase 200 quadros/s) até poder mandar o quadro completo. Gastava a placa à toa, baixava a qualidade de cada quadro e fazia quem assistia cair do motor. Corrigido']],
-  ['1.22.1', '03/11', ['Motor: transmite só a área interna da janela do jogo. Antes iam junto a barra de título e, no Windows 10, as bordas invisíveis da janela (faixas nas laterais e a imagem fora de escala)',
-                      'Teste padrão: nota exata, comparando a luminância do quadro decodificado com a cena no tamanho de verdade (antes as duas eram reduzidas de jeitos diferentes, e isso escondia diferença de qualidade). As notas novas não se comparam com as antigas']]
 ];
 function cmpVer(a, b){
   const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0), pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -1522,6 +1546,8 @@ let room = '', myName = '';
 let localStream = null;
 let members = [];
 let focusId = null;
+const JB_TILE = 'jb:video';   // focusId da tela da jukebox
+let jbReady = false, jbPlaceKey = '', jbTileEl = null;   // a tela da jukebox só fica na grade enquanto aparece
 let hubBusy = false, hubRetryTimer = null;
 const outCalls = new Map();   // peerId -> MediaConnection (eu enviando)
 const tiles = new Map();      // peerId -> {el, video, call, ...}
@@ -1813,7 +1839,26 @@ const jbOwner = () => !!(me && hubOwner && hubOwner === me.id);
 const jbMuted = () => !!store.get('jbMute', false);
 // só no app: o vídeo do player pode ficar escondido (a música vira só som). Na versão web o player fica sempre visível.
 const jbAppExtras = () => DESKTOP && !!window.telaoDesktop.ytStatus;
-const jbNoVideo = () => jbAppExtras() && !!store.get('jbHideVideo', true);
+// Como o vídeo aparece aqui: 'off' (só o som, só no app), 'mini' (no cartão) ou 'tile' (na tela, junto com as transmissões).
+function jbViewPref(){
+  const v = store.get('jbView', null);
+  if (v === 'off' || v === 'mini' || v === 'tile') return v;
+  return jbAppExtras() && store.get('jbHideVideo', true) !== false ? 'off' : 'mini';   // escolha antiga (1.26)
+}
+function jbView(){
+  let v = jbViewPref();
+  if (v === 'off' && !jbAppExtras()) v = 'mini';   // na versão web o player fica sempre visível
+  if (v === 'tile' && PHONE) v = 'mini';
+  return v;
+}
+const jbNoVideo = () => jbView() === 'off';
+function jbSetView(v){
+  store.set('jbView', v);
+  if (v !== 'off') store.set('jbViewOn', v);
+  if (v === 'tile' && $('#jb') && !$('#jb').hidden && innerWidth < 1100) toggleJukebox(false);   // tela pequena: abre espaço para o vídeo
+  jbRenderCard();
+}
+function jbTileShown(){ const el = document.getElementById('jbTile'); return !!el && !el.hidden; }
 const jbVol = () => { const v = +store.get('jbVol', 60); return v >= 0 && v <= 100 ? v : 60; };
 function jbPos(){
   const c = jb.s && jb.s.cur;
@@ -1899,7 +1944,7 @@ function jbApply(op, by){
   else if (op.op === 'meta'){
     if (c && c.id === op.id && !c.title && typeof op.title === 'string' && op.title){ c.pos = jbPos(); jb.at = performance.now(); c.title = op.title.slice(0, 140); jbCommit(); }
   }
-  else if (op.op === 'end'){ if (c && c.id === op.id && !c.paused && (!c.dur || jbPos() >= c.dur - 5)) jbNext(); }
+  else if (op.op === 'end'){ if (c && c.id === op.id && !c.paused && !c.wait && (c.dur ? jbPos() >= c.dur - 5 : jbPos() > 3)) jbNext(); }   // "acabou" logo no começo é aviso atrasado de um player
   else if (op.op === 'err'){
     if (!c || c.id !== op.id) return;
     const code = +op.code;
@@ -2077,15 +2122,22 @@ function jbRenderCard(){
   const c = jb.s && jb.s.cur, card = $('#jbCard');
   const show = !!(c && me && jbAvailable());
   card.hidden = !show;
-  if (!show) return;
-  const muted = jbMuted();
+  if (!show){ jbTileSync(false); return; }
+  const muted = jbMuted(), view = jbView();
   card.classList.toggle('muted', muted);
-  card.classList.toggle('novideo', jbNoVideo());
+  card.classList.toggle('novideo', view === 'off');
+  card.classList.toggle('mini', !muted && view === 'mini');
   $('#jbVid').hidden = !jbAppExtras() || muted;
-  $('#jbVid').textContent = jbNoVideo() ? '▭' : '▬';
-  $('#jbVid').title = jbNoVideo() ? 'Mostrar o vídeo' : 'Esconder o vídeo (só o som)';
+  $('#jbVid').textContent = view === 'off' ? '▭' : '▬';
+  $('#jbVid').title = view === 'off' ? 'Mostrar o vídeo' : 'Esconder o vídeo (só o som)';
+  $('#jbBig').hidden = PHONE || muted || view === 'off';
+  $('#jbBig').textContent = view === 'tile' ? '⤡' : '⤢';
+  $('#jbBig').title = view === 'tile' ? 'Voltar o vídeo para este cartão' : 'Levar o vídeo para a tela, junto com as transmissões (dá para destacar)';
   $('#jbCardT').textContent = jbTitle(c);
-  $('#jbCardSub').textContent = (c.paused ? 'Pausada · ' : c.wait ? 'Carregando… · ' : '') + (c.by ? 'por ' + c.by : '') + (jb.s.q.length ? ' · ' + jb.s.q.length + ' na fila' : '');
+  const sub = (c.paused ? 'Pausada · ' : c.wait ? 'Carregando… · ' : '') + (c.by ? 'por ' + c.by : '') + (jb.s.q.length ? ' · ' + jb.s.q.length + ' na fila' : '');
+  $('#jbCardSub').textContent = sub;
+  if (jbTileEl){ jbTileEl.querySelector('.jbt-t b').textContent = jbTitle(c); jbTileEl.querySelector('.jbt-t span').textContent = sub.replace(/^ · /, ''); }
+  jbTileSync(!muted && view === 'tile');
   $('#jbPlay').textContent = c.paused ? '▶' : '⏸';
   $('#jbPlay').title = c.paused ? 'Voltar a tocar para todos' : 'Pausar para todos';
   $('#jbMute').textContent = muted ? '🔇' : '🔊';
@@ -2156,6 +2208,65 @@ async function jbAcctRender(){
   let st = null; try{ st = await window.telaoDesktop.ytStatus(); }catch{}
   if (st) $('#jbAdblock').checked = !!st.adblock;
 }
+// A tela da jukebox no palco: entra e sai da grade como a de um amigo (e pode ser destacada).
+function jbTileSync(on){
+  const el = jbTileEl;
+  if (!el) return;
+  if (el.isConnected !== on){
+    if (on){ el.hidden = false; $('#stage').appendChild(el); }   // entra no fim da grade, como quem começa a transmitir
+    else { el.remove(); if (focusId === JB_TILE) focusId = null; }
+    layout();
+  }
+  jbPlace();
+}
+// Põe o player por cima do lugar dele: a tela da jukebox, o cartão, ou recortado (só o som).
+function jbPlace(){
+  if (!jbReady) return;
+  const box = $('#jbFrameBox'), card = $('#jbCard');
+  if (document.fullscreenElement === box){
+    if (jbPlaceKey !== 'fs'){ jbPlaceKey = 'fs'; box.removeAttribute('style'); box.classList.remove('jbcrop', 'onstage'); }
+    return;
+  }
+  if (card.hidden){ if (!box.hidden){ box.hidden = true; jbPlaceKey = ''; } return; }   // nada tocando: o quadro fica guardado (a busca continua)
+  const big = jbTileShown();
+  const r = (big ? $('#jbSlot') : $('#jbCardSlot')).getBoundingClientRect();
+  const crop = !big && !card.classList.contains('mini');
+  let clip = '';
+  if (big){   // a grade pode rolar: só aparece o pedaço que está dentro do palco
+    const st = $('#stage').getBoundingClientRect(), R = Math.round;
+    const t = R(Math.max(0, st.top - r.top)), b = R(Math.max(0, r.bottom - st.bottom)), l = R(Math.max(0, st.left - r.left)), rr = R(Math.max(0, r.right - st.right));
+    if (t || b || l || rr) clip = 'inset(' + t + 'px ' + rr + 'px ' + b + 'px ' + l + 'px)';
+  }
+  const key = [big, crop, Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height), clip].join(',');
+  if (key === jbPlaceKey && !box.hidden) return;
+  jbPlaceKey = key;
+  box.hidden = false;
+  box.classList.toggle('jbcrop', crop);
+  box.classList.toggle('onstage', big);
+  box.style.left = r.left + 'px'; box.style.top = r.top + 'px';
+  box.style.width = r.width + 'px'; box.style.height = (crop ? 0 : r.height) + 'px';
+  box.style.clipPath = clip;
+}
+function jbBuildTile(){
+  const el = document.createElement('div');
+  el.className = 'tile jbt'; el.id = 'jbTile'; el.tabIndex = 0;
+  el.innerHTML = '<div class="jbt-slot" id="jbSlot"></div>' +
+    '<div class="tstrip"><span class="jbt-ic">🎵</span><span class="jbt-t"><b></b><span></span></span>' +
+    '<span class="tbar"><span class="tgrp">' +
+    '<button type="button" id="jbtHide" title="Esconder o vídeo (só o som)">' + ICON.hide + '</button>' +
+    '<button type="button" id="jbtMini" title="Voltar o vídeo para o cartão">⤡</button>' +
+    '<button type="button" class="focus" id="jbtFocus" title="Destacar (as outras telas encolhem)">' + ICON.focus + '</button>' +
+    '<button type="button" class="fs" id="jbtFs" title="Tela cheia">' + ICON.fs + '</button></span></span></div>';
+  jbTileEl = el;
+  el.querySelector('#jbtHide').hidden = !jbAppExtras();
+  el.querySelector('#jbtHide').onclick = () => jbSetView('off');
+  el.querySelector('#jbtMini').onclick = () => jbSetView('mini');
+  el.querySelector('#jbtFocus').onclick = () => { focusId = focusId === JB_TILE ? null : JB_TILE; layout(); };
+  el.querySelector('#jbtFs').onclick = () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else $('#jbFrameBox').requestFullscreen().catch(() => {});
+  };
+}
 // recarrega o player (depois de ligar ou desligar o bloqueio, para valer já na música atual)
 function jbReloadFrame(){
   if (jb.frame){ jb.frame.remove(); jb.frame = null; jb.frameOk = false; jb.lastLoad = ''; jb.ps = null; }
@@ -2172,7 +2283,15 @@ function initJukebox(){
   $('#jbSkip').onclick = () => { const c = jb.s && jb.s.cur; if (c) jbOp({op: 'skip', id: c.id}); };
   $('#jbOpen').onclick = () => toggleJukebox(true);
   $('#jbMute').onclick = () => { store.set('jbMute', !jbMuted()); jbSync(); };
-  $('#jbVid').onclick = () => { store.set('jbHideVideo', !jbNoVideo()); jbRenderCard(); };
+  $('#jbVid').onclick = () => jbSetView(jbNoVideo() ? store.get('jbViewOn', PHONE ? 'mini' : 'tile') : 'off');
+  $('#jbBig').onclick = () => jbSetView(jbView() === 'tile' ? 'mini' : 'tile');
+  jbBuildTile();
+  jbReady = true;
+  // o player acompanha o lugar dele: janela mudando de tamanho, grade rolando, tela cheia, painéis abrindo
+  addEventListener('resize', jbPlace);
+  document.addEventListener('scroll', jbPlace, true);
+  document.addEventListener('fullscreenchange', () => { jbPlaceKey = ''; jbPlace(); });
+  setInterval(() => { if (!$('#jbCard').hidden) jbPlace(); }, 200);
   if (jbAppExtras()){
     $('#jbAdblock').onchange = async () => { try{ await window.telaoDesktop.ytAdblock($('#jbAdblock').checked); }catch{} jbAcctRender(); jbReloadFrame(); };
     jbAcctRender();
@@ -6772,7 +6891,7 @@ function engineChat(m){
   }
 }
 // Posição da janela de vídeo: o retângulo do vídeo na página (pixels físicos) e os "buracos" onde a página tem algo por cima.
-const ENGINE_OVERS = '#toasts > *, .pop:not([hidden]), #pip:not([hidden]), #picker:not([hidden]), #diag:not([hidden]), .modal:not([hidden]), .rx-panel:not([hidden]), #upd:not([hidden]), #cropper:not([hidden])';
+const ENGINE_OVERS = '#toasts > *, .pop:not([hidden]), #pip:not([hidden]), #picker:not([hidden]), #diag:not([hidden]), .modal:not([hidden]), .rx-panel:not([hidden]), #upd:not([hidden]), #cropper:not([hidden]), #jbCard:not([hidden]), #jbFrameBox:not([hidden])';
 let engineRectIv = 0;
 function engineRectLoop(){
   if (!engineRectIv) engineRectIv = setInterval(engineRects, 100);
@@ -7572,7 +7691,8 @@ function initPhone(){
 }
 
 function layout(){
-  const visible = [...tiles.keys()].filter(id => !hiddenIds.has(id)).length + waits.size;
+  const jbOn = jbTileShown();
+  const visible = [...tiles.keys()].filter(id => !hiddenIds.has(id)).length + waits.size + (jbOn ? 1 : 0);
   $('#empty').hidden = visible > 0;
   const allHidden = tiles.size > 0;
   $('#emptyTitle').textContent = allHidden ? 'Todas as telas estão ocultas' : 'Ninguém transmitindo ainda';
@@ -7580,11 +7700,13 @@ function layout(){
     : 'Quem compartilhar a tela aparece aqui na hora. A call de voz continua onde vocês já estão; aqui é só o vídeo.';
   $('#emptyPeople').hidden = allHidden;
   const floating = floatState && floatState.kind === 'doc' ? floatState.pid : null;
-  const focused = !PHONE && !!focusId && tiles.has(focusId) && !hiddenIds.has(focusId) && focusId !== floating && visible > 1;
+  const focused = !PHONE && !!focusId && (focusId === JB_TILE ? jbOn : tiles.has(focusId) && !hiddenIds.has(focusId) && focusId !== floating) && visible > 1;
   $('#stage').classList.toggle('focused', focused);
   for (const [id, t] of tiles) t.el.classList.toggle('is-focus', focused && id === focusId);
+  const jt = $('#jbTile'); if (jt) jt.classList.toggle('is-focus', focused && focusId === JB_TILE);
   fitGrid();
   phoneLayout();
+  jbPlace();
 }
 // Maior tamanho de tela (16:9) que faz todas caberem na área, testando de 1 a N colunas.
 // As linhas incompletas ficam centralizadas: 3 telas = 2 em cima e 1 no meio embaixo, sem buraco.
@@ -7599,7 +7721,7 @@ function fitGrid(){
   let best = 0;
   // telas no motor têm a faixa de nome/botões embaixo (e a de reações, se aberta)
   let extra = 0;
-  for (const e of st.children) if (e.classList.contains('nat') && !e.hidden) extra = Math.max(extra, 58 + (e.classList.contains('rxopen') ? 57 : 0));
+  for (const e of st.children) if ((e.classList.contains('nat') || e.classList.contains('jbt')) && !e.hidden) extra = Math.max(extra, 58 + (e.classList.contains('rxopen') ? 57 : 0));
   for (let c = 1; c <= n; c++){
     const r = Math.ceil(n / c);
     const w = Math.min((W - gap * (c - 1)) / c, ((H - gap * (r - 1)) / r - extra) * 16 / 9);
