@@ -1,30 +1,29 @@
 {
-  "version": "1.27.0",
+  "version": "1.27.1",
   "minShell": 14,
-  "page": "versoes/telao-1.27.0.html",
-  "sha256": "d8da4179d7cea41ea548619950ec1153d42eaee041e8050595ca63d667ca6832",
-  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.27.0",
+  "page": "versoes/telao-1.27.1.html",
+  "sha256": "1314ef53e317c56c388867b5682748cef12f6f8a527cc10f9784c7c9f4cd3ff3",
+  "download": "https://github.com/lightning1132/telaoapp/releases/tag/v1.27.1",
   "notes": [
-    "Vídeos juntos: o vídeo da jukebox pode ir para a tela, como mais uma tela da sala, ao lado de quem está transmitindo (botão ⤢ no cartão). Dá para destacar (as outras telas encolhem), destacar a tela de um amigo com o vídeo ao lado, ou pôr em tela cheia",
-    "Jukebox: o cartão e o vídeo ficam sempre por cima da tela compartilhada (antes, no app, a tela de quem transmitia cobria o player)",
-    "Jukebox: ⤡ volta o vídeo para o cartão; no app, ▬ continua deixando só o som"
+    "Jukebox: o cartão de controle agora pode ser arrastado para qualquer lugar (a posição fica guardada). Dois cliques nele voltam para o canto",
+    "Jukebox: botão – encolhe o cartão (só o título, a barra e tocar/pular); + mostra inteiro de novo"
   ],
   "app": {
-    "version": "1.27.0",
+    "version": "1.27.1",
     "shell": 14,
     "electron": "44.9.2",
     "files": {
       "app.asar": {
-        "path": "versoes/app-1.27.0/app.asar",
-        "sha256": "532133d8166df8e1fc89dcdbe7eed268b3486b1c03aaad86e183540d49920492",
-        "size": 768480
+        "path": "versoes/app-1.27.1/app.asar",
+        "sha256": "e263fe4d0d32097c027eeed1ed46fdfce66c486cf64caecfd6fe854084edef19",
+        "size": 772108
       },
       "telao-audio.exe": {
-        "path": "versoes/app-1.27.0/telao-audio.exe",
+        "path": "versoes/app-1.27.1/telao-audio.exe",
         "sha256": "b9ef8dbf6e702ddf3c9e6f86d7f8d0db47e28b19c384ba946aed10a2f7ca1afe",
         "size": 725504
       }
     }
   },
-  "minVersion": "1.27.0"
+  "minVersion": "1.27.1"
 }

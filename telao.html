@@ -565,6 +565,12 @@ html.wco body:has(#room:not([hidden])) #winTop{display:none}
 #jbCard{position:fixed;right:16px;bottom:16px;width:260px;z-index:13;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 #room:has(#chat:not([hidden])) #jbCard,#room:has(#jb:not([hidden])) #jbCard{right:calc(16px + 340px)}
 #jbCard[hidden]{display:none}
+#jbCard{cursor:grab;touch-action:none}
+#jbCard button,#jbCard input{cursor:pointer}
+#jbCard.dragging{cursor:grabbing;opacity:.92;box-shadow:0 14px 40px rgba(0,0,0,.65)}
+#jbCard.moved{right:auto!important;bottom:auto!important}   /* posição escolhida por quem arrastou (left/top) */
+#jbCard.folded .jb-vol,#jbCard.folded #jbCardSub,#jbCard.folded #jbTime,#jbCard.folded #jbVid,#jbCard.folded #jbBig,#jbCard.folded #jbOpen{display:none}
+#jbCard.folded .jb-info{padding-top:6px}
 /* lugar do vídeo no cartão (regra do YouTube: player visível com pelo menos 200×200) */
 #jbCardSlot{width:260px;height:0}
 #jbCard.mini #jbCardSlot{height:200px}
@@ -928,6 +934,7 @@ html:not(.cinema) #cineChat{display:none}
       <button type="button" class="ghost" id="jbVid" hidden title="Mostrar o vídeo">▭</button>
       <button type="button" class="ghost" id="jbBig" hidden title="Levar o vídeo para a tela">⤢</button>
       <button type="button" class="ghost" id="jbOpen" title="Abrir a jukebox (buscar e ver a fila)">☰</button>
+      <button type="button" class="ghost" id="jbFold" title="Encolher o cartão">–</button>
     </div>
     <div class="jb-vol">
       <button type="button" class="ghost" id="jbMute" title="Parar de ouvir só para mim">🔊</button>
@@ -1181,7 +1188,7 @@ const $ = s => document.querySelector(s);
 /* ---------- Config ---------- */
 /* ---------- Versão ----------
    Fonte única da versão (o app desktop é empacotado com o mesmo número). */
-const TELAO_VERSION = '1.27.0';
+const TELAO_VERSION = '1.27.1';
 // Atualização automática. REQUIRES_SHELL: nível do app desktop que esta página usa (main.js/preload/Telão Audio).
 // Todo mundo fica sempre na versão mais nova, então é sempre o nível do app atual (release.sh confere).
 const REQUIRES_SHELL = 14;
@@ -1189,7 +1196,9 @@ const UPDATE_MANIFEST = 'https://raw.githubusercontent.com/lightning1132/telaoap
 const WEB_URL = 'https://lightning1132.github.io/telaoapp/';           // preenchido no empacotamento (versão web sempre atualizada)
 const JUKEBOX_URL = 'https://lightning1132.github.io/telaoapp/jukebox.html';       // preenchido no empacotamento: player do YouTube e busca da jukebox, no site do Telão
 const CHANGELOG = [
-  ['1.27.0', 'hoje', ['Vídeos juntos: o vídeo da jukebox pode ir para a tela, como mais uma tela da sala, ao lado de quem está transmitindo (botão ⤢ no cartão). Dá para destacar (as outras telas encolhem), destacar a tela de um amigo com o vídeo ao lado, ou pôr em tela cheia',
+  ['1.27.1', 'hoje', ['Jukebox: o cartão de controle agora pode ser arrastado para qualquer lugar (a posição fica guardada). Dois cliques nele voltam para o canto',
+                      'Jukebox: botão – encolhe o cartão (só o título, a barra e tocar/pular); + mostra inteiro de novo']],
+  ['1.27.0', '11/11', ['Vídeos juntos: o vídeo da jukebox pode ir para a tela, como mais uma tela da sala, ao lado de quem está transmitindo (botão ⤢ no cartão). Dá para destacar (as outras telas encolhem), destacar a tela de um amigo com o vídeo ao lado, ou pôr em tela cheia',
                       'Jukebox: o cartão e o vídeo ficam sempre por cima da tela compartilhada (antes, no app, a tela de quem transmitia cobria o player)',
                       'Jukebox: ⤡ volta o vídeo para o cartão; no app, ▬ continua deixando só o som']],
   ['1.26.2', '08/11', ['Jukebox: ninguém perde mais o começo da música. Se o YouTube demora para começar a tocar, o relógio da sala espera o primeiro player começar (o cartão mostra "Carregando…"); antes, quando a música finalmente começava, o Telão pulava para frente para "alcançar" a sala',
@@ -1212,7 +1221,6 @@ const CHANGELOG = [
                       'Fora de sala, a atualização é aplicada sozinha, sem precisar clicar. Numa sala continua a faixa com "Atualizar agora" (para não derrubar ninguém no meio)',
                       'O app procura atualização de hora em hora (antes, a cada 6 h)',
                       'Versão mínima: quando uma versão antiga deixar de funcionar com as novas, ela mostra "Atualize o Telão para continuar" e não entra em sala até atualizar']],
-  ['1.22.2', '04/11', ['NVENC direto: quando alguém pedia quadro completo antes de passar 1 s do anterior, o Telão Audio codificava sem parar (quase 200 quadros/s) até poder mandar o quadro completo. Gastava a placa à toa, baixava a qualidade de cada quadro e fazia quem assistia cair do motor. Corrigido']],
 ];
 function cmpVer(a, b){
   const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0), pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
@@ -2137,6 +2145,11 @@ function jbRenderCard(){
   const sub = (c.paused ? 'Pausada · ' : c.wait ? 'Carregando… · ' : '') + (c.by ? 'por ' + c.by : '') + (jb.s.q.length ? ' · ' + jb.s.q.length + ' na fila' : '');
   $('#jbCardSub').textContent = sub;
   if (jbTileEl){ jbTileEl.querySelector('.jbt-t b').textContent = jbTitle(c); jbTileEl.querySelector('.jbt-t span').textContent = sub.replace(/^ · /, ''); }
+  const fold = !!store.get('jbFold', false);
+  card.classList.toggle('folded', fold);
+  $('#jbFold').textContent = fold ? '+' : '–';
+  $('#jbFold').title = fold ? 'Mostrar o cartão inteiro' : 'Encolher o cartão';
+  jbCardRestore();
   jbTileSync(!muted && view === 'tile');
   $('#jbPlay').textContent = c.paused ? '▶' : '⏸';
   $('#jbPlay').title = c.paused ? 'Voltar a tocar para todos' : 'Pausar para todos';
@@ -2164,6 +2177,7 @@ function toggleJukebox(force){
   $('#room').classList.toggle('side-jb', open);
   if (open){ jbRender(); jbRenderSearch(); setTimeout(() => $('#jbIn').focus(), 40); }
   scheduleRes();
+  if (jbReady) jbCardRestore();
 }
 async function jbSubmit(){
   const t = $('#jbIn').value.trim();
@@ -2247,6 +2261,58 @@ function jbPlace(){
   box.style.width = r.width + 'px'; box.style.height = (crop ? 0 : r.height) + 'px';
   box.style.clipPath = clip;
 }
+/* O cartão é arrastável (a posição fica salva como fração da tela, como a miniatura de quem transmite) e pode encolher. */
+function jbCardPlace(x, y){
+  const card = $('#jbCard');
+  if (card.hidden) return;
+  const w = card.offsetWidth, h = card.offsetHeight;
+  // não cobre a barra de cima nem o painel aberto à direita (chat ou jukebox)
+  let right = 0;
+  for (const id of ['#chat', '#jb']){ const a = $(id); if (a && !a.hidden && innerWidth > 760) right = Math.max(right, a.offsetWidth); }
+  const top = $('#bar').getBoundingClientRect().bottom;
+  x = Math.max(8, Math.min(innerWidth - right - w - 8, x));
+  y = Math.max(top + 8, Math.min(innerHeight - h - 8, y));
+  card.classList.add('moved');
+  card.style.left = Math.round(x) + 'px'; card.style.top = Math.round(y) + 'px';
+}
+function jbCardRestore(){
+  const card = $('#jbCard'), p = store.get('jbCardPos', null);
+  if (card.hidden) return;
+  if (!p || !(p.fx >= 0 && p.fx <= 1 && p.fy >= 0 && p.fy <= 1)){ card.classList.remove('moved'); card.style.left = card.style.top = ''; }
+  else jbCardPlace(p.fx * (innerWidth - card.offsetWidth), p.fy * (innerHeight - card.offsetHeight));
+  jbPlace();
+}
+function initJbCard(){
+  const card = $('#jbCard');
+  let drag = null;
+  card.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('button, input')) return;
+    const r = card.getBoundingClientRect();
+    drag = {dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false};
+    try{ card.setPointerCapture(e.pointerId); }catch{}
+    e.preventDefault();
+  });
+  card.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.moved && Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0) < 4) return;   // clique não é arrasto
+    drag.moved = true; card.classList.add('dragging');
+    jbCardPlace(e.clientX - drag.dx, e.clientY - drag.dy);
+    jbPlace();   // o vídeo no cartão vai junto
+  });
+  const end = () => {
+    if (!drag) return;
+    const moved = drag.moved; drag = null; card.classList.remove('dragging');
+    if (!moved) return;
+    const r = card.getBoundingClientRect();
+    store.set('jbCardPos', {fx: r.left / Math.max(1, innerWidth - r.width), fy: r.top / Math.max(1, innerHeight - r.height)});
+  };
+  card.addEventListener('pointerup', end);
+  card.addEventListener('pointercancel', end);
+  // dois cliques no cartão: volta para o canto de sempre
+  card.addEventListener('dblclick', e => { if (e.target.closest('button, input')) return; store.set('jbCardPos', null); jbCardRestore(); });
+  addEventListener('resize', jbCardRestore);
+  $('#jbFold').onclick = () => { store.set('jbFold', !store.get('jbFold', false)); jbRenderCard(); };
+}
 function jbBuildTile(){
   const el = document.createElement('div');
   el.className = 'tile jbt'; el.id = 'jbTile'; el.tabIndex = 0;
@@ -2286,6 +2352,7 @@ function initJukebox(){
   $('#jbVid').onclick = () => jbSetView(jbNoVideo() ? store.get('jbViewOn', PHONE ? 'mini' : 'tile') : 'off');
   $('#jbBig').onclick = () => jbSetView(jbView() === 'tile' ? 'mini' : 'tile');
   jbBuildTile();
+  initJbCard();
   jbReady = true;
   // o player acompanha o lugar dele: janela mudando de tamanho, grade rolando, tela cheia, painéis abrindo
   addEventListener('resize', jbPlace);
@@ -5251,6 +5318,7 @@ function toggleChat(force){
   syncChatBtn();
   scheduleRes();
   if (localStream && !$('#pip').hidden) restorePip();
+  if (jbReady) jbCardRestore();
 }
 function initChat(){
   $('#chatBtn').onclick = () => toggleChat();
